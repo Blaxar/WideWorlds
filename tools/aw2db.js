@@ -1,6 +1,6 @@
-const db = require('../common/db/utils.js');
-const World = require('../common/db/model/World.js').World;
-const Prop = require('../common/db/model/Prop.js').Prop;
+const db = require('../common/db/utils');
+const World = require('../common/db/model/World').World;
+const Prop = require('../common/db/model/Prop').Prop;
 const yargs = require('yargs');
 const iconvlite = require('iconv-lite');
 const fs = require('fs');
@@ -60,6 +60,11 @@ const argv = yargs
     description: 'Fallback world ID if no World entry is created (no attr file provided)',
     type: 'integer',
     default: 0
+  }).option('propBatchSize', {
+    alias: 'batch',
+    description: 'Maximum amount of props to commit to database a the same time',
+    type: 'integer',
+    default: 2000
   })
   .help()
   .alias('help', 'h').argv;
@@ -135,7 +140,7 @@ function* parsePropFile(path) {
         if (isNaN(userId)) {
             continue;
         }
-        
+
         /* Parse date (timestamp) */
         const date = parseInt(propSplit[1])
 
@@ -176,8 +181,15 @@ db.init(argv.sql).then(async connection => {
         for (const p of parsePropFile(argv.prop)) {
             props.push(new Prop(undefined, worldId, p.userId, p.date, p.x, p.y, p.z, p.yaw, p.pitch, p.roll,
                                 p.name, p.description, p.action));
+
+            if (props.length >= argv.propBatchSize) {
+                await connection.manager.save(props.splice(0, props.length));
+            }
         }
 
-        await connection.manager.save(props);
+        // Save any remaining prop (if any)
+        if (props.length) {
+            await connection.manager.save(props);
+        }
     }
 });
