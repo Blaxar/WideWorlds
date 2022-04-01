@@ -13,15 +13,19 @@ Positionals:
                                         [string] [default: "wideworlds.sqlite3"]
 
 Options:
-      --version         Show version number                            [boolean]
-  -a, --attr            Input AW world attributes dump file (e.g. atworld.txt)
-                                                                        [string]
-  -p, --prop            Input AW props dump file (e.g. propworld.txt)   [string]
-  -e, --encoding        Expected encoding from dump files
+      --version            Show version number                         [boolean]
+  -a, --attr               Input AW world attributes dump file (e.g. atworld.txt
+                           )                                            [string]
+  -p, --prop               Input AW props dump file (e.g. propworld.txt)[string]
+  -e, --encoding           Expected encoding from dump files
                                               [string] [default: "windows-1252"]
-      --worldId, --wid  Fallback world ID if no World entry is created (no attr
-                        file provided)                              [default: 0]
-  -h, --help            Show help                                      [boolean]
+      --worldId, --wid     Fallback world ID if no World entry is created (no at
+                           tr file provided)                        [default: 0]
+  -b, --batchSize          Maximum amount of props and users to commit to databa
+                           se a the same time                    [default: 2000]
+  -u, --autoGenerateUsers  Generate place-holder users based on unique user IDs
+                           found in props              [boolean] [default: true]
+  -h, --help               Show help                                   [boolean]
 ```
 
 #### Example:

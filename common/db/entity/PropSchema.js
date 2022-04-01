@@ -1,52 +1,52 @@
-const EntitySchema = require("typeorm").EntitySchema;
-const Prop = require("../model/Prop").Prop;
-const User = require("../model/User").User;
-const World = require("../model/World").World;
+const EntitySchema = require('typeorm').EntitySchema;
+const Prop = require('../model/Prop').Prop;
+const User = require('../model/User').User;
+const World = require('../model/World').World;
 
 module.exports = new EntitySchema({
-    name: "Prop",
+    name: 'Prop',
     target: Prop,
     columns: {
         id: {
             primary: true,
-            type: "int",
+            type: 'int',
             generated: true
         },
         worldId: {
-            type: "int"
+            type: 'int'
         },
         userId: {
-            type: "int"
+            type: 'int'
         },
         date: {
-            type: "int"
+            type: 'int'
         },
         x: {
-            type: "int"
+            type: 'int'
         },
         y: {
-            type: "int"
+            type: 'int'
         },
         z: {
-            type: "int"
+            type: 'int'
         },
         yaw: {
-            type: "int"
+            type: 'int'
         },
         pitch: {
-            type: "int"
+            type: 'int'
         },
         roll: {
-            type: "int"
+            type: 'int'
         },
         name: {
-            type: "text"
+            type: 'text'
         },
         description: {
-            type: "text"
+            type: 'text'
         },
         action: {
-            type: "text"
+            type: 'text'
         }
     }
 });

@@ -1,23 +1,26 @@
-const EntitySchema = require("typeorm").EntitySchema;
-const User = require("../model/User").User;
+const EntitySchema = require('typeorm').EntitySchema;
+const User = require('../model/User').User;
 
 module.exports = new EntitySchema({
-    name: "User",
+    name: 'User',
     target: User,
     columns: {
         id: {
             primary: true,
-            type: "int",
+            type: 'int',
             generated: true
         },
         name: {
-            type: "text"
+            type: 'text'
         },
         password: {
-            type: "text"
+            type: 'text'
         },
         email: {
-            type: "text"
+            type: 'text'
+        },
+        salt: {
+            type: 'text'
         }
     }
 });

@@ -1,6 +1,8 @@
 const db = require('../common/db/utils');
 const World = require('../common/db/model/World').World;
 const Prop = require('../common/db/model/Prop').Prop;
+const User = require('../common/db/model/User').User;
+const crypto = require('crypto');
 const yargs = require('yargs');
 const iconvlite = require('iconv-lite');
 const fs = require('fs');
@@ -60,11 +62,17 @@ const argv = yargs
     description: 'Fallback world ID if no World entry is created (no attr file provided)',
     type: 'integer',
     default: 0
-  }).option('propBatchSize', {
-    alias: 'batch',
-    description: 'Maximum amount of props to commit to database a the same time',
+  }).option('batchSize', {
+    alias: 'b',
+    description: 'Maximum amount of props and users to commit to database a the same time',
     type: 'integer',
     default: 2000
+  })
+  .option('autoGenerateUsers', {
+    alias: 'u',
+    description: 'Generate place-holder users based on unique user IDs found in props',
+    type: 'boolean',
+    default: true
   })
   .help()
   .alias('help', 'h').argv;
@@ -134,7 +142,7 @@ function* parsePropFile(path) {
 
         const propSplit = sanitizedEntry.split(' ');
 
-        /* Parse user id */
+        // Parse user id
         const userId = parseInt(propSplit[0])
 
         if (isNaN(userId)) {
@@ -144,7 +152,7 @@ function* parsePropFile(path) {
         /* Parse date (timestamp) */
         const date = parseInt(propSplit[1])
 
-        /* Parse position and orientation */
+        // Parse position and orientation
         const x = parseInt(propSplit[2]);
         const y = parseInt(propSplit[3]);
         const z = parseInt(propSplit[4]);
@@ -152,7 +160,7 @@ function* parsePropFile(path) {
         const pitch = parseInt(propSplit[6])
         const roll = parseInt(propSplit[7])
 
-        /* Parse name, action and description */
+        // Parse name, action and description
         const nameLength = parseInt(propSplit[8]);
         const descriptionLength = parseInt(propSplit[9]);
         const actionLength = parseInt(propSplit[10]);
@@ -167,6 +175,14 @@ function* parsePropFile(path) {
     }
 };
 
+const makeDefaultUser = (id) => {
+    const name = 'user#' + id;
+    const salt = crypto.randomBytes(db.saltLength).toString('base64');
+
+    // Use the name as password
+    return new User(id, name, db.hashPassword(name, salt), '', salt);
+};
+
 db.init(argv.sql).then(async connection => {
     let worldId = argv.worldId;
 
@@ -177,19 +193,41 @@ db.init(argv.sql).then(async connection => {
 
     if (argv.prop) {
         const props = [];
+        const users = [];
+        const userIdSet = new Set();
 
         for (const p of parsePropFile(argv.prop)) {
             props.push(new Prop(undefined, worldId, p.userId, p.date, p.x, p.y, p.z, p.yaw, p.pitch, p.roll,
                                 p.name, p.description, p.action));
 
-            if (props.length >= argv.propBatchSize) {
+            if (argv.autoGenerateUsers && !userIdSet.has(p.userId))
+            {
+                // We generate a new user for each new user ID we encounter in prop attributes
+                users.push(makeDefaultUser(p.userId));
+                userIdSet.add(p.userId);
+            }
+
+            // We save props by batch, lest we run into memory issues by letting the array
+            // grow to much, that's also why 'parsePropFile' yields results through an
+            // iterator instead of just returning one giant prop array all at once
+            if (props.length >= argv.batchSize) {
                 await connection.manager.save(props.splice(0, props.length));
+            }
+
+            // Same as above, but for users
+            if (users.length >= argv.batchSize) {
+                await connection.manager.save(users.splice(0, users.length));
             }
         }
 
-        // Save any remaining prop (if any)
+        // Save remaining props (if any)
         if (props.length) {
             await connection.manager.save(props);
+        }
+
+        // Save remaining users (if any)
+        if (users.length) {
+            await connection.manager.save(users);
         }
     }
 });
