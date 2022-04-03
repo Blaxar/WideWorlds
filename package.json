@@ -1,0 +1,39 @@
+{
+  "name": "wideworlds",
+  "version": "0.1.0",
+  "description": "3D online universe client/server solution, walking in the steps of Active Worlds",
+  "main": "index.js",
+  "scripts": {
+    "test": "./node_modules/mocha/bin/mocha -R spec tests/mocha/http.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Blaxar/WideWorlds.git"
+  },
+  "keywords": [
+    "3D",
+    "universe",
+    "Active",
+    "Worlds",
+    "AW",
+    "RenderWare",
+    "RWX"
+  ],
+  "author": "Julien 'Blaxar' Bardagi",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/Blaxar/WideWorlds/issues"
+  },
+  "homepage": "https://github.com/Blaxar/WideWorlds#readme",
+  "dependencies": {
+    "express": "^4.17.3",
+    "iconv-lite": "^0.6.3",
+    "jsonwebtoken": "^8.5.1",
+    "typeorm": "^0.2.41",
+    "yargs": "^17.3.1"
+  },
+  "devDependencies": {
+    "mocha": "^9.2.2",
+    "supertest": "^6.2.2"
+  }
+}
