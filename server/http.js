@@ -1,29 +1,57 @@
 const db = require('../common/db/utils');
 const World = require('../common/db/model/World').World;
 const Prop = require('../common/db/model/Prop').Prop;
+const User = require('../common/db/model/User').User;
 const express = require('express');
+const jwt = require('jsonwebtoken');
+
+
+// Generate a new secret for each runtime
+const secret = require('crypto').randomBytes(64).toString('hex');
+
+const authenticate = (req, res, next) => {
+    //TODO: implement and test
+};
 
 const httpServer = async (path, port) => {
     return db.init(path).then(async connection => {
-        const httpApp = express();
+        // Ready the express app
+        const httpApp = express().use(express.json());
+
+        httpApp.post('/api/login', (req, res) => {
+            res.setHeader('Content-Type', 'application/json');
+            // We expect a json body from the request, with 'name' and 'password' fields
+            const name = req.body?.name || null;
+            const password = req.body?.password || null;
+
+            // Get a list of all existing worlds
+            connection.manager.createQueryBuilder(User, 'user')
+                .where('user.name = :name', {name}).getOne().then(user => {
+                    if (user && user.password == db.hashPassword(password, user.salt)) {
+                        // Provided password is matching
+                        res.send({'id': user.id, 'token': jwt.sign(user.id, secret)});
+                    } else {
+                        // Invalid credentials provided: we cannot log this user in
+                        res.status(403).json({});
+                    }
+            });
+        });
 
         httpApp.get('/api/worlds', (req, res) => {
             res.setHeader('Content-Type', 'application/json');
-
             // Get a list of all existing worlds
             connection.manager.createQueryBuilder(World, 'world').getMany().then(worlds => res.send(worlds));
         });
 
         httpApp.get('/api/worlds/:id', (req, res) => {
             res.setHeader('Content-Type', 'application/json');
-
             // Get a single world using its id (return 404 if not found)
             connection.manager.createQueryBuilder(World, 'world')
                 .where('world.id = :id', {id: req.params.id}).getOne().then(world => {
                     if (world) {
                         res.send(world);
                     } else {
-                        res.sendStatus(404);
+                        res.status(404).json({});
                     }
                 });
         });
@@ -43,7 +71,7 @@ const httpServer = async (path, port) => {
             connection.manager.createQueryBuilder(World, 'world')
                 .where('world.id = :wid', {wid}).getOne().then(world => {
                     if (!world) {
-                        res.sendStatus(404);
+                        res.status(404).json({});
                     } else {
                         // World has been found, filter props using world ID
                         const queryBuilder = connection.manager.createQueryBuilder(Prop, 'prop')

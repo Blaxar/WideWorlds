@@ -6,6 +6,7 @@ const User = require('../../common/db/model/User').User;
 const request = require('supertest');
 const assert = require('assert');
 const fs = require('fs');
+const crypto = require('crypto');
 const getConnection = require('typeorm').getConnection;
 
 const dbFile = 'mocha-http-test-db.sqlite3';
@@ -14,8 +15,11 @@ const makeTestWorld = async (connection, name, data) => {
     return (await connection.manager.save([new World(undefined, name, data)]))[0].id;
 };
 
-const makeTestUser = async (connection, name, password) => {
-    return (await connection.manager.save([new User(undefined, name, password)]))[0].id;
+const makeTestUser = async (connection, name, password, email) => {
+    const salt = crypto.randomBytes(db.saltLength).toString('base64');
+
+    const user = new User(undefined, name, db.hashPassword(password, salt), email, salt);
+    return (await connection.manager.save([user]))[0].id;
 };
 
 const makeTestProp = async (connection, worldId, userId, date, x, y, z, yaw,
@@ -45,6 +49,9 @@ describe('http server', () => {
         // Create world in database, get its ID back
         worldId = await makeTestWorld(getConnection(), 'Test World', '{}');
 
+        // Create user in database, get their ID back
+        userId = await makeTestUser(getConnection(), 'xXx_B0b_xXx', '3p1cP4sSw0Rd', 'test@somemail.com');
+
         now = Date.now();
 
         // Fill-in database with a few props belonging to the world right above
@@ -70,16 +77,75 @@ describe('http server', () => {
         fs.unlinkSync(dbFile);
     });
 
-    it('GET /api/worlds', (done) => {
+    it('POST /api/login - OK', (done) => {
+        request(server)
+            .post('/api/login')
+            .send({name: 'xXx_B0b_xXx', password: '3p1cP4sSw0Rd'})
+            .set('Accept', 'application/json')
+            .expect('Content-Type', /json/)
+            .expect(200).then(response => {
+                const body = response.body;
+
+                assert.equal(body.id, userId);
+                assert.ok(body.token);
+
+                done();
+            });
+    });
+
+    it('POST /api/login - Forbidden', (done) => {
+        request(server)
+            .post('/api/login')
+            .send({name: 'xXx_B0b_xXx', password: 'UwU'})
+            .set('Accept', 'application/json')
+            .expect('Content-Type', /json/)
+            .expect(403, done);
+    });
+
+    it('GET /api/worlds - OK', (done) => {
         request(server)
             .get('/api/worlds')
             .set('Accept', 'application/json')
             .expect('Content-Type', /json/)
-            .expect('[{"id":1,"name":"Test World","data":"{}"}]')
-            .expect(200, done);
+            .expect(200).then(response => {
+                const body = response.body;
+
+                // We expect only one entry
+                assert.equal(body.length, 1);
+
+                assert.equal(body[0].id, worldId);
+                assert.equal(body[0].name, 'Test World');
+                assert.equal(body[0].data, '{}');
+
+                done();
+            });
     });
 
-    it('GET /api/worlds/id/props', (done) => {
+    it('GET /api/worlds/id - OK', (done) => {
+        request(server)
+            .get('/api/worlds/' + worldId)
+            .set('Accept', 'application/json')
+            .expect('Content-Type', /json/)
+            .expect(200).then(response => {
+                const body = response.body;
+
+                assert.equal(body.id, worldId);
+                assert.equal(body.name, 'Test World');
+                assert.equal(body.data, '{}');
+
+                done();
+            });
+    });
+
+    it('GET /api/worlds/id - Not found', (done) => {
+        request(server)
+            .get('/api/worlds/66666')
+            .set('Accept', 'application/json')
+            .expect('Content-Type', /json/)
+            .expect(404, done);
+    });
+
+    it('GET /api/worlds/id/props - OK', (done) => {
         request(server)
             .get('/api/worlds/' + worldId + '/props')
             .set('Accept', 'application/json')
@@ -155,5 +221,13 @@ describe('http server', () => {
                 done();
             })
             .catch(err => done(err))
+    });
+
+    it('GET /api/worlds/id/props - Not found', (done) => {
+        request(server)
+            .get('/api/worlds/66666/props')
+            .set('Accept', 'application/json')
+            .expect('Content-Type', /json/)
+            .expect(404, done);
     });
 });
