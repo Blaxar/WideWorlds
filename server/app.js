@@ -1,4 +1,5 @@
-const httpServer = require('./http');
+const spawnHttpServer = require('./http');
+const spawnWsServer = require('./ws');
 const yargs = require('yargs');
 
 const argv = yargs
@@ -8,11 +9,14 @@ const argv = yargs
     default: 'wideworlds.sqlite3'
   })
   .option('httpPort', {
-    description: 'Port to listen on for http requests',
+    description: 'Port to listen on for http and ws requests',
     type: 'string',
     default: '8080'
   })
   .help()
   .alias('help', 'h').argv;
 
-httpServer(argv.db, argv.httpPort);
+// Generate a new secret for each runtime
+const secret = require('crypto').randomBytes(64).toString('hex');
+
+spawnHttpServer(argv.db, argv.httpPort, secret).then( server => spawnWsServer(server, secret));

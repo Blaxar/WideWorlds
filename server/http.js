@@ -2,23 +2,43 @@ const db = require('../common/db/utils');
 const World = require('../common/db/model/World').World;
 const Prop = require('../common/db/model/Prop').Prop;
 const User = require('../common/db/model/User').User;
+const createHttpServer = require('http').createServer;
 const express = require('express');
 const jwt = require('jsonwebtoken');
 
+const bearerRegex = /^Bearer (.*)$/i;
 
-// Generate a new secret for each runtime
-const secret = require('crypto').randomBytes(64).toString('hex');
+const spawnHttpServer = async (path, port, secret) => {
+    const authenticate = (req, res, next) => {
+        // Get Bearer token, we strip the 'Bearer' part
+        const authMatch = req.headers['authorization']?.match(bearerRegex);
+        const token = authMatch && authMatch[1];
 
-const authenticate = (req, res, next) => {
-    //TODO: implement and test
-};
+        if (token === null) {
+            // We do not understand the credentials being provided at all (malformed)
+            return res.status(401).json({});
+        }
 
-const httpServer = async (path, port) => {
+        jwt.verify(token, secret, (err, userId) => {
+            if (err) {
+                // We aknowledge a Bearer token was provided to us, but it is not valid
+                return res.status(403).json({});
+            }
+
+            req.userId = userId;
+
+            next();
+        });
+    };
+
     return db.init(path).then(async connection => {
         // Ready the express app
-        const httpApp = express().use(express.json());
+        const app = express().use(express.json());
 
-        httpApp.post('/api/login', (req, res) => {
+        // Create http server
+        const server = createHttpServer(app);
+
+        app.post('/api/login', (req, res) => {
             res.setHeader('Content-Type', 'application/json');
             // We expect a json body from the request, with 'name' and 'password' fields
             const name = req.body?.name || null;
@@ -37,13 +57,13 @@ const httpServer = async (path, port) => {
             });
         });
 
-        httpApp.get('/api/worlds', (req, res) => {
+        app.get('/api/worlds', authenticate, (req, res) => {
             res.setHeader('Content-Type', 'application/json');
             // Get a list of all existing worlds
             connection.manager.createQueryBuilder(World, 'world').getMany().then(worlds => res.send(worlds));
         });
 
-        httpApp.get('/api/worlds/:id', (req, res) => {
+        app.get('/api/worlds/:id', authenticate, (req, res) => {
             res.setHeader('Content-Type', 'application/json');
             // Get a single world using its id (return 404 if not found)
             connection.manager.createQueryBuilder(World, 'world')
@@ -56,7 +76,7 @@ const httpServer = async (path, port) => {
                 });
         });
 
-        httpApp.get('/api/worlds/:id/props', (req, res) => {
+        app.get('/api/worlds/:id/props', authenticate, (req, res) => {
             res.setHeader('Content-Type', 'application/json');
             const wid = req.params.id
 
@@ -108,8 +128,10 @@ const httpServer = async (path, port) => {
                 });
         });
 
-        return httpApp.listen(port);
+        server.listen(port);
+
+        return server
     });
 };
 
-module.exports = httpServer;
+module.exports = spawnHttpServer;

@@ -1,15 +1,17 @@
 const db = require('../../common/db/utils');
-const httpServer = require('../../server/http');
+const spawnHttpServer = require('../../server/http');
+const spawnWsServer = require('../../server/ws');
 const World = require('../../common/db/model/World').World;
 const Prop = require('../../common/db/model/Prop').Prop;
 const User = require('../../common/db/model/User').User;
-const request = require('supertest');
+const request = require('superwstest');
 const assert = require('assert');
 const fs = require('fs');
 const crypto = require('crypto');
 const getConnection = require('typeorm').getConnection;
 
 const dbFile = 'mocha-http-test-db.sqlite3';
+const secret = require('crypto').randomBytes(64).toString('hex');
 
 const makeTestWorld = async (connection, name, data) => {
     return (await connection.manager.save([new World(undefined, name, data)]))[0].id;
@@ -30,19 +32,22 @@ const makeTestProp = async (connection, worldId, userId, date, x, y, z, yaw,
 };
 
 // Testing http server
-describe('http server', () => {
+describe('http and ws servers', () => {
     let server = null;
+    let wss = null;
     let connection = null;
     let worldId = null;
     let userId = 0;
     let now = 0;
+    let bearerToken = '';
 
     before(async () => {
         if (fs.existsSync(dbFile)) {
             throw("Test database file already exists, move it or delete it first.");
         }
 
-        server = await httpServer(dbFile, 62931);
+        server = await spawnHttpServer(dbFile, 62931, secret);
+        wss = await spawnWsServer(server, secret);
     });
 
     beforeEach(async () => {
@@ -51,6 +56,19 @@ describe('http server', () => {
 
         // Create user in database, get their ID back
         userId = await makeTestUser(getConnection(), 'xXx_B0b_xXx', '3p1cP4sSw0Rd', 'test@somemail.com');
+
+        bearerToken = await request(server)
+            .post('/api/login')
+            .send({name: 'xXx_B0b_xXx', password: '3p1cP4sSw0Rd'})
+            .set('Accept', 'application/json')
+            .expect('Content-Type', /json/)
+            .expect(200).then(async response => {
+                const body = response.body;
+
+                assert.equal(body.id, userId);
+                assert.ok(body.token);
+                return body.token;
+            });
 
         now = Date.now();
 
@@ -96,6 +114,7 @@ describe('http server', () => {
     it('POST /api/login - Forbidden', (done) => {
         request(server)
             .post('/api/login')
+            .set('Authorization', 'Bearer ' + bearerToken)
             .send({name: 'xXx_B0b_xXx', password: 'UwU'})
             .set('Accept', 'application/json')
             .expect('Content-Type', /json/)
@@ -105,6 +124,7 @@ describe('http server', () => {
     it('GET /api/worlds - OK', (done) => {
         request(server)
             .get('/api/worlds')
+            .set('Authorization', 'Bearer ' + bearerToken)
             .set('Accept', 'application/json')
             .expect('Content-Type', /json/)
             .expect(200).then(response => {
@@ -121,9 +141,28 @@ describe('http server', () => {
             });
     });
 
+    it('GET /api/worlds - Unauthorized', (done) => {
+        request(server)
+            .get('/api/worlds')
+            .set('Authorization', 'gibberish')
+            .set('Accept', 'application/json')
+            .expect('Content-Type', /json/)
+            .expect(401, done);
+    });
+
+    it('GET /api/worlds - Forbidden', (done) => {
+        request(server)
+            .get('/api/worlds')
+            .set('Authorization', 'Bearer iNvAlId')
+            .set('Accept', 'application/json')
+            .expect('Content-Type', /json/)
+            .expect(403, done);
+    });
+
     it('GET /api/worlds/id - OK', (done) => {
         request(server)
             .get('/api/worlds/' + worldId)
+            .set('Authorization', 'Bearer ' + bearerToken)
             .set('Accept', 'application/json')
             .expect('Content-Type', /json/)
             .expect(200).then(response => {
@@ -137,9 +176,28 @@ describe('http server', () => {
             });
     });
 
+    it('GET /api/worlds/id - Unauthorized', (done) => {
+        request(server)
+            .get('/api/worlds/' + worldId)
+            .set('Authorization', 'gibberish')
+            .set('Accept', 'application/json')
+            .expect('Content-Type', /json/)
+            .expect(401, done);
+    });
+
+    it('GET /api/worlds/id - Forbidden', (done) => {
+        request(server)
+            .get('/api/worlds/' + worldId)
+            .set('Authorization', 'Bearer iNvAlId')
+            .set('Accept', 'application/json')
+            .expect('Content-Type', /json/)
+            .expect(403, done);
+    });
+
     it('GET /api/worlds/id - Not found', (done) => {
         request(server)
             .get('/api/worlds/66666')
+            .set('Authorization', 'Bearer ' + bearerToken)
             .set('Accept', 'application/json')
             .expect('Content-Type', /json/)
             .expect(404, done);
@@ -148,6 +206,7 @@ describe('http server', () => {
     it('GET /api/worlds/id/props - OK', (done) => {
         request(server)
             .get('/api/worlds/' + worldId + '/props')
+            .set('Authorization', 'Bearer ' + bearerToken)
             .set('Accept', 'application/json')
             .expect('Content-Type', /json/)
             .expect(200).then(response => {
@@ -194,6 +253,7 @@ describe('http server', () => {
     it('GET /api/worlds/id/props with filters', (done) => {
         request(server)
             .get('/api/worlds/' + worldId + '/props?minX=50&maxX=150&minY=-240&maxY=-160&minZ=270&maxZ=330')
+            .set('Authorization', 'Bearer ' + bearerToken)
             .set('Accept', 'application/json')
             .expect('Content-Type', /json/)
             .expect(200).then(response => {
@@ -223,11 +283,53 @@ describe('http server', () => {
             .catch(err => done(err))
     });
 
+    it('GET /api/worlds/id/props - Unauthorized', (done) => {
+        request(server)
+            .get('/api/worlds/' + worldId + '/props')
+            .set('Authorization', 'gibberish')
+            .set('Accept', 'application/json')
+            .expect('Content-Type', /json/)
+            .expect(401, done);
+    });
+
+    it('GET /api/worlds/id/props - Forbidden', (done) => {
+        request(server)
+            .get('/api/worlds/' + worldId + '/props')
+            .set('Authorization', 'Bearer iNvAlId')
+            .set('Accept', 'application/json')
+            .expect('Content-Type', /json/)
+            .expect(403, done);
+    });
+
     it('GET /api/worlds/id/props - Not found', (done) => {
         request(server)
             .get('/api/worlds/66666/props')
+            .set('Authorization', 'Bearer ' + bearerToken)
             .set('Accept', 'application/json')
             .expect('Content-Type', /json/)
             .expect(404, done);
+    });
+
+    it('WS connect - OK', async () => {
+        await request(server).ws('/ws')
+            .set('Authorization', 'Bearer ' + bearerToken)
+            .sendText('What is my id?')
+            .expectText(`${userId}`)
+            .sendText('What is up my dude?')
+            .expectText('???')
+            .close()
+            .expectClosed();
+    });
+
+    it('WS connect - Unauthorized', async () => {
+        await request(server).ws('/ws')
+            .set('Authorization', 'gibberish')
+            .expectConnectionError(401);
+    });
+
+    it('WS connect - Forbidden', async () => {
+        await request(server).ws('/ws')
+            .set('Authorization', 'Bearer iNvAlId')
+            .expectConnectionError(403);
     });
 });
