@@ -1,4 +1,4 @@
-/* export */ class User {
+class User {
     constructor(id, name, password, email, salt) {
         this.id = id;
         this.name = name;
@@ -8,6 +8,4 @@
     }
 }
 
-module.exports = {
-    User
-};
+export default User;

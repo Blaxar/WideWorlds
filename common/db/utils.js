@@ -1,16 +1,19 @@
-const typeorm = require('typeorm');
-const scryptSync = require('crypto').scryptSync;
+import TypeORM from 'typeorm';
+import {scryptSync} from 'crypto';
+import UserSchema from './entity/UserSchema.js';
+import WorldSchema from './entity/WorldSchema.js';
+import PropSchema from './entity/PropSchema.js';
 
 const keyLength = 256;
 const saltLength = 128;
 
 const init = async (path) => {
-    return await typeorm.createConnection({
+    return await TypeORM.createConnection({
         type: 'sqlite',
         database: path, 
-        entities: [require('./entity/UserSchema'),
-                   require('./entity/WorldSchema'),
-                   require('./entity/PropSchema')],
+        entities: [UserSchema,
+                   WorldSchema,
+                   PropSchema],
         synchronize: true
     });
 };
@@ -19,8 +22,4 @@ const hashPassword = (password, salt) => {
     return scryptSync(password, salt, keyLength).toString('base64');
 }
 
-module.exports = {
-    init,
-    hashPassword,
-    saltLength,
-}
+export {init, hashPassword, saltLength};

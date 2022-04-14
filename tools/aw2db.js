@@ -1,11 +1,11 @@
-const db = require('../common/db/utils');
-const World = require('../common/db/model/World').World;
-const Prop = require('../common/db/model/Prop').Prop;
-const User = require('../common/db/model/User').User;
-const crypto = require('crypto');
-const yargs = require('yargs');
-const iconvlite = require('iconv-lite');
-const fs = require('fs');
+import * as db from '../common/db/utils.js';
+import World from '../common/db/model/World.js';
+import Prop from '../common/db/model/Prop.js';
+import User from '../common/db/model/User.js';
+import * as crypto from 'crypto';
+import yargs from 'yargs';
+import iconvlite from 'iconv-lite';
+import fs from 'fs';
 
 const worldAttr = {
     0: 'name',
@@ -35,7 +35,7 @@ const worldAttr = {
     87: 'skyColorBottomB'
 }
 
-const argv = yargs
+const argv = yargs(process.argv)
   .positional('sql', {
     description: 'Path to the destination SQLite3 database file, will be created if need be',
     type: 'string',

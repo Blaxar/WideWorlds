@@ -1,6 +1,6 @@
-const url = require("url");
-const ws = require('ws');
-const jwt = require('jsonwebtoken');
+import url from 'url';
+import {WebSocketServer} from 'ws';
+import jwt from 'jsonwebtoken';
 
 const bearerRegex = /^Bearer (.*)$/i;
 
@@ -27,7 +27,7 @@ const spawnWsServer = async (server, secret) => {
         });
     };
 
-    const wss = new ws.WebSocket.Server({noServer: true});
+    const wss = new WebSocketServer({noServer: true});
 
     wss.on('connection', (ws, request, userId) => {
         ws.on('message', (data) => {
@@ -69,4 +69,4 @@ const spawnWsServer = async (server, secret) => {
     return wss;
 }
 
-module.exports = spawnWsServer;
+export {spawnWsServer};

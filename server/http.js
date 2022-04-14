@@ -1,10 +1,10 @@
-const db = require('../common/db/utils');
-const World = require('../common/db/model/World').World;
-const Prop = require('../common/db/model/Prop').Prop;
-const User = require('../common/db/model/User').User;
-const createHttpServer = require('http').createServer;
-const express = require('express');
-const jwt = require('jsonwebtoken');
+import * as db from '../common/db/utils.js';
+import World from '../common/db/model/World.js';
+import Prop from '../common/db/model/Prop.js';
+import User from '../common/db/model/User.js';
+import {createServer} from 'http';
+import express from 'express';
+import jwt from 'jsonwebtoken';
 
 const bearerRegex = /^Bearer (.*)$/i;
 
@@ -36,7 +36,7 @@ const spawnHttpServer = async (path, port, secret) => {
         const app = express().use(express.json());
 
         // Create http server
-        const server = createHttpServer(app);
+        const server = createServer(app);
 
         app.post('/api/login', (req, res) => {
             res.setHeader('Content-Type', 'application/json');
@@ -134,4 +134,4 @@ const spawnHttpServer = async (path, port, secret) => {
     });
 };
 
-module.exports = spawnHttpServer;
+export {spawnHttpServer};

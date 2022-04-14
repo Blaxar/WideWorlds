@@ -1,4 +1,4 @@
-/* export */ class World {
+class World {
     constructor(id, name, data) {
         this.id = id;
         this.name = name;
@@ -6,6 +6,4 @@
     }
 }
 
-module.exports = {
-    World
-};
+export default World;

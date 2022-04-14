@@ -1,9 +1,7 @@
-const EntitySchema = require('typeorm').EntitySchema;
-const Prop = require('../model/Prop').Prop;
-const User = require('../model/User').User;
-const World = require('../model/World').World;
+import {EntitySchema} from 'typeorm';
+import Prop from '../model/Prop.js';
 
-module.exports = new EntitySchema({
+const PropSchema = new EntitySchema({
     name: 'Prop',
     target: Prop,
     columns: {
@@ -50,3 +48,5 @@ module.exports = new EntitySchema({
         }
     }
 });
+
+export default PropSchema;

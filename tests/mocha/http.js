@@ -1,17 +1,17 @@
-const db = require('../../common/db/utils');
-const spawnHttpServer = require('../../server/http');
-const spawnWsServer = require('../../server/ws');
-const World = require('../../common/db/model/World').World;
-const Prop = require('../../common/db/model/Prop').Prop;
-const User = require('../../common/db/model/User').User;
-const request = require('superwstest');
-const assert = require('assert');
-const fs = require('fs');
-const crypto = require('crypto');
-const getConnection = require('typeorm').getConnection;
+import * as db from '../../common/db/utils.js';
+import {spawnHttpServer} from '../../server/http.js';
+import {spawnWsServer} from '../../server/ws.js';
+import World from '../../common/db/model/World.js';
+import Prop from '../../common/db/model/Prop.js';
+import User from '../../common/db/model/User.js';
+import request from 'superwstest';
+import * as assert from 'assert';
+import * as fs from 'fs';
+import * as crypto from 'crypto';
+import TypeORM from 'typeorm';
 
 const dbFile = 'mocha-http-test-db.sqlite3';
-const secret = require('crypto').randomBytes(64).toString('hex');
+const secret = crypto.randomBytes(64).toString('hex');
 
 const makeTestWorld = async (connection, name, data) => {
     return (await connection.manager.save([new World(undefined, name, data)]))[0].id;
@@ -52,10 +52,10 @@ describe('http and ws servers', () => {
 
     beforeEach(async () => {
         // Create world in database, get its ID back
-        worldId = await makeTestWorld(getConnection(), 'Test World', '{}');
+        worldId = await makeTestWorld(TypeORM.getConnection(), 'Test World', '{}');
 
         // Create user in database, get their ID back
-        userId = await makeTestUser(getConnection(), 'xXx_B0b_xXx', '3p1cP4sSw0Rd', 'test@somemail.com');
+        userId = await makeTestUser(TypeORM.getConnection(), 'xXx_B0b_xXx', '3p1cP4sSw0Rd', 'test@somemail.com');
 
         bearerToken = await request(server)
             .post('/api/login')
@@ -73,19 +73,19 @@ describe('http and ws servers', () => {
         now = Date.now();
 
         // Fill-in database with a few props belonging to the world right above
-        await makeTestProp(getConnection(), worldId, userId, now, 0, 0, 0, 0, 0, 0,
+        await makeTestProp(TypeORM.getConnection(), worldId, userId, now, 0, 0, 0, 0, 0, 0,
                            'wall01.rwx', 'Some description.', 'create color red;');
-        await makeTestProp(getConnection(), worldId, userId, now, 100, -200, 300, 450, 900, 1350,
+        await makeTestProp(TypeORM.getConnection(), worldId, userId, now, 100, -200, 300, 450, 900, 1350,
                            'wall02.rwx', 'Some other description.', 'create color blue;');
     });
 
     afterEach(async () => {
         // Fetch all the entities
-        const entities = getConnection().entityMetadatas;
+        const entities = TypeORM.getConnection().entityMetadatas;
 
         // Clear them all
         for (const entity of entities) {
-            const repository = getConnection().getRepository(entity.name);
+            const repository = TypeORM.getConnection().getRepository(entity.name);
             await repository.clear();
         }
     });

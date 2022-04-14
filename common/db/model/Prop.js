@@ -1,4 +1,4 @@
-/* export */ class Prop {
+class Prop {
     constructor(id, wid, uid, date, x, y, z, ya, pi, ro, name, desc, act) {
         this.id = id;
         this.worldId = wid;
@@ -16,6 +16,4 @@
     }
 }
 
-module.exports = {
-    Prop
-};
+export default Prop;

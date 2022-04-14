@@ -1,7 +1,7 @@
-const EntitySchema = require('typeorm').EntitySchema;
-const User = require('../model/User').User;
+import {EntitySchema} from 'typeorm';
+import User from '../model/User.js';
 
-module.exports = new EntitySchema({
+const UserSchema = new EntitySchema({
     name: 'User',
     target: User,
     columns: {
@@ -24,3 +24,5 @@ module.exports = new EntitySchema({
         }
     }
 });
+
+export default UserSchema;

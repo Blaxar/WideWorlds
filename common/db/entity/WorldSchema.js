@@ -1,7 +1,7 @@
-const EntitySchema = require('typeorm').EntitySchema;
-const World = require('../model/World').World;
+import {EntitySchema} from 'typeorm';
+import World from '../model/World.js';
 
-module.exports = new EntitySchema({
+const WorldSchema = new EntitySchema({
     name: 'World',
     target: World,
     columns: {
@@ -18,3 +18,5 @@ module.exports = new EntitySchema({
         }
     }
 });
+
+export default WorldSchema;

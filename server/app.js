@@ -1,8 +1,9 @@
-const spawnHttpServer = require('./http');
-const spawnWsServer = require('./ws');
-const yargs = require('yargs');
+import {spawnHttpServer} from './http.js';
+import {spawnWsServer} from './ws.js';
+import yargs from 'yargs';
+import {randomBytes} from 'crypto';
 
-const argv = yargs
+const argv = yargs(process.argv)
   .option('db', {
     description: 'Path to the SQLite3 database file, will be created if need be',
     type: 'string',
@@ -17,6 +18,6 @@ const argv = yargs
   .alias('help', 'h').argv;
 
 // Generate a new secret for each runtime
-const secret = require('crypto').randomBytes(64).toString('hex');
+const secret = randomBytes(64).toString('hex');
 
 spawnHttpServer(argv.db, argv.httpPort, secret).then( server => spawnWsServer(server, secret));

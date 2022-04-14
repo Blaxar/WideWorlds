@@ -1,5 +1,6 @@
 {
   "name": "wideworlds",
+  "type": "module",
   "version": "0.1.0",
   "description": "3D online universe client/server solution, walking in the steps of Active Worlds",
   "main": "index.js",
