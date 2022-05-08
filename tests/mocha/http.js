@@ -17,10 +17,10 @@ const makeTestWorld = async (connection, name, data) => {
     return (await connection.manager.save([new World(undefined, name, data)]))[0].id;
 };
 
-const makeTestUser = async (connection, name, password, email) => {
+const makeTestUser = async (connection, name, password, email, role) => {
     const salt = crypto.randomBytes(db.saltLength).toString('base64');
 
-    const user = new User(undefined, name, db.hashPassword(password, salt), email, salt);
+    const user = new User(undefined, name, db.hashPassword(password, salt), email, role, salt);
     return (await connection.manager.save([user]))[0].id;
 };
 
@@ -55,7 +55,7 @@ describe('http and ws servers', () => {
         worldId = await makeTestWorld(TypeORM.getConnection(), 'Test World', '{}');
 
         // Create user in database, get their ID back
-        userId = await makeTestUser(TypeORM.getConnection(), 'xXx_B0b_xXx', '3p1cP4sSw0Rd', 'test@somemail.com');
+        userId = await makeTestUser(TypeORM.getConnection(), 'xXx_B0b_xXx', '3p1cP4sSw0Rd', 'test@somemail.com', 'admin');
 
         bearerToken = await request(server)
             .post('/api/login')
@@ -329,6 +329,27 @@ describe('http and ws servers', () => {
 
     it('WS connect - Forbidden', async () => {
         await request(server).ws('/ws')
+            .set('Authorization', 'Bearer iNvAlId')
+            .expectConnectionError(403);
+    });
+
+    it('WS world chat connect - OK', async () => {
+        await request(server).ws('/api/worlds/' + worldId + '/ws/chat')
+            .set('Authorization', 'Bearer ' + bearerToken)
+            .sendText('What is up my dude?')
+            .expectText('What is up my dude?')
+            .close()
+            .expectClosed();
+    });
+
+    it('WS world chat connect - Unauthorized', async () => {
+        await request(server).ws('/api/worlds/' + worldId + '/ws/chat')
+            .set('Authorization', 'gibberish')
+            .expectConnectionError(401);
+    });
+
+    it('WS world chat connect - Forbidden', async () => {
+        await request(server).ws('/api/worlds/' + worldId + '/ws/chat')
             .set('Authorization', 'Bearer iNvAlId')
             .expectConnectionError(403);
     });

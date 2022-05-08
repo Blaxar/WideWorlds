@@ -19,6 +19,9 @@ const UserSchema = new EntitySchema({
         email: {
             type: 'text'
         },
+        role: {
+            type: 'text'
+        },
         salt: {
             type: 'text'
         }

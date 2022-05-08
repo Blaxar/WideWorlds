@@ -44,7 +44,7 @@ const spawnHttpServer = async (path, port, secret) => {
             const name = req.body?.name || null;
             const password = req.body?.password || null;
 
-            // Get a list of all existing worlds
+            // Find user matching provided credentials (if any)
             connection.manager.createQueryBuilder(User, 'user')
                 .where('user.name = :name', {name}).getOne().then(user => {
                     if (user && user.password == db.hashPassword(password, user.salt)) {
