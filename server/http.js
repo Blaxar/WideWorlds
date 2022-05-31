@@ -128,6 +128,27 @@ const spawnHttpServer = async (path, port, secret) => {
                 });
         });
 
+        app.get('/api/users', authenticate, (req, res) => {
+            res.setHeader('Content-Type', 'application/json');
+            // Get a list of all existing users
+            connection.manager.createQueryBuilder(User, 'user').getMany().then(users =>
+                res.send(users.map(user => (({id, name, email, role}) => ({id, name, email, role}))(user)))
+            );
+        });
+
+        app.get('/api/users/:id', authenticate, (req, res) => {
+            res.setHeader('Content-Type', 'application/json');
+            // Get a single user using their id (return 404 if not found)
+            connection.manager.createQueryBuilder(User, 'user')
+                .where('user.id = :id', {id: req.params.id}).getOne().then(user => {
+                    if (user) {
+                        res.send(JSON.stringify(user, ['id', 'name', 'email', 'role']));
+                    } else {
+                        res.status(404).json({});
+                    }
+                });
+        });
+
         server.listen(port);
 
         return server

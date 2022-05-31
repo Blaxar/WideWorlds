@@ -121,6 +121,8 @@ describe('http and ws servers', () => {
             .expect(403, done);
     });
 
+    // Testing World API
+
     it('GET /api/worlds - OK', (done) => {
         request(server)
             .get('/api/worlds')
@@ -202,6 +204,8 @@ describe('http and ws servers', () => {
             .expect('Content-Type', /json/)
             .expect(404, done);
     });
+
+    // Testing Prop API
 
     it('GET /api/worlds/id/props - OK', (done) => {
         request(server)
@@ -309,6 +313,94 @@ describe('http and ws servers', () => {
             .expect('Content-Type', /json/)
             .expect(404, done);
     });
+
+    // Testing User API (as as admin)
+
+    it('GET /api/users - OK', (done) => {
+        request(server)
+            .get('/api/users')
+            .set('Authorization', 'Bearer ' + bearerToken)
+            .set('Accept', 'application/json')
+            .expect('Content-Type', /json/)
+            .expect(200).then(response => {
+                const body = response.body;
+
+                // We expect only one entry
+                assert.equal(body.length, 1);
+
+                assert.equal(body[0].id, userId);
+                assert.equal(body[0].name, 'xXx_B0b_xXx');
+                assert.equal(body[0].email, 'test@somemail.com');
+                assert.equal(body[0].role, 'admin');
+
+                done();
+            });
+    });
+
+    it('GET /api/users - Unauthorized', (done) => {
+        request(server)
+            .get('/api/users')
+            .set('Authorization', 'gibberish')
+            .set('Accept', 'application/json')
+            .expect('Content-Type', /json/)
+            .expect(401, done);
+    });
+
+    it('GET /api/users - Forbidden', (done) => {
+        request(server)
+            .get('/api/users')
+            .set('Authorization', 'Bearer iNvAlId')
+            .set('Accept', 'application/json')
+            .expect('Content-Type', /json/)
+            .expect(403, done);
+    });
+
+    it('GET /api/users/id - OK', (done) => {
+        request(server)
+            .get('/api/users/' + userId)
+            .set('Authorization', 'Bearer ' + bearerToken)
+            .set('Accept', 'application/json')
+            .expect('Content-Type', /json/)
+            .expect(200).then(response => {
+                const body = response.body;
+
+                assert.equal(body.id, userId);
+                assert.equal(body.name, 'xXx_B0b_xXx');
+                assert.equal(body.email, 'test@somemail.com');
+                assert.equal(body.role, 'admin');
+
+                done();
+            });
+    });
+
+    it('GET /api/users/id - Unauthorized', (done) => {
+        request(server)
+            .get('/api/users/' + userId)
+            .set('Authorization', 'gibberish')
+            .set('Accept', 'application/json')
+            .expect('Content-Type', /json/)
+            .expect(401, done);
+    });
+
+    it('GET /api/users/id - Forbidden', (done) => {
+        request(server)
+            .get('/api/users/' + userId)
+            .set('Authorization', 'Bearer iNvAlId')
+            .set('Accept', 'application/json')
+            .expect('Content-Type', /json/)
+            .expect(403, done);
+    });
+
+    it('GET /api/users/id - Not found', (done) => {
+        request(server)
+            .get('/api/users/66666')
+            .set('Authorization', 'Bearer ' + bearerToken)
+            .set('Accept', 'application/json')
+            .expect('Content-Type', /json/)
+            .expect(404, done);
+    });
+
+    // Testing websockets
 
     it('WS connect - OK', async () => {
         await request(server).ws('/ws')
