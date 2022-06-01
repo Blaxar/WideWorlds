@@ -6,7 +6,57 @@ import {createServer} from 'http';
 import express from 'express';
 import jwt from 'jsonwebtoken';
 
+const roleLevels = {
+    'tourist': 0,
+    'citizen': 1,
+    'admin': 2
+};
+
 const bearerRegex = /^Bearer (.*)$/i;
+
+const hasUserRole = (role, strict = false) => {
+    return ((req) => {
+        // If we don't enforce strict role check: the actual user role can be superior or equal in rank to what's expected
+        if ((!strict && roleLevels[req.userRole] >= roleLevels[role]) || role == req.userRole) {
+            return true;
+        } else {
+            return false;
+        }
+    });
+};
+
+const hasUserIdInParams = (param) => {
+    return ((req) => {
+        if (req.params[param] && req.params[param] == req.userId) {
+            return true;
+        } else {
+            return false;
+        }
+    });
+};
+
+const middleOr = (firstCondition, secondCondition) => {
+    return ((req) => {
+        return firstCondition(req) || secondCondition(req);
+    });
+};
+
+const middleAnd = (firstCondition, secondCondition) => {
+    return ((req) => {
+        return firstCondition(req) && secondCondition(req);
+    });
+};
+
+const forbiddenOnFalse = (condition) => {
+    return ((req, res, next) => {
+        if (condition(req)) {
+            next();
+        } else {
+            // We aknowledge a Bearer token was provided to us, but it is not valid
+            return res.status(403).json({});
+        }
+    });
+};
 
 const spawnHttpServer = async (path, port, secret) => {
     const authenticate = (req, res, next) => {
@@ -19,13 +69,14 @@ const spawnHttpServer = async (path, port, secret) => {
             return res.status(401).json({});
         }
 
-        jwt.verify(token, secret, (err, userId) => {
+        jwt.verify(token, secret, (err, payload) => {
             if (err) {
                 // We aknowledge a Bearer token was provided to us, but it is not valid
                 return res.status(403).json({});
             }
 
-            req.userId = userId;
+            req.userId = payload.userId;
+            req.userRole = payload.userRole;
 
             next();
         });
@@ -49,7 +100,7 @@ const spawnHttpServer = async (path, port, secret) => {
                 .where('user.name = :name', {name}).getOne().then(user => {
                     if (user && user.password == db.hashPassword(password, user.salt)) {
                         // Provided password is matching
-                        res.send({'id': user.id, 'token': jwt.sign(user.id, secret)});
+                        res.send({'id': user.id, 'role': user.role, 'token': jwt.sign({userId: user.id, userRole: user.role}, secret)});
                     } else {
                         // Invalid credentials provided: we cannot log this user in
                         res.status(403).json({});
@@ -128,7 +179,7 @@ const spawnHttpServer = async (path, port, secret) => {
                 });
         });
 
-        app.get('/api/users', authenticate, (req, res) => {
+        app.get('/api/users', authenticate, forbiddenOnFalse(hasUserRole('admin')), (req, res) => {
             res.setHeader('Content-Type', 'application/json');
             // Get a list of all existing users
             connection.manager.createQueryBuilder(User, 'user').getMany().then(users =>
@@ -136,7 +187,7 @@ const spawnHttpServer = async (path, port, secret) => {
             );
         });
 
-        app.get('/api/users/:id', authenticate, (req, res) => {
+        app.get('/api/users/:id', authenticate, forbiddenOnFalse(middleOr(hasUserRole('admin'), hasUserIdInParams('id'))), (req, res) => {
             res.setHeader('Content-Type', 'application/json');
             // Get a single user using their id (return 404 if not found)
             connection.manager.createQueryBuilder(User, 'user')

@@ -65,14 +65,14 @@ const spawnWsServer = async (server, secret) => {
             return;
         }
 
-        jwt.verify(token, secret, (err, userId) => {
+        jwt.verify(token, secret, (err, payload) => {
             if (err) {
                 // We aknowledge a Bearer token was provided to us, but it is not valid
                 onError(403);
                 return;
             }
 
-            onSuccess(userId);
+            onSuccess(payload.userId);
         });
     };
 
