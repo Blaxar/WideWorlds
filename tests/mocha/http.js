@@ -37,9 +37,11 @@ describe('http and ws servers', () => {
     let wss = null;
     let connection = null;
     let worldId = null;
-    let userId = 0;
+    let adminId = 0;
+    let citizenId = 0;
     let now = 0;
-    let bearerToken = '';
+    let adminBearerToken = '';
+    let citizenBearerToken = '';
 
     before(async () => {
         if (fs.existsSync(dbFile)) {
@@ -54,10 +56,11 @@ describe('http and ws servers', () => {
         // Create world in database, get its ID back
         worldId = await makeTestWorld(TypeORM.getConnection(), 'Test World', '{}');
 
-        // Create user in database, get their ID back
-        userId = await makeTestUser(TypeORM.getConnection(), 'xXx_B0b_xXx', '3p1cP4sSw0Rd', 'test@somemail.com', 'admin');
+        // Create users in database, get their IDs back
+        adminId = await makeTestUser(TypeORM.getConnection(), 'xXx_B0b_xXx', '3p1cP4sSw0Rd', 'test@somemail.com', 'admin');
+        citizenId = await makeTestUser(TypeORM.getConnection(), 'oOo_Al1ce_oOo', '3p1cP4sSw0Rd', 'test2@somemail.com', 'citizen');
 
-        bearerToken = await request(server)
+        adminBearerToken = await request(server)
             .post('/api/login')
             .send({name: 'xXx_B0b_xXx', password: '3p1cP4sSw0Rd'})
             .set('Accept', 'application/json')
@@ -65,7 +68,20 @@ describe('http and ws servers', () => {
             .expect(200).then(async response => {
                 const body = response.body;
 
-                assert.equal(body.id, userId);
+                assert.equal(body.id, adminId);
+                assert.ok(body.token);
+                return body.token;
+            });
+
+        citizenBearerToken = await request(server)
+            .post('/api/login')
+            .send({name: 'oOo_Al1ce_oOo', password: '3p1cP4sSw0Rd'})
+            .set('Accept', 'application/json')
+            .expect('Content-Type', /json/)
+            .expect(200).then(async response => {
+                const body = response.body;
+
+                assert.equal(body.id, citizenId);
                 assert.ok(body.token);
                 return body.token;
             });
@@ -73,9 +89,9 @@ describe('http and ws servers', () => {
         now = Date.now();
 
         // Fill-in database with a few props belonging to the world right above
-        await makeTestProp(TypeORM.getConnection(), worldId, userId, now, 0, 0, 0, 0, 0, 0,
+        await makeTestProp(TypeORM.getConnection(), worldId, adminId, now, 0, 0, 0, 0, 0, 0,
                            'wall01.rwx', 'Some description.', 'create color red;');
-        await makeTestProp(TypeORM.getConnection(), worldId, userId, now, 100, -200, 300, 450, 900, 1350,
+        await makeTestProp(TypeORM.getConnection(), worldId, adminId, now, 100, -200, 300, 450, 900, 1350,
                            'wall02.rwx', 'Some other description.', 'create color blue;');
     });
 
@@ -104,7 +120,7 @@ describe('http and ws servers', () => {
             .expect(200).then(response => {
                 const body = response.body;
 
-                assert.equal(body.id, userId);
+                assert.equal(body.id, adminId);
                 assert.ok(body.token);
 
                 done();
@@ -114,7 +130,7 @@ describe('http and ws servers', () => {
     it('POST /api/login - Forbidden', (done) => {
         request(server)
             .post('/api/login')
-            .set('Authorization', 'Bearer ' + bearerToken)
+            .set('Authorization', 'Bearer ' + adminBearerToken)
             .send({name: 'xXx_B0b_xXx', password: 'UwU'})
             .set('Accept', 'application/json')
             .expect('Content-Type', /json/)
@@ -126,7 +142,7 @@ describe('http and ws servers', () => {
     it('GET /api/worlds - OK', (done) => {
         request(server)
             .get('/api/worlds')
-            .set('Authorization', 'Bearer ' + bearerToken)
+            .set('Authorization', 'Bearer ' + adminBearerToken)
             .set('Accept', 'application/json')
             .expect('Content-Type', /json/)
             .expect(200).then(response => {
@@ -164,7 +180,7 @@ describe('http and ws servers', () => {
     it('GET /api/worlds/id - OK', (done) => {
         request(server)
             .get('/api/worlds/' + worldId)
-            .set('Authorization', 'Bearer ' + bearerToken)
+            .set('Authorization', 'Bearer ' + adminBearerToken)
             .set('Accept', 'application/json')
             .expect('Content-Type', /json/)
             .expect(200).then(response => {
@@ -199,7 +215,7 @@ describe('http and ws servers', () => {
     it('GET /api/worlds/id - Not found', (done) => {
         request(server)
             .get('/api/worlds/66666')
-            .set('Authorization', 'Bearer ' + bearerToken)
+            .set('Authorization', 'Bearer ' + adminBearerToken)
             .set('Accept', 'application/json')
             .expect('Content-Type', /json/)
             .expect(404, done);
@@ -210,7 +226,7 @@ describe('http and ws servers', () => {
     it('GET /api/worlds/id/props - OK', (done) => {
         request(server)
             .get('/api/worlds/' + worldId + '/props')
-            .set('Authorization', 'Bearer ' + bearerToken)
+            .set('Authorization', 'Bearer ' + adminBearerToken)
             .set('Accept', 'application/json')
             .expect('Content-Type', /json/)
             .expect(200).then(response => {
@@ -222,7 +238,7 @@ describe('http and ws servers', () => {
 
                 // Assert first prop fields
                 assert.equal(body[0].worldId, worldId);
-                assert.equal(body[0].userId, userId);
+                assert.equal(body[0].userId, adminId);
                 assert.equal(body[0].date, now);
                 assert.equal(body[0].x, 0);
                 assert.equal(body[0].y, 0);
@@ -236,7 +252,7 @@ describe('http and ws servers', () => {
 
                 // Assert second prop fields
                 assert.equal(body[1].worldId, worldId);
-                assert.equal(body[1].userId, userId);
+                assert.equal(body[1].userId, adminId);
                 assert.equal(body[1].date, now);
                 assert.equal(body[1].x, 100);
                 assert.equal(body[1].y, -200);
@@ -257,7 +273,7 @@ describe('http and ws servers', () => {
     it('GET /api/worlds/id/props with filters', (done) => {
         request(server)
             .get('/api/worlds/' + worldId + '/props?minX=50&maxX=150&minY=-240&maxY=-160&minZ=270&maxZ=330')
-            .set('Authorization', 'Bearer ' + bearerToken)
+            .set('Authorization', 'Bearer ' + adminBearerToken)
             .set('Accept', 'application/json')
             .expect('Content-Type', /json/)
             .expect(200).then(response => {
@@ -269,7 +285,7 @@ describe('http and ws servers', () => {
 
                 // Assert prop fields
                 assert.equal(body[0].worldId, worldId);
-                assert.equal(body[0].userId, userId);
+                assert.equal(body[0].userId, adminId);
                 assert.equal(body[0].date, now);
                 assert.equal(body[0].x, 100);
                 assert.equal(body[0].y, -200);
@@ -308,36 +324,41 @@ describe('http and ws servers', () => {
     it('GET /api/worlds/id/props - Not found', (done) => {
         request(server)
             .get('/api/worlds/66666/props')
-            .set('Authorization', 'Bearer ' + bearerToken)
+            .set('Authorization', 'Bearer ' + adminBearerToken)
             .set('Accept', 'application/json')
             .expect('Content-Type', /json/)
             .expect(404, done);
     });
 
-    // Testing User API (as as admin)
+    // Testing User API (as admin)
 
-    it('GET /api/users - OK', (done) => {
+    it('GET /api/users (as admin) - OK', (done) => {
         request(server)
             .get('/api/users')
-            .set('Authorization', 'Bearer ' + bearerToken)
+            .set('Authorization', 'Bearer ' + adminBearerToken)
             .set('Accept', 'application/json')
             .expect('Content-Type', /json/)
             .expect(200).then(response => {
                 const body = response.body;
 
                 // We expect only one entry
-                assert.equal(body.length, 1);
+                assert.equal(body.length, 2);
 
-                assert.equal(body[0].id, userId);
+                assert.equal(body[0].id, adminId);
                 assert.equal(body[0].name, 'xXx_B0b_xXx');
                 assert.equal(body[0].email, 'test@somemail.com');
                 assert.equal(body[0].role, 'admin');
+
+                assert.equal(body[1].id, citizenId);
+                assert.equal(body[1].name, 'oOo_Al1ce_oOo');
+                assert.equal(body[1].email, 'test2@somemail.com');
+                assert.equal(body[1].role, 'citizen');
 
                 done();
             });
     });
 
-    it('GET /api/users - Unauthorized', (done) => {
+    it('GET /api/users (as admin) - Unauthorized', (done) => {
         request(server)
             .get('/api/users')
             .set('Authorization', 'gibberish')
@@ -346,7 +367,7 @@ describe('http and ws servers', () => {
             .expect(401, done);
     });
 
-    it('GET /api/users - Forbidden', (done) => {
+    it('GET /api/users (as admin) - Forbidden', (done) => {
         request(server)
             .get('/api/users')
             .set('Authorization', 'Bearer iNvAlId')
@@ -355,16 +376,16 @@ describe('http and ws servers', () => {
             .expect(403, done);
     });
 
-    it('GET /api/users/id - OK', (done) => {
+    it('GET /api/users/id (as admin) - OK (self)', (done) => {
         request(server)
-            .get('/api/users/' + userId)
-            .set('Authorization', 'Bearer ' + bearerToken)
+            .get('/api/users/' + adminId)
+            .set('Authorization', 'Bearer ' + adminBearerToken)
             .set('Accept', 'application/json')
             .expect('Content-Type', /json/)
             .expect(200).then(response => {
                 const body = response.body;
 
-                assert.equal(body.id, userId);
+                assert.equal(body.id, adminId);
                 assert.equal(body.name, 'xXx_B0b_xXx');
                 assert.equal(body.email, 'test@somemail.com');
                 assert.equal(body.role, 'admin');
@@ -373,40 +394,132 @@ describe('http and ws servers', () => {
             });
     });
 
-    it('GET /api/users/id - Unauthorized', (done) => {
+    it('GET /api/users/id (as admin) - OK (someone else)', (done) => {
         request(server)
-            .get('/api/users/' + userId)
+            .get('/api/users/' + citizenId)
+            .set('Authorization', 'Bearer ' + adminBearerToken)
+            .set('Accept', 'application/json')
+            .expect('Content-Type', /json/)
+            .expect(200).then(response => {
+                const body = response.body;
+
+                assert.equal(body.id, citizenId);
+                assert.equal(body.name, 'oOo_Al1ce_oOo');
+                assert.equal(body.email, 'test2@somemail.com');
+                assert.equal(body.role, 'citizen');
+
+                done();
+            });
+    });
+
+    it('GET /api/users/id (as admin) - Unauthorized', (done) => {
+        request(server)
+            .get('/api/users/' + adminId)
             .set('Authorization', 'gibberish')
             .set('Accept', 'application/json')
             .expect('Content-Type', /json/)
             .expect(401, done);
     });
 
-    it('GET /api/users/id - Forbidden', (done) => {
+    it('GET /api/users/id (as admin) - Forbidden', (done) => {
         request(server)
-            .get('/api/users/' + userId)
+            .get('/api/users/' + adminId)
             .set('Authorization', 'Bearer iNvAlId')
             .set('Accept', 'application/json')
             .expect('Content-Type', /json/)
             .expect(403, done);
     });
 
-    it('GET /api/users/id - Not found', (done) => {
+    it('GET /api/users/id (as admin) - Not found', (done) => {
         request(server)
             .get('/api/users/66666')
-            .set('Authorization', 'Bearer ' + bearerToken)
+            .set('Authorization', 'Bearer ' + adminBearerToken)
             .set('Accept', 'application/json')
             .expect('Content-Type', /json/)
             .expect(404, done);
+    });
+
+    // Testing User API (as citizen)
+
+    it('GET /api/users (as citizen) - Forbidden (low rank)', (done) => {
+        request(server)
+            .get('/api/users')
+            .set('Authorization', 'Bearer ' + citizenBearerToken)
+            .set('Accept', 'application/json')
+            .expect('Content-Type', /json/)
+            .expect(403, done);
+    });
+
+    it('GET /api/users (as citizen) - Unauthorized', (done) => {
+        request(server)
+            .get('/api/users')
+            .set('Authorization', 'gibberish')
+            .set('Accept', 'application/json')
+            .expect('Content-Type', /json/)
+            .expect(401, done);
+    });
+
+    it('GET /api/users (as citizen) - Forbidden', (done) => {
+        request(server)
+            .get('/api/users')
+            .set('Authorization', 'Bearer iNvAlId')
+            .set('Accept', 'application/json')
+            .expect('Content-Type', /json/)
+            .expect(403, done);
+    });
+
+    it('GET /api/users/id (as citizen) - OK (self)', (done) => {
+        request(server)
+            .get('/api/users/' + citizenId)
+            .set('Authorization', 'Bearer ' + citizenBearerToken)
+            .set('Accept', 'application/json')
+            .expect('Content-Type', /json/)
+            .expect(200).then(response => {
+                const body = response.body;
+
+                assert.equal(body.id, citizenId);
+                assert.equal(body.name, 'oOo_Al1ce_oOo');
+                assert.equal(body.email, 'test2@somemail.com');
+                assert.equal(body.role, 'citizen');
+
+                done();
+            });
+    });
+
+    it('GET /api/users/id (as citizen) - Forbidden (someone else)', (done) => {
+        request(server)
+            .get('/api/users/' + adminId)
+            .set('Authorization', 'Bearer ' + citizenBearerToken)
+            .set('Accept', 'application/json')
+            .expect('Content-Type', /json/)
+            .expect(403, done);;
+    });
+
+    it('GET /api/users/id (as citizen) - Unauthorized', (done) => {
+        request(server)
+            .get('/api/users/' + citizenId)
+            .set('Authorization', 'gibberish')
+            .set('Accept', 'application/json')
+            .expect('Content-Type', /json/)
+            .expect(401, done);
+    });
+
+    it('GET /api/users/id (as citizen) - Forbidden', (done) => {
+        request(server)
+            .get('/api/users/' + citizenId)
+            .set('Authorization', 'Bearer iNvAlId')
+            .set('Accept', 'application/json')
+            .expect('Content-Type', /json/)
+            .expect(403, done);
     });
 
     // Testing websockets
 
     it('WS connect - OK', async () => {
         await request(server).ws('/ws')
-            .set('Authorization', 'Bearer ' + bearerToken)
+            .set('Authorization', 'Bearer ' + adminBearerToken)
             .sendText('What is my id?')
-            .expectText(`${userId}`)
+            .expectText(`${adminId}`)
             .sendText('What is up my dude?')
             .expectText('???')
             .close()
@@ -427,7 +540,7 @@ describe('http and ws servers', () => {
 
     it('WS world chat connect - OK', async () => {
         await request(server).ws('/api/worlds/' + worldId + '/ws/chat')
-            .set('Authorization', 'Bearer ' + bearerToken)
+            .set('Authorization', 'Bearer ' + adminBearerToken)
             .sendText('What is up my dude?')
             .expectText('What is up my dude?')
             .close()
