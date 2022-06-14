@@ -124,7 +124,8 @@ describe('http and ws servers', () => {
                 assert.ok(body.token);
 
                 done();
-            });
+            })
+            .catch(err => done(err));
     });
 
     it('POST /api/login - Forbidden', (done) => {
@@ -156,7 +157,8 @@ describe('http and ws servers', () => {
                 assert.equal(body[0].data, '{}');
 
                 done();
-            });
+            })
+            .catch(err => done(err));
     });
 
     it('GET /api/worlds - Unauthorized', (done) => {
@@ -191,7 +193,8 @@ describe('http and ws servers', () => {
                 assert.equal(body.data, '{}');
 
                 done();
-            });
+            })
+            .catch(err => done(err));
     });
 
     it('GET /api/worlds/id - Unauthorized', (done) => {
@@ -264,10 +267,9 @@ describe('http and ws servers', () => {
                 assert.equal(body[1].description, 'Some other description.')
                 assert.equal(body[1].action, 'create color blue;');
 
-                // Success!
                 done();
             })
-            .catch(err => done(err))
+            .catch(err => done(err));
     });
 
     it('GET /api/worlds/id/props with filters', (done) => {
@@ -297,10 +299,9 @@ describe('http and ws servers', () => {
                 assert.equal(body[0].description, 'Some other description.')
                 assert.equal(body[0].action, 'create color blue;');
 
-                // Success!
                 done();
             })
-            .catch(err => done(err))
+            .catch(err => done(err));
     });
 
     it('GET /api/worlds/id/props - Unauthorized', (done) => {
@@ -355,7 +356,8 @@ describe('http and ws servers', () => {
                 assert.equal(body[1].role, 'citizen');
 
                 done();
-            });
+            })
+            .catch(err => done(err));
     });
 
     it('GET /api/users (as admin) - Unauthorized', (done) => {
@@ -391,7 +393,8 @@ describe('http and ws servers', () => {
                 assert.equal(body.role, 'admin');
 
                 done();
-            });
+            })
+            .catch(err => done(err));
     });
 
     it('GET /api/users/id (as admin) - OK (someone else)', (done) => {
@@ -409,7 +412,8 @@ describe('http and ws servers', () => {
                 assert.equal(body.role, 'citizen');
 
                 done();
-            });
+            })
+            .catch(err => done(err));
     });
 
     it('GET /api/users/id (as admin) - Unauthorized', (done) => {
@@ -483,7 +487,8 @@ describe('http and ws servers', () => {
                 assert.equal(body.role, 'citizen');
 
                 done();
-            });
+            })
+            .catch(err => done(err));
     });
 
     it('GET /api/users/id (as citizen) - Forbidden (someone else)', (done) => {

@@ -24,6 +24,10 @@ const UserSchema = new EntitySchema({
         },
         salt: {
             type: 'text'
+        },
+        privilegePassword: {
+            type: 'text',
+            nullable: true
         }
     }
 });
