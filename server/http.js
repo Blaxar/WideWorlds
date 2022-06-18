@@ -2,61 +2,12 @@ import * as db from '../common/db/utils.js';
 import World from '../common/db/model/World.js';
 import Prop from '../common/db/model/Prop.js';
 import User from '../common/db/model/User.js';
+import {roleLevels, hasUserRole, hasUserIdInParams, middleOr, middleAnd, forbiddenOnFalse} from './utils.js';
 import {createServer} from 'http';
 import express from 'express';
 import jwt from 'jsonwebtoken';
 
-const roleLevels = {
-    'tourist': 0,
-    'citizen': 1,
-    'admin': 2
-};
-
 const bearerRegex = /^Bearer (.*)$/i;
-
-const hasUserRole = (role, strict = false) => {
-    return ((req) => {
-        // If we don't enforce strict role check: the actual user role can be superior or equal in rank to what's expected
-        if ((!strict && roleLevels[req.userRole] >= roleLevels[role]) || role == req.userRole) {
-            return true;
-        } else {
-            return false;
-        }
-    });
-};
-
-const hasUserIdInParams = (param) => {
-    return ((req) => {
-        if (req.params[param] && req.params[param] == req.userId) {
-            return true;
-        } else {
-            return false;
-        }
-    });
-};
-
-const middleOr = (firstCondition, secondCondition) => {
-    return ((req) => {
-        return firstCondition(req) || secondCondition(req);
-    });
-};
-
-const middleAnd = (firstCondition, secondCondition) => {
-    return ((req) => {
-        return firstCondition(req) && secondCondition(req);
-    });
-};
-
-const forbiddenOnFalse = (condition) => {
-    return ((req, res, next) => {
-        if (condition(req)) {
-            next();
-        } else {
-            // We aknowledge a Bearer token was provided to us, but it is not valid
-            return res.status(403).json({});
-        }
-    });
-};
 
 const spawnHttpServer = async (path, port, secret) => {
     const authenticate = (req, res, next) => {
