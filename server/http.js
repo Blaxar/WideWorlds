@@ -9,6 +9,10 @@ import jwt from 'jsonwebtoken';
 
 const bearerRegex = /^Bearer (.*)$/i;
 
+const minNbUsersPerPage = 1;
+const defaultNbUsersPerPage = 200;
+const maxNbUsersPerPage = defaultNbUsersPerPage*10;
+
 const spawnHttpServer = async (path, port, secret) => {
     const authenticate = (req, res, next) => {
         // Get Bearer token, we strip the 'Bearer' part
@@ -56,13 +60,15 @@ const spawnHttpServer = async (path, port, secret) => {
                         // Invalid credentials provided: we cannot log this user in
                         res.status(403).json({});
                     }
-            });
+                })
+                .catch(err => res.status(500).json({}));
         });
 
         app.get('/api/worlds', authenticate, (req, res) => {
             res.setHeader('Content-Type', 'application/json');
             // Get a list of all existing worlds
-            connection.manager.createQueryBuilder(World, 'world').getMany().then(worlds => res.send(worlds));
+            connection.manager.createQueryBuilder(World, 'world').getMany().then(worlds => res.send(worlds))
+            .catch(err => res.status(500).json({}));
         });
 
         app.get('/api/worlds/:id', authenticate, (req, res) => {
@@ -75,19 +81,20 @@ const spawnHttpServer = async (path, port, secret) => {
                     } else {
                         res.status(404).json({});
                     }
-                });
+                })
+                .catch(err => res.status(500).json({}));
         });
 
         app.get('/api/worlds/:id/props', authenticate, (req, res) => {
             res.setHeader('Content-Type', 'application/json');
             const wid = req.params.id
 
-            const minX = req.query.minX
-            const maxX = req.query.maxX
-            const minY = req.query.minY
-            const maxY = req.query.maxY
-            const minZ = req.query.minZ
-            const maxZ = req.query.maxZ
+            let minX = req.query.minX
+            let maxX = req.query.maxX
+            let minY = req.query.minY
+            let maxY = req.query.maxY
+            let minZ = req.query.minZ
+            let maxZ = req.query.maxZ
 
             // Get prop of single world using its id (return 404 if not found)
             connection.manager.createQueryBuilder(World, 'world')
@@ -101,41 +108,95 @@ const spawnHttpServer = async (path, port, secret) => {
 
                         // Get chunked list of props by filtering with provided XYZ boundaries (if any)
                         if (minX) {
-                            queryBuilder.andWhere('prop.x >= :minX', {minX: parseInt(minX)});
+                            minX = parseInt(minX)
+
+                            if (!isFinite(minX)) {
+                                res.status(400).json({});
+                                return;
+                            }
+
+                            queryBuilder.andWhere('prop.x >= :minX', {minX});
                         }
 
                         if (maxX) {
-                            queryBuilder.andWhere('prop.x < :maxX', {maxX: parseInt(maxX)});
+                            maxX = parseInt(maxX)
+
+                            if (!isFinite(maxX)) {
+                                res.status(400).json({});
+                                return;
+                            }
+
+                            queryBuilder.andWhere('prop.x < :maxX', {maxX});
                         }
 
                         if (minY) {
-                            queryBuilder.andWhere('prop.y >= :minY', {minY: parseInt(minY)});
+                            minY = parseInt(minY)
+
+                            if (!isFinite(minY)) {
+                                res.status(400).json({});
+                                return;
+                            }
+
+                            queryBuilder.andWhere('prop.y >= :minY', {minY});
                         }
 
                         if (maxY) {
-                            queryBuilder.andWhere('prop.y < :maxY', {maxY: parseInt(maxY)});
+                            maxY = parseInt(maxY)
+
+                            if (!isFinite(maxY)) {
+                                res.status(400).json({});
+                                return;
+                            }
+
+                            queryBuilder.andWhere('prop.y < :maxY', {maxY});
                         }
 
                         if (minZ) {
-                            queryBuilder.andWhere('prop.z >= :minZ', {minZ: parseInt(minZ)});
+                            minZ = parseInt(minZ)
+
+                            if (!isFinite(minZ)) {
+                                res.status(400).json({});
+                                return;
+                            }
+
+                            queryBuilder.andWhere('prop.z >= :minZ', {minZ});
                         }
 
                         if (maxZ) {
-                            queryBuilder.andWhere('prop.z < :maxZ', {maxZ: parseInt(maxZ)});
+                            maxZ = parseInt(maxZ)
+
+                            if (!isFinite(maxZ)) {
+                                res.status(400).json({});
+                                return;
+                            }
+
+                            queryBuilder.andWhere('prop.z < :maxZ', {maxZ});
                         }
 
                         // Respond with list of props
                         queryBuilder.getMany().then(props => res.send(props));
                     }
-                });
+                })
+                .catch(err => res.status(500).json({}));
         });
 
         app.get('/api/users', authenticate, forbiddenOnFalse(hasUserRole('admin')), (req, res) => {
             res.setHeader('Content-Type', 'application/json');
+
+            // Fetch pagination info from query parameters (if any)
+            const page = req.query.page ? parseInt(req.query.page) : 0;
+            const amount = req.query.amount ? parseInt(req.query.amount) : defaultNbUsersPerPage;
+
+            if (!isFinite(page) || !isFinite(amount) || amount > maxNbUsersPerPage || amount < minNbUsersPerPage || page < 0) {
+                res.status(400).json({});
+                return;
+            }
+
             // Get a list of all existing users
-            connection.manager.createQueryBuilder(User, 'user').getMany().then(users =>
+            connection.manager.createQueryBuilder(User, 'user').skip(page*amount).take(amount).getMany().then(users =>
                 res.send(users.map(user => (({id, name, email, role}) => ({id, name, email, role}))(user)))
-            );
+            )
+            .catch(err => res.status(500).json({}));
         });
 
         app.get('/api/users/:id', authenticate, forbiddenOnFalse(middleOr(hasUserRole('admin'), hasUserIdInParams('id'))), (req, res) => {
@@ -148,7 +209,8 @@ const spawnHttpServer = async (path, port, secret) => {
                     } else {
                         res.status(404).json({});
                     }
-                });
+                })
+                .catch(err => res.status(500).json({}));
         });
 
         server.listen(port);

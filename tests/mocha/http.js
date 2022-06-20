@@ -272,7 +272,7 @@ describe('http and ws servers', () => {
             .catch(err => done(err));
     });
 
-    it('GET /api/worlds/id/props with filters', (done) => {
+    it('GET /api/worlds/id/props with filters - OK', (done) => {
         request(server)
             .get('/api/worlds/' + worldId + '/props?minX=50&maxX=150&minY=-240&maxY=-160&minZ=270&maxZ=330')
             .set('Authorization', 'Bearer ' + adminBearerToken)
@@ -304,6 +304,15 @@ describe('http and ws servers', () => {
             .catch(err => done(err));
     });
 
+    it('GET /api/worlds/id/props with filters - Bad Request', (done) => {
+        request(server)
+            .get('/api/worlds/' + worldId + '/props?minX=sdgdsgsdg&maxX=150&minY=-240&maxY=-160&minZ=270&maxZ=330')
+            .set('Authorization', 'Bearer ' + adminBearerToken)
+            .set('Accept', 'application/json')
+            .expect('Content-Type', /json/)
+            .expect(400, done);
+    });
+
     it('GET /api/worlds/id/props - Unauthorized', (done) => {
         request(server)
             .get('/api/worlds/' + worldId + '/props')
@@ -333,7 +342,7 @@ describe('http and ws servers', () => {
 
     // Testing User API (as admin)
 
-    it('GET /api/users (as admin) - OK', (done) => {
+    it('GET /api/users (as admin) - OK (all)', (done) => {
         request(server)
             .get('/api/users')
             .set('Authorization', 'Bearer ' + adminBearerToken)
@@ -358,6 +367,59 @@ describe('http and ws servers', () => {
                 done();
             })
             .catch(err => done(err));
+    });
+
+    it('GET /api/users (as admin) - OK (first page)', (done) => {
+        request(server)
+            .get('/api/users?amount=1')
+            .set('Authorization', 'Bearer ' + adminBearerToken)
+            .set('Accept', 'application/json')
+            .expect('Content-Type', /json/)
+            .expect(200).then(response => {
+                const body = response.body;
+
+                // We expect only one entry
+                assert.equal(body.length, 1);
+
+                assert.equal(body[0].id, adminId);
+                assert.equal(body[0].name, 'xXx_B0b_xXx');
+                assert.equal(body[0].email, 'test@somemail.com');
+                assert.equal(body[0].role, 'admin');
+
+                done();
+            })
+            .catch(err => done(err));
+    });
+
+    it('GET /api/users (as admin) - OK (second page)', (done) => {
+        request(server)
+            .get('/api/users?amount=1&page=1')
+            .set('Authorization', 'Bearer ' + adminBearerToken)
+            .set('Accept', 'application/json')
+            .expect('Content-Type', /json/)
+            .expect(200).then(response => {
+                const body = response.body;
+
+                // We expect only one entry
+                assert.equal(body.length, 1);
+
+                assert.equal(body[0].id, citizenId);
+                assert.equal(body[0].name, 'oOo_Al1ce_oOo');
+                assert.equal(body[0].email, 'test2@somemail.com');
+                assert.equal(body[0].role, 'citizen');
+
+                done();
+            })
+            .catch(err => done(err));
+    });
+
+    it('GET /api/users (as admin) - Bad Request', (done) => {
+        request(server)
+            .get('/api/users?amount=-1000000')
+            .set('Authorization', 'Bearer ' + adminBearerToken)
+            .set('Accept', 'application/json')
+            .expect('Content-Type', /json/)
+            .expect(400, done);
     });
 
     it('GET /api/users (as admin) - Unauthorized', (done) => {
