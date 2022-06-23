@@ -4,6 +4,7 @@ import Prop from '../common/db/model/Prop.js';
 import User from '../common/db/model/User.js';
 import {roleLevels, hasUserRole, hasUserIdInParams, middleOr, middleAnd, forbiddenOnFalse} from './utils.js';
 import {createServer} from 'http';
+import cors from 'cors';
 import express from 'express';
 import jwt from 'jsonwebtoken';
 
@@ -39,13 +40,14 @@ const spawnHttpServer = async (path, port, secret) => {
 
     return db.init(path).then(async connection => {
         // Ready the express app
-        const app = express().use(express.json());
+        const app = express().use(express.json()).use(cors());
 
         // Create http server
         const server = createServer(app);
 
         app.post('/api/login', (req, res) => {
             res.setHeader('Content-Type', 'application/json');
+
             // We expect a json body from the request, with 'name' and 'password' fields
             const name = req.body?.name || null;
             const password = req.body?.password || null;
