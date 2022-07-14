@@ -25,19 +25,21 @@ describe('AppState', () => {
 
         assert.equal(appState.state, AppStates.SIGNED_OUT);
         assert.equal(appState.signIn(), AppStates.SIGNING_IN);
+        assert.equal(appState.failedSigningIn(), AppStates.SIGNED_OUT);
+        assert.equal(appState.signIn(), AppStates.SIGNING_IN);
         assert.equal(appState.toWorldSelection(), AppStates.WORLD_UNLOADED);
         assert.equal(appState.loadWorld(), AppStates.WORLD_LOADING);
         assert.equal(appState.readyWorld(), AppStates.WORLD_LOADED);
         assert.equal(appState.unloadWorld(), AppStates.WORLD_UNLOADED);
         assert.equal(appState.signOut(), AppStates.SIGNED_OUT);
 
-        assert.equal(inSignedOut, 2);
-        assert.equal(inSigningIn, 1);
+        assert.equal(inSignedOut, 3);
+        assert.equal(inSigningIn, 2);
         assert.equal(inWorldUnloaded, 2);
         assert.equal(inWorldLoading, 1);
         assert.equal(inWorldLoaded, 1);
-        assert.equal(outSignedOut, 1);
-        assert.equal(outSigningIn, 1);
+        assert.equal(outSignedOut, 2);
+        assert.equal(outSigningIn, 2);
         assert.equal(outWorldUnloaded, 2);
         assert.equal(outWorldLoading, 1);
         assert.equal(outWorldLoaded, 1);
