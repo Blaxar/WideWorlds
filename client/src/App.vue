@@ -2,10 +2,19 @@
 import * as THREE from 'three';
 import Splash from './components/Splash.vue';
 import Login from './components/Login.vue';
+import AppState, {AppStates} from './core/app-state.js';
+
+const hooks = {[AppStates.SIGNED_OUT]: [() => console.log("Entering 'Signed out' state."), () => console.log("Leaving 'Signed out' state.")],
+               [AppStates.SIGNING_IN]: [() => console.log("Entering 'Signing in' state."), () => console.log("Leaving 'Signing in' state.")],
+               [AppStates.WORLD_UNLOADED]: [() => console.log("Entering 'World unloaded' state."), () => console.log("Leaving 'World unloaded' state.")],
+               [AppStates.WORLD_LOADING]: [() => console.log("Entering 'World loading' state."), () => console.log("Leaving 'World loading' state.")],
+               [AppStates.WORLD_LOADED]: [() => console.log("Entering 'World loaded' state."), () => console.log("Leaving 'World loaded' state.")]};
+
+const appState = new AppState(hooks);
 
 const handleLogin = ({username, password}) => {
 
-    console.log(username, password, import.meta.env);
+    appState.signIn();
 
     const headers = new Headers();
     headers.append('Content-Type', 'application/json');
@@ -17,9 +26,17 @@ const handleLogin = ({username, password}) => {
         mode: 'cors'
     });
 
-    fetch(request).then(response => { return response.json(); })
-    .then(json => { console.log(json); })
-    .catch(error => { console.log(error); });
+    fetch(request).then(response => {
+        if(response.ok) return response.json();
+        else throw(response.status);
+    })
+    .then(json => {
+        console.log(json);
+        appState.toWorldSelection();
+    })
+    .catch(error => {
+        appState.failedSigningIn();
+    });
 
 };
 

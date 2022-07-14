@@ -14,6 +14,7 @@ class AppState {
 
         this.transitions = {signIn: [AppStates.SIGNED_OUT, AppStates.SIGNING_IN],
                             toWorldSelection: [AppStates.SIGNING_IN, AppStates.WORLD_UNLOADED],
+                            failedSigningIn: [AppStates.SIGNING_IN, AppStates.SIGNED_OUT],
                             signOut: [AppStates.WORLD_UNLOADED, AppStates.SIGNED_OUT],
                             loadWorld: [AppStates.WORLD_UNLOADED, AppStates.WORLD_LOADING],
                             readyWorld: [AppStates.WORLD_LOADING, AppStates.WORLD_LOADED],

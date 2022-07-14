@@ -1,7 +1,7 @@
 <script setup>
 
 const props = defineProps({
-  login_prompt: {
+  prompt: {
     type: String,
     default: 'Log in'
   },
@@ -33,7 +33,7 @@ const onSubmit = () => { emit('submit', {username: props.username, password: pro
 
 <template>
   <div class="login">
-    <h2>{{ login_prompt }}</h2>
+    <h2>{{ prompt }}</h2>
     <form @submit.prevent="onSubmit">
     <table>
     <tr><td><label> Username: </label></td>
