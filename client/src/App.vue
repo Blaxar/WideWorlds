@@ -1,14 +1,33 @@
 <script setup>
+import {computed, reactive} from "vue";
 import * as THREE from 'three';
 import Splash from './components/Splash.vue';
 import Login from './components/Login.vue';
+import WorldSelection from './components/WorldSelection.vue';
 import AppState, {AppStates} from './core/app-state.js';
 
-const hooks = {[AppStates.SIGNED_OUT]: [() => console.log("Entering 'Signed out' state."), () => console.log("Leaving 'Signed out' state.")],
-               [AppStates.SIGNING_IN]: [() => console.log("Entering 'Signing in' state."), () => console.log("Leaving 'Signing in' state.")],
-               [AppStates.WORLD_UNLOADED]: [() => console.log("Entering 'World unloaded' state."), () => console.log("Leaving 'World unloaded' state.")],
-               [AppStates.WORLD_LOADING]: [() => console.log("Entering 'World loading' state."), () => console.log("Leaving 'World loading' state.")],
-               [AppStates.WORLD_LOADED]: [() => console.log("Entering 'World loaded' state."), () => console.log("Leaving 'World loaded' state.")]};
+const main = reactive({
+    state: AppStates.SIGNED_OUT
+});
+
+const entranceHook = (state) => {
+    console.log('Entering "' + state + '" state.');
+    main.state = state;
+};
+
+const exitHook = (state) => {
+    console.log('Leaving "' + state + '" state.');
+};
+
+const hooks = {
+    [AppStates.SIGNED_OUT]: [entranceHook, exitHook],
+    [AppStates.SIGNING_IN]: [entranceHook, exitHook],
+    [AppStates.WORLD_UNLOADED]: [entranceHook, exitHook],
+    [AppStates.WORLD_LOADING]: [entranceHook, exitHook],
+    [AppStates.WORLD_LOADED]: [entranceHook, exitHook]
+};
+
+let token = null;
 
 const appState = new AppState(hooks);
 
@@ -31,7 +50,7 @@ const handleLogin = ({username, password}) => {
         else throw(response.status);
     })
     .then(json => {
-        console.log(json);
+        token = json.token;
         appState.toWorldSelection();
     })
     .catch(error => {
@@ -40,11 +59,15 @@ const handleLogin = ({username, password}) => {
 
 };
 
+const displayLogin = computed(() => main.state === AppStates.SIGNED_OUT);
+const displayWorldSelection = computed(() => main.state === AppStates.WORLD_UNLOADED);
+
 </script>
 
 <template>
     <Splash msg="Wide Worlds" />
-    <Login @submit="handleLogin" />
+    <Login v-if="displayLogin" @submit="handleLogin" />
+    <WorldSelection v-if="displayWorldSelection" />
 </template>
 
 <style>
