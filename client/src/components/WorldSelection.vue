@@ -17,16 +17,16 @@ const props = defineProps({
     type: Array,
     default: []
   },
-  world: {
-    type: Object,
+  worldId: {
+    type: Number,
     default: null
   }
 });
 
 const emit = defineEmits(['submit', 'cancel', 'fetchWorldList']);
 
-const onSubmit = () => { emit('submit', world.id); }
-const cancel = () => { emit('cancel'); }
+const onSubmit = () => { emit('submit', props.worldId); }
+const cancel = () => { props.worlds.length = 0; emit('cancel'); }
 
 </script>
 
@@ -37,7 +37,7 @@ const cancel = () => { emit('cancel'); }
     <table>
     <tr><td><label> World: </label></td>
     <td>
-      <select v-model="world">
+      <select v-model="worldId">
         <option v-for="w in worlds" :key="w.id" :value="w.id">
           {{ w.name }}
         </option>

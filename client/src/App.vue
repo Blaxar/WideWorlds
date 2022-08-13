@@ -80,6 +80,20 @@ const handleLogin = ({username, password}) => {
 
 };
 
+const handleWorldSelection = (world) => {
+
+    // WIP
+
+    console.log(world);
+
+};
+
+const handleWorldCancel = () => {
+
+    appState.signOut();
+
+};
+
 const displayLogin = computed(() => main.state === AppStates.SIGNED_OUT);
 const displayWorldSelection = computed(() => main.state === AppStates.WORLD_UNLOADED && main.worlds.length > 0);
 
@@ -88,7 +102,7 @@ const displayWorldSelection = computed(() => main.state === AppStates.WORLD_UNLO
 <template>
     <Splash msg="Wide Worlds" />
     <Login v-if="displayLogin" @submit="handleLogin" />
-    <WorldSelection v-if="displayWorldSelection" :worlds="main.worlds"/>
+    <WorldSelection v-if="displayWorldSelection" :worlds="main.worlds" @submit="handleWorldSelection" @cancel="handleWorldCancel"/>
 </template>
 
 <style>

@@ -9,7 +9,8 @@ const argv = yargs(process.argv)
     type: 'string',
     default: 'wideworlds.sqlite3'
   })
-  .option('httpPort', {
+  .option('port', {
+    alias: 'p',
     description: 'Port to listen on for http and ws requests',
     type: 'string',
     default: '8080'
@@ -20,4 +21,4 @@ const argv = yargs(process.argv)
 // Generate a new secret for each runtime
 const secret = randomBytes(64).toString('hex');
 
-spawnHttpServer(argv.db, argv.httpPort, secret).then( server => spawnWsServer(server, secret));
+spawnHttpServer(argv.db, argv.port, secret).then( server => spawnWsServer(server, secret));
