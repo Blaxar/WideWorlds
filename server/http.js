@@ -49,12 +49,12 @@ const spawnHttpServer = async (path, port, secret) => {
             res.setHeader('Content-Type', 'application/json');
 
             // We expect a json body from the request, with 'name' and 'password' fields
-            const name = req.body?.name || null;
+            const username = req.body?.username || null;
             const password = req.body?.password || null;
 
             // Find user matching provided credentials (if any)
             connection.manager.createQueryBuilder(User, 'user')
-                .where('user.name = :name', {name}).getOne().then(user => {
+                .where('user.name = :username', {username}).getOne().then(user => {
                     if (user && user.password == db.hashPassword(password, user.salt)) {
                         // Provided password is matching
                         res.send({'id': user.id, 'role': user.role, 'token': jwt.sign({userId: user.id, userRole: user.role}, secret)});

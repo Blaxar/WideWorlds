@@ -62,7 +62,7 @@ describe('http and ws servers', () => {
 
         adminBearerToken = await request(server)
             .post('/api/login')
-            .send({name: 'xXx_B0b_xXx', password: '3p1cP4sSw0Rd'})
+            .send({username: 'xXx_B0b_xXx', password: '3p1cP4sSw0Rd'})
             .set('Accept', 'application/json')
             .expect('Content-Type', /json/)
             .expect(200).then(async response => {
@@ -75,7 +75,7 @@ describe('http and ws servers', () => {
 
         citizenBearerToken = await request(server)
             .post('/api/login')
-            .send({name: 'oOo_Al1ce_oOo', password: '3p1cP4sSw0Rd'})
+            .send({username: 'oOo_Al1ce_oOo', password: '3p1cP4sSw0Rd'})
             .set('Accept', 'application/json')
             .expect('Content-Type', /json/)
             .expect(200).then(async response => {
@@ -114,7 +114,7 @@ describe('http and ws servers', () => {
     it('POST /api/login - OK', (done) => {
         request(server)
             .post('/api/login')
-            .send({name: 'xXx_B0b_xXx', password: '3p1cP4sSw0Rd'})
+            .send({username: 'xXx_B0b_xXx', password: '3p1cP4sSw0Rd'})
             .set('Accept', 'application/json')
             .expect('Content-Type', /json/)
             .expect(200).then(response => {
@@ -132,7 +132,7 @@ describe('http and ws servers', () => {
         request(server)
             .post('/api/login')
             .set('Authorization', 'Bearer ' + adminBearerToken)
-            .send({name: 'xXx_B0b_xXx', password: 'UwU'})
+            .send({username: 'xXx_B0b_xXx', password: 'UwU'})
             .set('Accept', 'application/json')
             .expect('Content-Type', /json/)
             .expect(403, done);

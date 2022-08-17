@@ -52,7 +52,7 @@ const hooks = {
 
 const appState = new AppState(hooks);
 
-const handleLogin = ({username, password}) => {
+const handleLogin = (credentials) => {
 
     appState.signIn();
 
@@ -62,7 +62,7 @@ const handleLogin = ({username, password}) => {
     const request = new Request(import.meta.env.VITE_SERVER_URL + '/api/login', {
         method: 'POST',
         headers: headers,
-        body: JSON.stringify({name: username, password: password}),
+        body: JSON.stringify(credentials),
         mode: 'cors'
     });
 
