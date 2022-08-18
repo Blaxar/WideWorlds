@@ -5,12 +5,14 @@ import Splash from './components/Splash.vue';
 import Login from './components/Login.vue';
 import WorldSelection from './components/WorldSelection.vue';
 import AppState, {AppStates} from './core/app-state.js';
+import HttpClient from './core/http-client.js';
 
 const main = reactive({
     state: AppStates.SIGNED_OUT,
-    worlds: [],
-    token: null
+    worlds: []
 });
+
+const httpClient = new HttpClient(import.meta.env.VITE_SERVER_URL + '/api', true);
 
 const entranceHook = (state) => {
     console.log('Entering "' + state + '" state.');
@@ -23,20 +25,8 @@ const exitHook = (state) => {
 
 const fetchWorldList = () => {
 
-    const headers = new Headers();
-    headers.append('Content-Type', 'application/json');
-    headers.append('Authorization', 'Bearer ' + main.token);
-
-    const request = new Request(import.meta.env.VITE_SERVER_URL + '/api/worlds', {
-        method: 'GET',
-        headers: headers,
-        mode: 'cors'
-    });
-
-    fetch(request).then(response => {
-        if(response.ok) return response.json();
-        else throw(response.status);
-    }).then(json => {
+    httpClient.getWorlds()
+    .then(json => {
         main.worlds.push(...json);
     });
 
@@ -56,25 +46,12 @@ const handleLogin = (credentials) => {
 
     appState.signIn();
 
-    const headers = new Headers();
-    headers.append('Content-Type', 'application/json');
-
-    const request = new Request(import.meta.env.VITE_SERVER_URL + '/api/login', {
-        method: 'POST',
-        headers: headers,
-        body: JSON.stringify(credentials),
-        mode: 'cors'
-    });
-
-    fetch(request).then(response => {
-        if(response.ok) return response.json();
-        else throw(response.status);
-    })
-    .then(json => {
-        main.token = json.token;
+    httpClient.login(credentials.username, credentials.password)
+    .then(() => {
         appState.toWorldSelection();
     })
     .catch(error => {
+        console.log(error);
         appState.failedSigningIn();
     });
 
