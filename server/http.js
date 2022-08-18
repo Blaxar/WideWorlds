@@ -60,7 +60,7 @@ const spawnHttpServer = async (path, port, secret) => {
                         res.send({'id': user.id, 'role': user.role, 'token': jwt.sign({userId: user.id, userRole: user.role}, secret)});
                     } else {
                         // Invalid credentials provided: we cannot log this user in
-                        res.status(403).json({});
+                        res.status(401).json({});
                     }
                 })
                 .catch(err => res.status(500).json({}));

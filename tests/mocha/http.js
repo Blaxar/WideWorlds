@@ -128,14 +128,13 @@ describe('http and ws servers', () => {
             .catch(err => done(err));
     });
 
-    it('POST /api/login - Forbidden', (done) => {
+    it('POST /api/login - Unauthorized', (done) => {
         request(server)
             .post('/api/login')
-            .set('Authorization', 'Bearer ' + adminBearerToken)
             .send({username: 'xXx_B0b_xXx', password: 'UwU'})
             .set('Accept', 'application/json')
             .expect('Content-Type', /json/)
-            .expect(403, done);
+            .expect(401, done);
     });
 
     // Testing World API
