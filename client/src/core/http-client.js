@@ -34,7 +34,7 @@ class HttpClient {
     }
 
     async getWorlds() {
-        const request = new Request(import.meta.env.VITE_SERVER_URL + '/api/worlds', {
+        const request = new Request(this.url + '/worlds', {
             method: 'GET',
             headers: this.headers,
             mode: this.cors ? 'cors' : undefined

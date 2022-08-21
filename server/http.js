@@ -20,7 +20,8 @@ const spawnHttpServer = async (path, port, secret) => {
         const authMatch = req.headers['authorization']?.match(bearerRegex);
         const token = authMatch && authMatch[1];
 
-        if (token === null) {
+        // Test if token is falsy
+        if (!token) {
             // We do not understand the credentials being provided at all (malformed)
             return res.status(401).json({});
         }
@@ -215,9 +216,14 @@ const spawnHttpServer = async (path, port, secret) => {
                 .catch(err => res.status(500).json({}));
         });
 
+        server.on('close', async () => {
+            // Close DB connection along with webserver
+            await connection.close();
+        });
+
         server.listen(port);
 
-        return server
+        return server;
     });
 };
 

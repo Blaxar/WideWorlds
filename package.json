@@ -5,7 +5,7 @@
   "description": "3D online universe client/server solution, walking in the steps of Active Worlds",
   "main": "index.js",
   "scripts": {
-    "test": "./node_modules/mocha/bin/mocha -R spec tests/mocha/http.js tests/mocha/core.js",
+    "test": "./node_modules/mocha/bin/mocha -R spec tests/mocha/http.js tests/mocha/http-client.js tests/mocha/app-state.js",
     "server": "node server/app.js",  
     "client-dev": "vite client",
     "client-build": "vite build client",
