@@ -5,8 +5,8 @@
   "description": "3D online universe client/server solution, walking in the steps of Active Worlds",
   "main": "index.js",
   "scripts": {
-    "test": "./node_modules/mocha/bin/mocha -R spec tests/mocha/http.js tests/mocha/http-client.js tests/mocha/app-state.js",
-    "server": "node server/app.js",  
+      "test": "./node_modules/mocha/bin/mocha -R spec tests/mocha/http.js tests/mocha/http-client.js tests/mocha/app-state.js tests/mocha/world-path-registry.js",
+    "server": "node server/app.js",
     "client-dev": "vite client",
     "client-build": "vite build client",
     "client-preview": "vite preview --port 4173 client"
@@ -36,7 +36,8 @@
     "iconv-lite": "^0.6.3",
     "jsonwebtoken": "^8.5.1",
     "sqlite3": "^5.0.8",
-    "three": ">=0.142.0",
+    "three": "^0.143.0",
+    "three-rwx-loader": "^0.8.1",
     "typeorm": "^0.2.41",
     "vue": "^3.2.37",
     "ws": "^8.5.0",

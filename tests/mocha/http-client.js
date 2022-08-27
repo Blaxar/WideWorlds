@@ -2,7 +2,7 @@ import makeHttpTestBase from '../utils.js';
 import HttpClient from '../../client/src/core/http-client.js';
 import * as assert from 'assert';
 
-// Testing http server
+// Testing http client
 describe('http client', () => {
     const ctx = makeHttpTestBase();
     const base = ctx.base;

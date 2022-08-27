@@ -5,6 +5,8 @@ import Splash from './components/Splash.vue';
 import Login from './components/Login.vue';
 import WorldSelection from './components/WorldSelection.vue';
 import AppState, {AppStates} from './core/app-state.js';
+import ModelRegistry from './core/model-registry.js';
+import WorldPathRegistry from './core/world-path-registry.js';
 import HttpClient from './core/http-client.js';
 
 const main = reactive({
