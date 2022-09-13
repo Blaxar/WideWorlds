@@ -110,6 +110,9 @@ const makeHttpTestBase = (port = 62931, dbFile = 'mocha-http-test-db.sqlite3', s
     const after = async () => {
         await base.server.close();
         fs.unlinkSync(base.dbFile);
+
+        // Wait for everything to be properly closed
+        await new Promise(resolve => setTimeout(resolve, 1000));
     }
 
     return {base, before, after, beforeEach, afterEach};
