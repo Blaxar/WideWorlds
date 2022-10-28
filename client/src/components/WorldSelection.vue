@@ -31,10 +31,10 @@ const cancel = () => { props.worlds.length = 0; emit('cancel'); }
 </script>
 
 <template>
-  <div class="world_selection">
-    <h2>{{ prompt }}</h2>
+  <div class="world-selection window">
+    <div class="title-bar"><div class="title-bar-text">{{ prompt }}</div></div>
     <form @submit.prevent="onSubmit">
-    <table>
+    <table class="window-body">
     <tr><td><label> World: </label></td>
     <td>
       <select v-model="worldId">

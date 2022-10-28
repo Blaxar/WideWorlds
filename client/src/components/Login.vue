@@ -32,10 +32,10 @@ const onSubmit = () => { emit('submit', {username: props.username, password: pro
 </script>
 
 <template>
-  <div class="login">
-    <h2>{{ prompt }}</h2>
+    <div class="login window">
+    <div class="title-bar"><div class="title-bar-text">{{ prompt }}</div></div>
     <form @submit.prevent="onSubmit">
-    <table>
+    <table class="window-body">
     <tr><td><label> Username: </label></td>
     <td><input type="text" :placeholder="username_placeholder" v-model="username" required></td>
     </tr>

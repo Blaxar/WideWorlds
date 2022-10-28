@@ -1,19 +1,42 @@
 <script setup>
-import {computed, reactive} from "vue";
+import {computed, reactive, onMounted} from "vue";
 import * as THREE from 'three';
 import Splash from './components/Splash.vue';
 import Login from './components/Login.vue';
 import WorldSelection from './components/WorldSelection.vue';
+import WorldView from './components/WorldView.vue';
 import AppState, {AppStates} from './core/app-state.js';
 import ModelRegistry from './core/model-registry.js';
 import WorldPathRegistry from './core/world-path-registry.js';
 import HttpClient from './core/http-client.js';
+import * as utils3D from './core/utils-3d.js';
 
+// Three.js context-related settings
+const clock = new THREE.Clock();
+const textureEncoding = THREE.sRGBEncoding;
+let renderer = null;
+const scene = new THREE.Scene();
+const reversedOctahedron = utils3D.makeReversedOctahedron();
+reversedOctahedron.material.depthTest = false;
+const scaleOctahedron = new THREE.Matrix4();
+scaleOctahedron.makeScale(60.0, 60.0, 60.0);
+reversedOctahedron.applyMatrix4(scaleOctahedron);
+reversedOctahedron.renderOrder = -1;
+scene.add(reversedOctahedron);
+const fov = 45;
+const aspect = 2;
+const near = 0.1;
+const far = 100;
+const camera = new THREE.PerspectiveCamera(fov, aspect, near, far);
+camera.position.set(0, 0, 0);
+
+// Define reactive states for Vue.js
 const main = reactive({
     state: AppStates.SIGNED_OUT,
     worlds: []
 });
 
+// Ready http client for REST API usage
 const httpClient = new HttpClient(import.meta.env.VITE_SERVER_URL + '/api', true);
 
 const entranceHook = (state) => {
@@ -42,6 +65,7 @@ const hooks = {
     [AppStates.WORLD_LOADED]: [entranceHook, exitHook]
 };
 
+// Initialize Wide Worlds main application object to handle core transitions (between offline and online)
 const appState = new AppState(hooks);
 
 const handleLogin = (credentials) => {
@@ -76,73 +100,51 @@ const handleWorldCancel = () => {
 const displayLogin = computed(() => main.state === AppStates.SIGNED_OUT);
 const displayWorldSelection = computed(() => main.state === AppStates.WORLD_UNLOADED && main.worlds.length > 0);
 
+const resizeRendererToDisplaySize = (renderer) => {
+    const canvas = renderer.domElement;
+    const width = canvas.clientWidth;
+    const height = canvas.clientHeight;
+    const needResize = canvas.width !== width || canvas.height !== height;
+    if (needResize) {
+        renderer.setSize(width, height, false);
+    }
+    return needResize;
+};
+
+const render = () => {
+    const deltaTime = Math.min(clock.getDelta());
+
+    if (resizeRendererToDisplaySize(renderer)) {
+      const canvas = renderer.domElement;
+      camera.aspect = canvas.clientWidth / canvas.clientHeight;
+      camera.updateProjectionMatrix();
+    }
+
+    reversedOctahedron.rotateY(deltaTime*0.2);
+
+    renderer.render(scene, camera);
+    requestAnimationFrame(render);
+};
+
+// As soon as the component is mounted: initialize Three.js 3D context and spool up rendering cycle
+onMounted(() => {
+    const canvas = document.querySelector('#main-3d-canvas');
+    renderer = new THREE.WebGLRenderer({canvas});
+    renderer.outputEncoding = THREE.sRGBEncoding;
+    requestAnimationFrame(render);
+});
+
 </script>
 
 <template>
-    <Splash msg="Wide Worlds" />
+    <canvas id="main-3d-canvas"></canvas>
+    <div id="overlay">
     <Login v-if="displayLogin" @submit="handleLogin" />
     <WorldSelection v-if="displayWorldSelection" :worlds="main.worlds" @submit="handleWorldSelection" @cancel="handleWorldCancel"/>
+    </div>
 </template>
 
 <style>
-@import './assets/base.css';
-
-#app {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-
-  font-weight: normal;
-}
-
-header {
-  line-height: 1.5;
-}
-
-.logo {
-  display: block;
-  margin: 0 auto 2rem;
-}
-
-a,
-.green {
-  text-decoration: none;
-  color: hsla(160, 100%, 37%, 1);
-  transition: 0.4s;
-}
-
-@media (hover: hover) {
-  a:hover {
-    background-color: hsla(160, 100%, 37%, 0.2);
-  }
-}
-
-@media (min-width: 1024px) {
-  body {
-    display: flex;
-    place-items: center;
-  }
-
-  #app {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    padding: 0 2rem;
-  }
-
-  header {
-    display: flex;
-    place-items: center;
-    padding-right: calc(var(--section-gap) / 2);
-  }
-
-  header .wrapper {
-    display: flex;
-    place-items: flex-start;
-    flex-wrap: wrap;
-  }
-
-  .logo {
-    margin: 0 2rem 0 0;
-  }
-}
+@import 'xp.css/dist/XP.css';
+@import './assets/style.css';
 </style>

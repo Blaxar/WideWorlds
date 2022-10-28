@@ -1,0 +1,33 @@
+body {
+    margin: 0;
+    padding: 0;
+    height: 100vh;
+    width: 100vw;
+}
+
+#overlay {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.window {
+    margin-top: 40vh;
+}
+
+.login {
+    width: min-content;
+}
+
+.world-selection {
+    width: min-content;
+}
+
+#main-3d-canvas {
+    position: absolute;
+    z-index: -1;
+    height: 100vh;
+    width: 100vw;
+}
