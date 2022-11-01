@@ -51,7 +51,7 @@ class SubjectBehavior {
 }
 
 class UserInputListener {
-    constructor(behaviorFactory) {
+    constructor(behaviorFactory = new SubjectBehaviorFactory()) {
         this.subjectBehaviorFactory = behaviorFactory;
         this.subjectBehavior = null;
 
@@ -61,23 +61,51 @@ class UserInputListener {
         for(const name of UserInput) {
             const upperCased = name.charAt(0).toUpperCase() + name.slice(1);
             this[`${name}Key`] = null;
-            this[`bind${upperCased}Key`] = (input) => { this[`${name}Key`] = input; };
-            this[`clear${upperCased}Key`] = () => { this[`${name}Key`] = null; };
-            this[`get${upperCased}Key`] = () => this[`${name}Key`];
+            this[`${name}Pressed`] = false;
+            this[`bind${upperCased}Key`] = (input) => this.bindKey(name, input);
+            this[`clear${upperCased}Key`] = () => this.clearKey(name);
+            this[`get${upperCased}Key`] = () => this.getKey(name);
         }
+    }
+
+    bindKey(name, input) {
+        this[`${name}Key`] = input;
+    }
+
+    clearKey(name) {
+        this[`${name}Key`] = null;
+    }
+
+    getKey(name) {
+        return this[`${name}Key`];
     }
 
     setSubject(subjectType, subject) {
         this.subjectBehavior = this.subjectBehaviorFactory.make(subjectType, subject);
     }
 
-    input(keys, delta) {
-        for(const key of keys) {
-            for(const name of UserInput) {
-                if(this[`${name}Key`] === key) {
-                    if(this.subjectBehavior) this.subjectBehavior[`${name}`](delta);
-                    break;
-                }
+    pressKey(key) {
+        for(const name of UserInput) {
+            if(this[`${name}Key`] === key) {
+                this[`${name}Pressed`] = true;
+                break;
+            }
+        }
+    }
+
+    releaseKey(key) {
+        for(const name of UserInput) {
+            if(this[`${name}Key`] === key) {
+                this[`${name}Pressed`] = false;
+                break;
+            }
+        }
+    }
+
+    step(delta) {
+        for(const name of UserInput) {
+            if(this[`${name}Pressed`]) {
+                if(this.subjectBehavior) this.subjectBehavior[`${name}`](delta);
             }
         }
     }

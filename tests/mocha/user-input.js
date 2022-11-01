@@ -119,13 +119,21 @@ describe('UserInput', () => {
 
         inputListener.setSubject('dummy', subject);
 
-        inputListener.input(['z', 'q'], 2.0);
+        inputListener.pressKey('z');
+        inputListener.pressKey('q');
+        inputListener.step(2.0);
+        inputListener.releaseKey('z');
+        inputListener.releaseKey('q');
 
         assert.equal(subject.x, 4.0);
         assert.equal(subject.y, 0.0);
         assert.equal(subject.z, 4.0);
 
-        inputListener.input(['s', '-'], 3.0);
+        inputListener.pressKey('s');
+        inputListener.pressKey('-');
+        inputListener.step(3.0);
+        inputListener.releaseKey('s');
+        inputListener.releaseKey('-');
 
         assert.equal(subject.x, 4.0);
         assert.equal(subject.y, -6.0);
