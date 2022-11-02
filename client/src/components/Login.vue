@@ -5,15 +5,15 @@ const props = defineProps({
     type: String,
     default: 'Log in'
   },
-  username_placeholder: {
+  usernamePlaceholder: {
     type: String,
     default: 'your username'
   },
-  password_placeholder: {
+  passwordPlaceholder: {
     type: String,
     default: 'your password'
   },
-  button_text: {
+  buttonText: {
     type: String,
     default: 'Login'
   },
@@ -37,14 +37,14 @@ const onSubmit = () => { emit('submit', {username: props.username, password: pro
     <form @submit.prevent="onSubmit">
     <table class="window-body">
     <tr><td><label> Username: </label></td>
-    <td><input type="text" :placeholder="username_placeholder" v-model="username" required></td>
+    <td><input type="text" :placeholder="usernamePlaceholder" v-model="username" required></td>
     </tr>
     <tr>
     <td><label> Password: </label></td>
-    <td><input type="password" :placeholder="password_placeholder" v-model="password" required></td>
+    <td><input type="password" :placeholder="passwordPlaceholder" v-model="password" required></td>
     </tr>
     <tr>
-    <td colspan=2><button type="submit">{{button_text}}</button></td>
+    <td colspan=2><button type="submit">{{buttonText}}</button></td>
     </tr>
     </table>
     </form>

@@ -54,6 +54,7 @@ class UserInputListener {
     constructor(behaviorFactory = new SubjectBehaviorFactory()) {
         this.subjectBehaviorFactory = behaviorFactory;
         this.subjectBehavior = null;
+        this.bindingListeners = [];
 
         // Each input key will be set to null by default, a 'bind' and 'reset' method
         // will also ne ready of each one of them, eg: for 'forward' there will be
@@ -62,14 +63,59 @@ class UserInputListener {
             const upperCased = name.charAt(0).toUpperCase() + name.slice(1);
             this[`${name}Key`] = null;
             this[`${name}Pressed`] = false;
-            this[`bind${upperCased}Key`] = (input) => this.bindKey(name, input);
+            this[`bind${upperCased}Key`] = (input, uniqueOverride = false) => this.bindKey(name, input, uniqueOverride);
             this[`clear${upperCased}Key`] = () => this.clearKey(name);
             this[`get${upperCased}Key`] = () => this.getKey(name);
         }
     }
 
-    bindKey(name, input) {
+    addBindingListener(listener) {
+        const id = this.bindingListeners.length;
+
+        this.bindingListeners.push(listener);
+
+        return id;
+    }
+
+    removeBindingListener(id) {
+        if (id >= this.bindingListeners.length)
+            return false;
+
+        this.bindingListeners[id] = null;
+        return true;
+    }
+
+    clearBindingListeners() {
+        this.bindingListeners.length = 0;
+    }
+
+    callBindingListeners(name, input) {
+        for (const listener of this.bindingListeners) {
+            if (listener) listener(name, input);
+        }
+    }
+
+    getBindingsFromKey(input) {
+        const bindings = [];
+
+        for(const name of UserInput) {
+            if(this[`${name}Key`] === input) {
+                bindings.push(name);
+            }
+        }
+
+        return bindings;
+    }
+
+    bindKey(name, input, uniqueOverride = false) {
         this[`${name}Key`] = input;
+        this.callBindingListeners(name, input);
+
+        if (uniqueOverride) {
+            for (const binding of this.getBindingsFromKey(input)) {
+                if (binding !== name) this.bindKey(binding, null, false);
+            }
+        }
     }
 
     clearKey(name) {

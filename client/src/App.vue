@@ -1,15 +1,19 @@
 <script setup>
+
 import {computed, reactive, onMounted} from "vue";
 import * as THREE from 'three';
 import Splash from './components/Splash.vue';
 import Login from './components/Login.vue';
 import WorldSelection from './components/WorldSelection.vue';
 import WorldView from './components/WorldView.vue';
+import TopBar from './components/TopBar.vue';
+import ControlBindings from './components/ControlBindings.vue';
 import AppState, {AppStates} from './core/app-state.js';
 import ModelRegistry from './core/model-registry.js';
 import WorldPathRegistry from './core/world-path-registry.js';
 import HttpClient from './core/http-client.js';
 import * as utils3D from './core/utils-3d.js';
+import UserInput, {SubjectBehavior, SubjectBehaviorFactory, UserInputListener} from './core/user-input.js';
 
 // Three.js context-related settings
 const clock = new THREE.Clock();
@@ -49,18 +53,21 @@ const exitHook = (state) => {
 };
 
 const fetchWorldList = () => {
-
     httpClient.getWorlds()
     .then(json => {
         main.worlds.push(...json);
     });
+};
 
+const clearWorldList = () => {
+    main.worlds.length = 0;
 };
 
 const hooks = {
     [AppStates.SIGNED_OUT]: [entranceHook, exitHook],
     [AppStates.SIGNING_IN]: [entranceHook, exitHook],
-    [AppStates.WORLD_UNLOADED]: [(state) => { entranceHook(state); fetchWorldList();}, exitHook],
+    [AppStates.WORLD_UNLOADED]: [(state) => { entranceHook(state); fetchWorldList();},
+                                 (state) => { exitHook(state); clearWorldList();}],
     [AppStates.WORLD_LOADING]: [entranceHook, exitHook],
     [AppStates.WORLD_LOADED]: [entranceHook, exitHook]
 };
@@ -85,9 +92,11 @@ const handleLogin = (credentials) => {
 
 const handleWorldSelection = (world) => {
 
+    appState.loadWorld();
+
     // WIP
 
-    console.log(world);
+    appState.readyWorld();
 
 };
 
@@ -97,8 +106,15 @@ const handleWorldCancel = () => {
 
 };
 
+const handleLeave = () => {
+
+    appState.unloadWorld();
+
+};
+
 const displayLogin = computed(() => main.state === AppStates.SIGNED_OUT);
 const displayWorldSelection = computed(() => main.state === AppStates.WORLD_UNLOADED && main.worlds.length > 0);
+const displayTopbar = computed(() => main.state === AppStates.WORLD_LOADED);
 
 const resizeRendererToDisplaySize = (renderer) => {
     const canvas = renderer.domElement;
@@ -134,13 +150,21 @@ onMounted(() => {
     requestAnimationFrame(render);
 });
 
+const behaviorFactory = new SubjectBehaviorFactory();
+const inputListener = new UserInputListener(behaviorFactory);
+
+//behaviorFactory.register('dummy', DummyBehavior);
+
 </script>
 
 <template>
     <canvas id="main-3d-canvas"></canvas>
     <div id="overlay">
+    <TopBar v-if="displayTopbar" @leave="handleLeave">
+    <template v-slot:control-bindings><ControlBindings :listener="inputListener" /></template>
+    </TopBar>
     <Login v-if="displayLogin" @submit="handleLogin" />
-    <WorldSelection v-if="displayWorldSelection" :worlds="main.worlds" @submit="handleWorldSelection" @cancel="handleWorldCancel"/>
+    <WorldSelection v-if="displayWorldSelection" :worlds="main.worlds" @submit="handleWorldSelection" @cancel="handleWorldCancel" />
     </div>
 </template>
 

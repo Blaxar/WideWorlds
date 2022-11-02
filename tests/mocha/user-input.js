@@ -101,15 +101,41 @@ describe('UserInput', () => {
         const behaviorFactory = new SubjectBehaviorFactory();
         const inputListener = new UserInputListener(behaviorFactory);
 
+        // Keep track of binding changes caught by the listener
+        const names = [];
+        const inputs = [];
+
         behaviorFactory.register('dummy', DummyBehavior);
 
-        inputListener.bindForwardKey('z');
+        assert.equal(inputListener.bindingListeners.length, 0);
+        const handler = inputListener.addBindingListener((name, input) => {
+            names.push(name);
+            inputs.push(input);
+        });
+        assert.equal(inputListener.bindingListeners.length, 1);
+
+        inputListener.bindLookUpKey('z');
+        assert.equal(names.length, 1);
+        assert.equal(names[0], 'lookUp');
+        assert.equal(inputs.length, 1);
+        assert.equal(inputs[0], 'z');
+        inputListener.bindForwardKey('z', true); // This should unset the 'lookUp' key
+        assert.equal(names.length, 3);
+        assert.equal(names[1], 'forward');
+        assert.equal(names[2], 'lookUp');
+        assert.equal(inputs.length, 3);
+        assert.equal(inputs[1], 'z');
+        assert.strictEqual(inputs[2], null); // 'lookUp' key unset, caught by the binding listener
+        inputListener.removeBindingListener(handler);
+        assert.equal(inputListener.bindingListeners.length, 1);
+        assert.strictEqual(inputListener.bindingListeners[0], null);
         inputListener.bindBackwardKey('s');
         inputListener.bindLeftKey('q');
         inputListener.bindRightKey('d');
         inputListener.bindMoveUpKey('+');
         inputListener.bindMoveDownKey('-');
 
+        assert.strictEqual(inputListener.getLookUpKey(), null); // 'lookUp' key unset
         assert.equal(inputListener.getForwardKey(), 'z');
         assert.equal(inputListener.getBackwardKey(), 's');
         assert.equal(inputListener.getLeftKey(), 'q');
@@ -152,5 +178,8 @@ describe('UserInput', () => {
         assert.strictEqual(inputListener.getRightKey(), null);
         assert.strictEqual(inputListener.getMoveUpKey(), null);
         assert.strictEqual(inputListener.getMoveDownKey(), null);
+
+        inputListener.clearBindingListeners();
+        assert.equal(inputListener.bindingListeners.length, 0);
     });
 });

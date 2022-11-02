@@ -13,7 +13,7 @@ const props = defineProps({
     type: String,
     default: 'world-view-toolbar'
   },
-  logout_button_text: {
+  logoutButtonText: {
     type: String,
     default: 'Log out'
   }
@@ -25,7 +25,7 @@ const emit = defineEmits(['logout']);
 
 <template>
 <div :id="id">
-  <div :id="toolbarId"><button @click="logout">{{logout_button_text}}</button></div>
+  <div :id="toolbarId"><button @click="logout">{{logoutButtonText}}</button></div>
   <canvas :id="canvasId"></canvas>
 </div>
 </template>

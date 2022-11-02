@@ -9,12 +9,10 @@ body {
     width: 100%;
     height: 100%;
     display: flex;
-    justify-content: center;
-    align-items: center;
 }
 
 .window {
-    margin-top: 40vh;
+    margin: 40vh auto;
 }
 
 .login {
@@ -23,6 +21,22 @@ body {
 
 .world-selection {
     width: min-content;
+}
+
+.top-bar {
+    position: absolute;
+    z-index: 1;
+    margin: 0;
+    width: 100vw;
+    height: min-content;
+}
+
+.button-bar {
+    height: min-content;
+}
+
+.settings-pannel {
+    height: min-content;
 }
 
 #main-3d-canvas {

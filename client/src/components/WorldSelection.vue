@@ -5,11 +5,11 @@ const props = defineProps({
     type: String,
     default: 'Select world'
   },
-  select_button_text: {
+  selectButtonText: {
     type: String,
     default: 'Select'
   },
-  cancel_button_text: {
+  cancelButtonText: {
     type: String,
     default: 'Cancel'
   },
@@ -23,10 +23,10 @@ const props = defineProps({
   }
 });
 
-const emit = defineEmits(['submit', 'cancel', 'fetchWorldList']);
+const emit = defineEmits(['submit', 'cancel']);
 
 const onSubmit = () => { emit('submit', props.worldId); }
-const cancel = () => { props.worlds.length = 0; emit('cancel'); }
+const cancel = () => { emit('cancel'); }
 
 </script>
 
@@ -45,8 +45,8 @@ const cancel = () => { props.worlds.length = 0; emit('cancel'); }
     </td>
     </tr>
     <tr>
-    <td><button @click="cancel">{{cancel_button_text}}</button></td>
-    <td><button type="submit">{{select_button_text}}</button></td>
+    <td><button @click="cancel">{{cancelButtonText}}</button></td>
+    <td><button type="submit">{{selectButtonText}}</button></td>
     </tr>
     </table>
     </form>
