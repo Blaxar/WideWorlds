@@ -74,6 +74,12 @@ const argv = yargs(process.argv)
     type: 'boolean',
     default: true
   })
+  .option('pathOverride', {
+    alias: 'po',
+    description: 'Set the object path value for the world to the provided string, keep the original value otherwise',
+    type: 'string',
+    default: null
+  })
   .help()
   .alias('help', 'h').argv;
 
@@ -119,8 +125,10 @@ const parseAttrFile = (path) => {
                     }
                 }
             }
-        } else if (key == 'enableTerrain') {
-            worldData[key] = value == 'Y' ? true : false;
+        } else if (key === 'enableTerrain') {
+            worldData[key] = value === 'Y' ? true : false;
+        } else if (key === 'path') {
+            worldData[key] = argv.pathOverride ? argv.pathOverride : worldData[key];
         } else {
             worldData[key] = value;
         }
@@ -143,22 +151,22 @@ function* parsePropFile(path) {
         const propSplit = sanitizedEntry.split(' ');
 
         // Parse user id
-        const userId = parseInt(propSplit[0])
+        const userId = parseInt(propSplit[0]);
 
         if (isNaN(userId)) {
             continue;
         }
 
         /* Parse date (timestamp) */
-        const date = parseInt(propSplit[1])
+        const date = parseInt(propSplit[1]);
 
         // Parse position and orientation
         const x = parseInt(propSplit[2]);
         const y = parseInt(propSplit[3]);
         const z = parseInt(propSplit[4]);
-        const yaw = parseInt(propSplit[5])
-        const pitch = parseInt(propSplit[6])
-        const roll = parseInt(propSplit[7])
+        const yaw = parseInt(propSplit[5]);
+        const pitch = parseInt(propSplit[6]);
+        const roll = parseInt(propSplit[7]);
 
         // Parse name, action and description
         const nameLength = parseInt(propSplit[8]);
