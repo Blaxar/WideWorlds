@@ -13,6 +13,7 @@ import WorldPathRegistry from './core/world-path-registry.js';
 import HttpClient from './core/http-client.js';
 import Engine3D from './core/engine-3d.js';
 import UserInput, {SubjectBehavior, SubjectBehaviorFactory, UserInputListener} from './core/user-input.js';
+import {LoadingManager} from 'three';
 
 // Three.js context-related settings
 let engine3d = null;
@@ -25,6 +26,9 @@ const main = reactive({
 
 // Ready http client for REST API usage
 const httpClient = new HttpClient(import.meta.env.VITE_SERVER_URL + '/api', true);
+
+// Ready world path registry for object caching
+const worldPathRegistry = new WorldPathRegistry(new LoadingManager());
 
 const entranceHook = (state) => {
     console.log('Entering "' + state + '" state.');
@@ -79,6 +83,8 @@ const handleWorldSelection = (id) => {
 
     const data = JSON.parse(world.data);
 
+    const modelRegistry = worldPathRegistry.get(data.path);
+
     // Fetch all the sky colors from the world data, normalize them between 0.0 and 1.0
     engine3d.setSkyColors([
         ...data.skyColor.north,
@@ -89,7 +95,13 @@ const handleWorldSelection = (id) => {
         ...data.skyColor.bottom
     ].map((c) => c / 255.0));
 
-    //TODO: set skybox as well
+    if (data.skybox) {
+        worldPathRegistry.get(data.path).then((modelRegistry) => {
+            return modelRegistry.get(`${data.skybox}.rwx`);
+        }).then((model) => {
+            engine3d.setSkyBox(model)
+        });
+    }
 
     appState.readyWorld();
 };
@@ -101,6 +113,7 @@ const handleWorldCancel = () => {
 const handleLeave = () => {
     appState.unloadWorld();
     engine3d.resetSkyColors();
+    engine3d.resetSkyBox();
 };
 
 const displayLogin = computed(() => main.state === AppStates.SIGNED_OUT);

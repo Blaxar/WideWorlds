@@ -1,5 +1,8 @@
 import RWXLoader from 'three-rwx-loader';
 import {Group, Mesh, BufferGeometry, BufferAttribute, MeshBasicMaterial} from 'three';
+import * as THREE from 'three';
+import * as JSZip from 'jszip';
+import JSZipUtils from 'jszip-utils';
 
 class ModelRegistry {
     constructor(loadingManager, path, resourcePath) {
@@ -18,14 +21,14 @@ class ModelRegistry {
         this.placeholder.name = 'unknown';
 
         this.models = new Map();
-        this.loader = (new RWXLoader(loadingManager)).setPath(path).setResourcePath(resourcePath);
+        this.loader = (new RWXLoader(loadingManager)).setPath(path).setResourcePath(resourcePath).setJSZip(JSZip, JSZipUtils).setTextureEncoding(THREE.sRGBEncoding).setUseBasicMaterial(true);
     }
 
     /* Fetch an object from the registry, load it first if necessary and use placeholder if not found */
     async get(name) {
         if(!this.models.has(name)) {
             this.models.set(name, new Promise((resolve) => {
-                this.loader.load(name, (rwx) => resolve(rwx), null, () => resolve(this.placeholder));
+                this.loader.load(name, (rwx) => { rwx.name = name; resolve(rwx);}, null, () => resolve(this.placeholder));
             }));
         }
 
