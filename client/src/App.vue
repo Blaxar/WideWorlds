@@ -1,7 +1,6 @@
 <script setup>
 
 import {computed, reactive, onMounted} from "vue";
-import * as THREE from 'three';
 import Splash from './components/Splash.vue';
 import Login from './components/Login.vue';
 import WorldSelection from './components/WorldSelection.vue';
@@ -12,32 +11,16 @@ import AppState, {AppStates} from './core/app-state.js';
 import ModelRegistry from './core/model-registry.js';
 import WorldPathRegistry from './core/world-path-registry.js';
 import HttpClient from './core/http-client.js';
-import * as utils3D from './core/utils-3d.js';
+import Engine3D from './core/engine-3d.js';
 import UserInput, {SubjectBehavior, SubjectBehaviorFactory, UserInputListener} from './core/user-input.js';
 
 // Three.js context-related settings
-const clock = new THREE.Clock();
-const textureEncoding = THREE.sRGBEncoding;
-let renderer = null;
-const scene = new THREE.Scene();
-const reversedOctahedron = utils3D.makeReversedOctahedron();
-reversedOctahedron.material.depthTest = false;
-const scaleOctahedron = new THREE.Matrix4();
-scaleOctahedron.makeScale(60.0, 60.0, 60.0);
-reversedOctahedron.applyMatrix4(scaleOctahedron);
-reversedOctahedron.renderOrder = -1;
-scene.add(reversedOctahedron);
-const fov = 45;
-const aspect = 2;
-const near = 0.1;
-const far = 100;
-const camera = new THREE.PerspectiveCamera(fov, aspect, near, far);
-camera.position.set(0, 0, 0);
+let engine3d = null;
 
 // Define reactive states for Vue.js
 const main = reactive({
     state: AppStates.SIGNED_OUT,
-    worlds: []
+    worlds: {}
 });
 
 // Ready http client for REST API usage
@@ -54,13 +37,15 @@ const exitHook = (state) => {
 
 const fetchWorldList = () => {
     httpClient.getWorlds()
-    .then(json => {
-        main.worlds.push(...json);
+        .then(json => {
+            for (const world of json) {
+                main.worlds[world.id] = world;
+            }
     });
 };
 
 const clearWorldList = () => {
-    main.worlds.length = 0;
+    main.worlds = {};
 };
 
 const hooks = {
@@ -76,7 +61,6 @@ const hooks = {
 const appState = new AppState(hooks);
 
 const handleLogin = (credentials) => {
-
     appState.signIn();
 
     httpClient.login(credentials.username, credentials.password)
@@ -87,33 +71,40 @@ const handleLogin = (credentials) => {
         console.log(error);
         appState.failedSigningIn();
     });
-
 };
 
-const handleWorldSelection = (world) => {
-
+const handleWorldSelection = (id) => {
+    const world = main.worlds[id];
     appState.loadWorld();
 
-    // WIP
+    const data = JSON.parse(world.data);
+
+    // Fetch all the sky colors from the world data, normalize them between 0.0 and 1.0
+    engine3d.setSkyColors([
+        ...data.skyColor.north,
+        ...data.skyColor.east,
+        ...data.skyColor.south,
+        ...data.skyColor.west,
+        ...data.skyColor.top,
+        ...data.skyColor.bottom
+    ].map((c) => c / 255.0));
+
+    //TODO: set skybox as well
 
     appState.readyWorld();
-
 };
 
 const handleWorldCancel = () => {
-
     appState.signOut();
-
 };
 
 const handleLeave = () => {
-
     appState.unloadWorld();
-
+    engine3d.resetSkyColors();
 };
 
 const displayLogin = computed(() => main.state === AppStates.SIGNED_OUT);
-const displayWorldSelection = computed(() => main.state === AppStates.WORLD_UNLOADED && main.worlds.length > 0);
+const displayWorldSelection = computed(() => main.state === AppStates.WORLD_UNLOADED && Object.values(main.worlds).length > 0);
 const displayTopbar = computed(() => main.state === AppStates.WORLD_LOADED);
 
 const resizeRendererToDisplaySize = (renderer) => {
@@ -128,25 +119,15 @@ const resizeRendererToDisplaySize = (renderer) => {
 };
 
 const render = () => {
-    const deltaTime = Math.min(clock.getDelta());
-
-    if (resizeRendererToDisplaySize(renderer)) {
-      const canvas = renderer.domElement;
-      camera.aspect = canvas.clientWidth / canvas.clientHeight;
-      camera.updateProjectionMatrix();
-    }
-
-    reversedOctahedron.rotateY(deltaTime*0.2);
-
-    renderer.render(scene, camera);
-    requestAnimationFrame(render);
+    if (engine3d.render())
+        requestAnimationFrame(render);
 };
 
 // As soon as the component is mounted: initialize Three.js 3D context and spool up rendering cycle
 onMounted(() => {
     const canvas = document.querySelector('#main-3d-canvas');
-    renderer = new THREE.WebGLRenderer({canvas});
-    renderer.outputEncoding = THREE.sRGBEncoding;
+    engine3d = new Engine3D(canvas);
+    engine3d.start();
     requestAnimationFrame(render);
 });
 
@@ -164,7 +145,7 @@ const inputListener = new UserInputListener(behaviorFactory);
     <template v-slot:control-bindings><ControlBindings :listener="inputListener" /></template>
     </TopBar>
     <Login v-if="displayLogin" @submit="handleLogin" />
-    <WorldSelection v-if="displayWorldSelection" :worlds="main.worlds" @submit="handleWorldSelection" @cancel="handleWorldCancel" />
+    <WorldSelection v-if="displayWorldSelection" :worlds="Object.values(main.worlds)" @submit="handleWorldSelection" @cancel="handleWorldCancel" />
     </div>
 </template>
 
