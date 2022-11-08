@@ -7,11 +7,11 @@ import JSZipUtils from 'jszip-utils';
 class ModelRegistry {
     constructor(loadingManager, path, resourcePath) {
         this.textureEncoding = THREE.sRGBEncoding;
-        this.basicMaterialManager = new RWXMaterialManager(resourcePath, '.jpg', '.zip', JSZip, JSZipUtils,
-                                                           true, this.textureEncoding);
 
         this.materialManager = new RWXMaterialManager(resourcePath, '.jpg', '.zip', JSZip, JSZipUtils,
                                                       false, this.textureEncoding);
+        this.basicMaterialManager = new RWXMaterialManager(resourcePath, '.jpg', '.zip', JSZip, JSZipUtils,
+                                                           true, this.textureEncoding);
 
         const placeholderGeometry = new BufferGeometry();
         const positions = [
@@ -24,11 +24,12 @@ class ModelRegistry {
         placeholderGeometry.setIndex([0, 1, 2]);
         placeholderGeometry.addGroup(0, 3, 0);
 
-        this.placeholder = new Group().add(new Mesh(placeholderGeometry, [new MeshBasicMaterial({color: 0x000000})]));
+        this.placeholder = new Mesh(placeholderGeometry, [new MeshBasicMaterial({color: 0x000000})]);
         this.placeholder.name = 'unknown';
 
-        this.basicModels = new Map();
         this.models = new Map();
+        this.basicModels = new Map();
+
         this.loader = (new RWXLoader(loadingManager)).setRWXMaterialManager(this.materialManager)
             .setPath(path);
         this.basicLoader = (new RWXLoader(loadingManager)).setRWXMaterialManager(this.basicMaterialManager)
@@ -39,17 +40,18 @@ class ModelRegistry {
     async get(name) {
         if(!this.models.has(name)) {
             this.models.set(name, new Promise((resolve) => {
-                this.loader.load(name, (rwx) => { rwx.name = name; resolve(rwx);}, null, () => resolve(this.placeholder));
+                this.loader.load(name, (rwx) => { rwx.name = name; resolve(rwx);}, null, () => resolve(this.placeholder.clone()));
             }));
         }
 
         return (await this.models.get(name)).clone();
     }
 
+    /* Same as above, but using basic materials instead of light-sensitive ones */
     async getBasic(name) {
         if(!this.basicModels.has(name)) {
             this.basicModels.set(name, new Promise((resolve) => {
-                this.basicLoader.load(name, (rwx) => { rwx.name = name; resolve(rwx);}, null, () => resolve(this.placeholder));
+                this.basicLoader.load(name, (rwx) => { rwx.name = name; resolve(rwx);}, null, () => resolve(this.placeholder.clone()));
             }));
         }
 
@@ -58,6 +60,7 @@ class ModelRegistry {
 
     clear() {
         this.models.clear();
+        this.basicModels.clear();
     }
 }
 

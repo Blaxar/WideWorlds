@@ -11,17 +11,24 @@ describe('WorldPathRegistry and ModelRegistry', () => {
                                            'http://127.0.0.1/some/path/textures');
 
         assert.equal(registry.loader.path, 'http://127.0.0.1/some/path/rwx');
-        assert.equal(registry.loader.resourcePath, 'http://127.0.0.1/some/path/textures');
+        assert.equal(registry.materialManager.folder, 'http://127.0.0.1/some/path/textures');
+        assert.equal(registry.basicLoader.path, 'http://127.0.0.1/some/path/rwx');
+        assert.equal(registry.basicMaterialManager.folder, 'http://127.0.0.1/some/path/textures');
 
         assert.equal(registry.models.size, 0);
 
         const model = await registry.get('notfound.rwx');
         assert.equal(model.name, 'unknown');
 
+        const basicModel = await registry.getBasic('notfound.rwx');
+        assert.equal(basicModel.name, 'unknown');
+
         assert.equal(registry.models.size, 1);
+        assert.equal(registry.basicModels.size, 1);
 
         registry.clear();
         assert.equal(registry.models.size, 0);
+        assert.equal(registry.basicModels.size, 0);
     });
 
     it('WorldPathRegistry', async () => {
