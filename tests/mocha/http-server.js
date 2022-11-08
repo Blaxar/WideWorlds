@@ -166,8 +166,8 @@ describe('http and ws servers', () => {
                 assert.equal(body[1].yaw, 450);
                 assert.equal(body[1].pitch, 900);
                 assert.equal(body[1].roll, 1350);
-                assert.equal(body[1].name, 'wall02.rwx')
-                assert.equal(body[1].description, 'Some other description.')
+                assert.equal(body[1].name, 'wall02.rwx');
+                assert.equal(body[1].description, 'Some other description.');
                 assert.equal(body[1].action, 'create color blue;');
 
                 done();
@@ -198,8 +198,8 @@ describe('http and ws servers', () => {
                 assert.equal(body[0].yaw, 450);
                 assert.equal(body[0].pitch, 900);
                 assert.equal(body[0].roll, 1350);
-                assert.equal(body[0].name, 'wall02.rwx')
-                assert.equal(body[0].description, 'Some other description.')
+                assert.equal(body[0].name, 'wall02.rwx');
+                assert.equal(body[0].description, 'Some other description.');
                 assert.equal(body[0].action, 'create color blue;');
 
                 done();

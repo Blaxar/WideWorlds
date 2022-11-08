@@ -1,4 +1,4 @@
-import RWXLoader from 'three-rwx-loader';
+import RWXLoader, {RWXMaterialManager} from 'three-rwx-loader';
 import {Group, Mesh, BufferGeometry, BufferAttribute, MeshBasicMaterial} from 'three';
 import * as THREE from 'three';
 import * as JSZip from 'jszip';
@@ -6,6 +6,13 @@ import JSZipUtils from 'jszip-utils';
 
 class ModelRegistry {
     constructor(loadingManager, path, resourcePath) {
+        this.textureEncoding = THREE.sRGBEncoding;
+        this.basicMaterialManager = new RWXMaterialManager(resourcePath, '.jpg', '.zip', JSZip, JSZipUtils,
+                                                           true, this.textureEncoding);
+
+        this.materialManager = new RWXMaterialManager(resourcePath, '.jpg', '.zip', JSZip, JSZipUtils,
+                                                      false, this.textureEncoding);
+
         const placeholderGeometry = new BufferGeometry();
         const positions = [
             0.0,  0.2,  0.0,
@@ -20,8 +27,12 @@ class ModelRegistry {
         this.placeholder = new Group().add(new Mesh(placeholderGeometry, [new MeshBasicMaterial({color: 0x000000})]));
         this.placeholder.name = 'unknown';
 
+        this.basicModels = new Map();
         this.models = new Map();
-        this.loader = (new RWXLoader(loadingManager)).setPath(path).setResourcePath(resourcePath).setJSZip(JSZip, JSZipUtils).setTextureEncoding(THREE.sRGBEncoding).setUseBasicMaterial(true);
+        this.loader = (new RWXLoader(loadingManager)).setRWXMaterialManager(this.materialManager)
+            .setPath(path);
+        this.basicLoader = (new RWXLoader(loadingManager)).setRWXMaterialManager(this.basicMaterialManager)
+            .setPath(path);
     }
 
     /* Fetch an object from the registry, load it first if necessary and use placeholder if not found */
@@ -32,7 +43,17 @@ class ModelRegistry {
             }));
         }
 
-        return await this.models.get(name);
+        return (await this.models.get(name)).clone();
+    }
+
+    async getBasic(name) {
+        if(!this.basicModels.has(name)) {
+            this.basicModels.set(name, new Promise((resolve) => {
+                this.basicLoader.load(name, (rwx) => { rwx.name = name; resolve(rwx);}, null, () => resolve(this.placeholder));
+            }));
+        }
+
+        return (await this.basicModels.get(name)).clone();
     }
 
     clear() {

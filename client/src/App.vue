@@ -10,6 +10,7 @@ import ControlBindings from './components/ControlBindings.vue';
 import AppState, {AppStates} from './core/app-state.js';
 import ModelRegistry from './core/model-registry.js';
 import WorldPathRegistry from './core/world-path-registry.js';
+import WorldManager from './core/world-manager.js';
 import HttpClient from './core/http-client.js';
 import Engine3D from './core/engine-3d.js';
 import UserInput, {SubjectBehavior, SubjectBehaviorFactory, UserInputListener} from './core/user-input.js';
@@ -17,6 +18,8 @@ import {LoadingManager} from 'three';
 
 // Three.js context-related settings
 let engine3d = null;
+const worldPathRegistry = new WorldPathRegistry(new LoadingManager());
+let worldManager = null;
 
 // Define reactive states for Vue.js
 const main = reactive({
@@ -26,9 +29,6 @@ const main = reactive({
 
 // Ready http client for REST API usage
 const httpClient = new HttpClient(import.meta.env.VITE_SERVER_URL + '/api', true);
-
-// Ready world path registry for object caching
-const worldPathRegistry = new WorldPathRegistry(new LoadingManager());
 
 const entranceHook = (state) => {
     console.log('Entering "' + state + '" state.');
@@ -81,29 +81,9 @@ const handleWorldSelection = (id) => {
     const world = main.worlds[id];
     appState.loadWorld();
 
-    const data = JSON.parse(world.data);
-
-    const modelRegistry = worldPathRegistry.get(data.path);
-
-    // Fetch all the sky colors from the world data, normalize them between 0.0 and 1.0
-    engine3d.setSkyColors([
-        ...data.skyColor.north,
-        ...data.skyColor.east,
-        ...data.skyColor.south,
-        ...data.skyColor.west,
-        ...data.skyColor.top,
-        ...data.skyColor.bottom
-    ].map((c) => c / 255.0));
-
-    if (data.skybox) {
-        worldPathRegistry.get(data.path).then((modelRegistry) => {
-            return modelRegistry.get(`${data.skybox}.rwx`);
-        }).then((model) => {
-            engine3d.setSkyBox(model)
-        });
-    }
-
-    appState.readyWorld();
+    worldManager.load(world).then(() => {
+        appState.readyWorld();
+    });
 };
 
 const handleWorldCancel = () => {
@@ -111,9 +91,9 @@ const handleWorldCancel = () => {
 };
 
 const handleLeave = () => {
-    appState.unloadWorld();
-    engine3d.resetSkyColors();
-    engine3d.resetSkyBox();
+    worldManager.unload().then(() => {
+        appState.unloadWorld();
+    });
 };
 
 const displayLogin = computed(() => main.state === AppStates.SIGNED_OUT);
@@ -140,6 +120,10 @@ const render = () => {
 onMounted(() => {
     const canvas = document.querySelector('#main-3d-canvas');
     engine3d = new Engine3D(canvas);
+
+    // Ready world path registry for object caching
+    worldManager = new WorldManager(engine3d, worldPathRegistry, httpClient);
+
     engine3d.start();
     requestAnimationFrame(render);
 });
