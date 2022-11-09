@@ -14,28 +14,30 @@ class DummyBehavior extends SubjectBehavior {
         super(subject);
     }
 
-    forward(delta) {
-        this.subject.z += 2.0 * delta;
-    }
+    step(delta) {
+        if (this.forward()) {
+            this.subject.z += 2.0 * delta;
+        }
 
-    backward(delta) {
-        this.subject.z -= 2.0 * delta;
-    }
+        if (this.backward()) {
+            this.subject.z -= 2.0 * delta;
+        }
 
-    left(delta) {
-        this.subject.x += 2.0 * delta;
-    }
+        if (this.left()) {
+            this.subject.x += 2.0 * delta;
+        }
 
-    right(delta) {
-        this.subject.x -= 2.0 * delta;
-    }
+        if (this.right()) {
+            this.subject.x -= 2.0 * delta;
+        }
 
-    moveUp(delta) {
-        this.subject.y += 2.0 * delta;
-    }
+        if (this.moveUp()) {
+            this.subject.y += 2.0 * delta;
+        }
 
-    moveDown(delta) {
-        this.subject.y -= 2.0 * delta;
+        if (this.moveDown()) {
+            this.subject.y -= 2.0 * delta;
+        }
     }
 }
 
@@ -79,21 +81,21 @@ describe('UserInput', () => {
         assert.equal(subject.y, 0.0);
         assert.equal(subject.z, 0.0);
 
-        behavior.forward(2.0);
-        behavior.left(3.0);
-        behavior.moveUp(4.0);
+        behavior._forwardPressed = true;
+        behavior.step(4.0); // Moves forward
+        behavior._forwardPressed = false;
+        behavior.step(2.0); // Does nothing
 
-        assert.equal(subject.z, 4.0);
-        assert.equal(subject.x, 6.0);
+        assert.equal(subject.z, 8.0);
+
+        behavior._rightPressed = true;
+        behavior._moveUpPressed = true;
+        behavior.step(3.0); // Moves up to the right
+        behavior._rightPressed = false;
+        behavior.step(1.0); // Only moves up
+
+        assert.equal(subject.x, -6.0);
         assert.equal(subject.y, 8.0);
-
-        behavior.backward(3.0);
-        behavior.right(1.0);
-        behavior.moveDown(2.0);
-
-        assert.equal(subject.z, -2.0);
-        assert.equal(subject.x, 4.0);
-        assert.equal(subject.y, 4.0);
     });
 
     it('UserInputListener', () => {

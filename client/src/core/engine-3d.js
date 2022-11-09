@@ -89,11 +89,13 @@ class Engine3D {
         this.nodes[id].add(obj3d);
     }
 
-    render() {
+    getDeltaTime() {
+        return Math.min(this.clock.getDelta());
+    }
+
+    render(deltaTime = this.getDeltaTime()) {
         // Do not render anything: notify the upper window context that we want to stop
         if (this.stopRequested) return false;
-
-        const deltaTime = Math.min(this.clock.getDelta());
 
         if (this.resizeRendererToDisplaySize()) {
             const canvas = this.renderer.domElement;

@@ -14,10 +14,12 @@ import WorldManager from './core/world-manager.js';
 import HttpClient from './core/http-client.js';
 import Engine3D from './core/engine-3d.js';
 import UserInput, {SubjectBehavior, SubjectBehaviorFactory, UserInputListener} from './core/user-input.js';
+import UserBehavior from './core/user-behavior.js';
 import {LoadingManager} from 'three';
 
 // Three.js context-related settings
 let engine3d = null;
+let user = null;
 const worldPathRegistry = new WorldPathRegistry(new LoadingManager());
 let worldManager = null;
 
@@ -96,10 +98,6 @@ const handleLeave = () => {
     });
 };
 
-const displayLogin = computed(() => main.state === AppStates.SIGNED_OUT);
-const displayWorldSelection = computed(() => main.state === AppStates.WORLD_UNLOADED && Object.values(main.worlds).length > 0);
-const displayTopbar = computed(() => main.state === AppStates.WORLD_LOADED);
-
 const resizeRendererToDisplaySize = (renderer) => {
     const canvas = renderer.domElement;
     const width = canvas.clientWidth;
@@ -111,15 +109,27 @@ const resizeRendererToDisplaySize = (renderer) => {
     return needResize;
 };
 
+const onKeyUp = (event) => {
+    inputListener.releaseKey(event.keyCode);
+}
+
+const onKeyDown = (event) => {
+    inputListener.pressKey(event.keyCode);
+}
+
 const render = () => {
-    if (engine3d.render())
+    const delta = engine3d.getDeltaTime();
+    inputListener.step(delta);
+    if (engine3d.render(delta)) {
         requestAnimationFrame(render);
+    }
 };
 
 // As soon as the component is mounted: initialize Three.js 3D context and spool up rendering cycle
 onMounted(() => {
     const canvas = document.querySelector('#main-3d-canvas');
     engine3d = new Engine3D(canvas);
+    user = inputListener.setSubject('user', engine3d.camera);
 
     // Ready world path registry for object caching
     worldManager = new WorldManager(engine3d, worldPathRegistry, httpClient);
@@ -131,7 +141,14 @@ onMounted(() => {
 const behaviorFactory = new SubjectBehaviorFactory();
 const inputListener = new UserInputListener(behaviorFactory);
 
-//behaviorFactory.register('dummy', DummyBehavior);
+behaviorFactory.register('user', UserBehavior);
+
+const displayLogin = computed(() => main.state === AppStates.SIGNED_OUT);
+const displayWorldSelection = computed(() => main.state === AppStates.WORLD_UNLOADED && Object.values(main.worlds).length > 0);
+const displayTopbar = computed(() => main.state === AppStates.WORLD_LOADED);
+
+document.addEventListener('keyup', onKeyUp, false);
+document.addEventListener('keydown', onKeyDown, false);
 
 </script>
 

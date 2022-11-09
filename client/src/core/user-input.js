@@ -43,11 +43,13 @@ class SubjectBehavior {
     constructor(subject) {
         this.subject = subject;
 
-        for(const name of UserInput) {
-            // If nothing is defined for this command: make a dummy implementation on the spot
-            if(!this[name]) this[name] = (delta) => {};
+        for (const name of UserInput) {
+            this[name] = () => this[`_${name}Pressed`];
+            this[`_${name}Pressed`] = false;
         }
     }
+
+    step(delta) {} // derive this
 }
 
 class UserInputListener {
@@ -59,7 +61,7 @@ class UserInputListener {
         // Each input key will be set to null by default, a 'bind' and 'reset' method
         // will also ne ready of each one of them, eg: for 'forward' there will be
         // 'bindForward(input)' and 'clearForward()' methods available
-        for(const name of UserInput) {
+        for (const name of UserInput) {
             const upperCased = name.charAt(0).toUpperCase() + name.slice(1);
             this[`${name}Key`] = null;
             this[`${name}Pressed`] = false;
@@ -131,8 +133,8 @@ class UserInputListener {
     }
 
     pressKey(key) {
-        for(const name of UserInput) {
-            if(this[`${name}Key`] === key) {
+        for (const name of UserInput) {
+            if( this[`${name}Key`] === key) {
                 this[`${name}Pressed`] = true;
                 break;
             }
@@ -140,8 +142,8 @@ class UserInputListener {
     }
 
     releaseKey(key) {
-        for(const name of UserInput) {
-            if(this[`${name}Key`] === key) {
+        for (const name of UserInput) {
+            if (this[`${name}Key`] === key) {
                 this[`${name}Pressed`] = false;
                 break;
             }
@@ -149,10 +151,16 @@ class UserInputListener {
     }
 
     step(delta) {
-        for(const name of UserInput) {
-            if(this[`${name}Pressed`]) {
-                if(this.subjectBehavior) this.subjectBehavior[`${name}`](delta);
+        if (this.subjectBehavior) {
+            for (const name of UserInput) {
+                if (this[`${name}Pressed`]) {
+                    this.subjectBehavior[`_${name}Pressed`] = true;
+                } else {
+                    this.subjectBehavior[`_${name}Pressed`] = false;
+                }
             }
+
+            this.subjectBehavior.step(delta);
         }
     }
 }

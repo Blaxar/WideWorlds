@@ -39,6 +39,7 @@ class ModelRegistry {
     /* Fetch an object from the registry, load it first if necessary and use placeholder if not found */
     async get(name) {
         if(!this.models.has(name)) {
+            // TODO: support names without extension (defaults to .rwx)
             this.models.set(name, new Promise((resolve) => {
                 this.loader.load(name, (rwx) => { rwx.name = name; resolve(rwx);}, null, () => resolve(this.placeholder.clone()));
             }));
@@ -50,6 +51,7 @@ class ModelRegistry {
     /* Same as above, but using basic materials instead of light-sensitive ones */
     async getBasic(name) {
         if(!this.basicModels.has(name)) {
+            // TODO: support names without extension (defaults to .rwx)
             this.basicModels.set(name, new Promise((resolve) => {
                 this.basicLoader.load(name, (rwx) => { rwx.name = name; resolve(rwx);}, null, () => resolve(this.placeholder.clone()));
             }));
