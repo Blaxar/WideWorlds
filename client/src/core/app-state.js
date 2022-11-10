@@ -9,8 +9,8 @@ const AppStates = {
 const noOp = () => {};
 
 class AppState {
-    constructor(hooks = {}) {
-        this.state = AppStates.SIGNED_OUT;
+    constructor(hooks = {}, state = AppStates.SIGNED_OUT) {
+        this.state = state;
 
         this.transitions = {signIn: [AppStates.SIGNED_OUT, AppStates.SIGNING_IN],
                             toWorldSelection: [AppStates.SIGNING_IN, AppStates.WORLD_UNLOADED],

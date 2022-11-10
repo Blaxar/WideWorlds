@@ -1,10 +1,18 @@
 class HttpClient {
-    constructor(url = "/api", cors = false) {
+    constructor(url = "/api", cors = false, token = null) {
         this.headers = new Headers();
         this.headers.append('Content-Type', 'application/json');
+        this.token = token;
+
+        if (token) this.setAuthToken(token);
 
         this.url = url;
         this.cors = cors;
+    }
+
+    setAuthToken(token) {
+        this.clear();
+        this.headers.append('Authorization', 'Bearer ' + token);
     }
 
     clear() {
@@ -28,8 +36,8 @@ class HttpClient {
             else throw('Missing authorization token');
         })
         .then(token => {
-            this.clear();
-            this.headers.append('Authorization', 'Bearer ' + token);
+            this.setAuthToken(token);
+            return token;
         });
     }
 

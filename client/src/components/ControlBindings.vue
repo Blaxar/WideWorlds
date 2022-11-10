@@ -79,6 +79,8 @@ const onKeyUp = (event) => {
 
 const inputField = ref(null);
 
+const emit = defineEmits(['keyBindingUpdated']);
+
 onMounted(() => {
     // Each time some binding changes: we look for the corresponding input field and update the value
     props.listener.addBindingListener((name, input) => {
@@ -88,6 +90,8 @@ onMounted(() => {
                 break;
             }
         }
+
+        emit('keyBindingUpdated', name, input);
     });
 });
 

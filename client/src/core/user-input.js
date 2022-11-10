@@ -15,6 +15,23 @@ const UserInput = [
     'crouch'
 ];
 
+const qwertyBindings = {
+    forward: 87, // W
+    backward: 83, // S
+    left: 65, // A
+    right: 68, // D
+    turnLeft: 81, // Q
+    turnRight: 69, // E
+    moveUp: 107, // Numpad +
+    moveDown: 109, // Numpad -
+    lookUp: 33, // Page Up
+    lookDown: 34, // Page Down
+    jump: 32, // Space
+    strafe: 16, // Shift
+    run: 17, // Ctrl
+    crouch: 67 // C
+};
+
 class SubjectBehaviorFactory {
     constructor() {
         this.behaviorMap = new Map();
@@ -53,7 +70,7 @@ class SubjectBehavior {
 }
 
 class UserInputListener {
-    constructor(behaviorFactory = new SubjectBehaviorFactory()) {
+    constructor(behaviorFactory = new SubjectBehaviorFactory(), keyBindings = {}) {
         this.subjectBehaviorFactory = behaviorFactory;
         this.subjectBehavior = null;
         this.bindingListeners = [];
@@ -63,7 +80,7 @@ class UserInputListener {
         // 'bindForward(input)' and 'clearForward()' methods available
         for (const name of UserInput) {
             const upperCased = name.charAt(0).toUpperCase() + name.slice(1);
-            this[`${name}Key`] = null;
+            this[`${name}Key`] = keyBindings[name] ? keyBindings[name] : null;
             this[`${name}Pressed`] = false;
             this[`bind${upperCased}Key`] = (input, uniqueOverride = false) => this.bindKey(name, input, uniqueOverride);
             this[`clear${upperCased}Key`] = () => this.clearKey(name);
@@ -166,4 +183,4 @@ class UserInputListener {
 }
 
 export default UserInput;
-export {SubjectBehavior, SubjectBehaviorFactory, UserInputListener};
+export {SubjectBehavior, SubjectBehaviorFactory, UserInputListener, qwertyBindings};
