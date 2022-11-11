@@ -27,10 +27,14 @@ class Engine3D {
         this.reversedOctahedron.applyMatrix4(this.scaleSky);
         this.reversedOctahedron.renderOrder = -2;
         this.reversedOctahedron.depthTest = false;
-        this.ambientLight = new THREE.AmbientLight(0x909090); // soft white light
+        this.ambientLight = new THREE.AmbientLight(0xffffff, 0.6); // soft white light
+        this.directionalLight = new THREE.DirectionalLight(0xffff70, 0.9); // orange-ish?
+        this.directionalLight.position.set(1, 1, 1);
         this.backgroundScene.add(this.reversedOctahedron);
         this.scene.add(this.ambientLight);
-        this.nodes = [];
+        this.scene.add(this.directionalLight);
+        this.nodes = new Map();
+        this.lastId = 0;
     }
 
     resizeRendererToDisplaySize() {
@@ -71,26 +75,32 @@ class Engine3D {
         this.ambientlight.color = color;
     }
 
-    spawnNode() {
-        // TODO: reuse empty slots when possible
-        const id = this.nodes.length;
-        this.nodes.push(new THREE.Group());
-        this.scene.add(this.nodes[id]);
+    spawnNode(x = 0, y = 0, z = 0) {
+        const id = this.lastId++;
+        this.nodes.set(id, new THREE.Group());
+        const node = this.nodes.get(id);
+        node.position.set(x, y, z);
+        this.scene.add(node);
         return id;
     }
 
     removeNode(id) {
-        // TODO: check that node exists
-        this.scene.remove(this.nodes[id]);
-        this.nodes[id] = null;
+        if (!this.nodes.has(id)) return false;
+
+        this.scene.remove(this.nodes.get(id));
+        this.nodes.delete(id);
+        return true;
     }
 
     appendToNode(id, obj3d) {
-        this.nodes[id].add(obj3d);
+        if (!this.nodes.has(id)) return false;
+
+        this.nodes.get(id).add(obj3d);
+        return true;
     }
 
     getDeltaTime() {
-        return Math.min(this.clock.getDelta());
+        return this.clock.getDelta();
     }
 
     render(deltaTime = this.getDeltaTime()) {

@@ -123,9 +123,8 @@ const handleWorldCancel = () => {
 };
 
 const handleLeave = () => {
-    worldManager.unload().then(() => {
-        appState.unloadWorld();
-    });
+    worldManager.unload();
+    appState.unloadWorld();
 };
 
 const handleKeyBindingUpdated = (name, input) => {
@@ -155,6 +154,7 @@ const onKeyDown = (event) => {
 const render = () => {
     const delta = engine3d.getDeltaTime();
     inputListener.step(delta);
+    worldManager?.update(engine3d.camera.position);
     if (engine3d.render(delta)) {
         requestAnimationFrame(render);
     }
@@ -162,6 +162,12 @@ const render = () => {
 
 // As soon as the component is mounted: initialize Three.js 3D context and spool up rendering cycle
 onMounted(() => {
+    document.addEventListener("keydown", event => {
+        if (event.ctrlKey) {
+            event.preventDefault();
+        }
+    });
+
     const canvas = document.querySelector('#main-3d-canvas');
     engine3d = new Engine3D(canvas);
     user = inputListener.setSubject('user', engine3d.camera);
