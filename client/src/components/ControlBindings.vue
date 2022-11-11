@@ -57,7 +57,7 @@ const props = defineProps({
 });
 
 const formatLabel = (name) => {
-    // Capitalize first letter, then put a space before each remaining capital letters
+    // Capitalize first letter, then put a space before each remaining capital letter
     return name.charAt(0).toUpperCase() + name.slice(1).replace(/([A-Z])/g, ' $1').trim();
 };
 

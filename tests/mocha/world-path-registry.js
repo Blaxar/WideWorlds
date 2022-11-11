@@ -1,5 +1,5 @@
 import WorldPathRegistry from '../../client/src/core/world-path-registry.js';
-import ModelRegistry from '../../client/src/core/model-registry.js';
+import ModelRegistry, {normalizePropName} from '../../client/src/core/model-registry.js';
 import {LoadingManager} from 'three';
 import * as assert from 'assert';
 
@@ -45,5 +45,11 @@ describe('WorldPathRegistry and ModelRegistry', () => {
 
         registry.clear();
         assert.equal(registry.modelRegistries.size, 0);
+    });
+
+    it('normalizePropName', () => {
+        assert.equal(normalizePropName('chair.rwx'), 'chair.rwx');
+        assert.equal(normalizePropName('chair'), 'chair.rwx');
+        assert.equal(normalizePropName('chair.cob'), 'chair.cob');
     });
 });
