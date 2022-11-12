@@ -18,9 +18,10 @@ class Engine3D {
         this.camera.position.set(0, 1.80, 0);
         this.camera.lookAt(new THREE.Vector3(0, 1.80, 1)); // Look to the north
 
-        // Ready the Octahedron foir sky colors
+        // Ready the Octahedron for sky colors
         this.reversedOctahedron = utils3D.makeReversedOctahedron();
         this.skyBox = null;
+        this.spinSkyColor = true;
 
         this.reversedOctahedron.material.depthTest = false;
         this.scaleSky = new THREE.Matrix4();
@@ -103,6 +104,11 @@ class Engine3D {
         return this.clock.getDelta();
     }
 
+    setSkyColorSpinning(spin) {
+        this.spinSkyColor = spin;
+        if (!spin) this.reversedOctahedron.setRotationFromAxisAngle(new THREE.Vector3(), 0);
+    }
+
     render(deltaTime = this.getDeltaTime()) {
         // Do not render anything: notify the upper window context that we want to stop
         if (this.stopRequested) return false;
@@ -113,8 +119,10 @@ class Engine3D {
             this.camera.updateProjectionMatrix();
         }
 
-        // TODO: only enable spin it when the world is not loaded 
-        this.reversedOctahedron.rotateY(deltaTime*0.2);
+        if (this.spinSkyColor) {
+            this.reversedOctahedron.rotateY(deltaTime*0.2);
+        }
+
         this.reversedOctahedron.position.copy(this.camera.position);
         if (this.skyBox) {
             this.skyBox.position.set(this.camera.position.x,

@@ -12,14 +12,17 @@ const chunkLoadingPattern = [[-1, 1], [0, 1], [1, 1],
                              [-1, -1], [0, -1], [1, -1]];
 
 class WorldManager {
-    constructor(engine3d, worldPathRegistry, httpClient, chunkSide = 2000) {
+    constructor(engine3d, worldPathRegistry, httpClient, chunkSide = 2000, textureUpdatePeriod = 0.20) {
         this.engine3d = engine3d;
         this.worldPathRegistry = worldPathRegistry;
         this.httpClient = httpClient;
-        this.chunkSide = chunkSide; // Expressed in centimeters
+        this.chunkSide = chunkSide; // In centimeters
+        this.textureUpdatePeriod = textureUpdatePeriod; // In seconds
         this.currentWorld = null;
         this.currentModelRegistry = null;
         this.chunks = new Map();
+        this.props = new Map();
+        this.lastTextureUpdate = 0;
     }
 
     // Takes in a world json description, parse it and set the 3D scene accordingly
@@ -38,6 +41,7 @@ class WorldManager {
             ...data.skyColor.top,
             ...data.skyColor.bottom
         ].map((c) => c / 255.0));
+        this.engine3d.setSkyColorSpinning(false);
 
         if (!data.path) throw('Missing path field from world data json');
 
@@ -47,8 +51,6 @@ class WorldManager {
             const model = await this.currentModelRegistry.getBasic(`${data.skybox}.rwx`);
             this.engine3d.setSkyBox(model);
         }
-
-        this.update(new Vector3(0, 0, 0));
     }
 
     // Clear current world data, reset engine3d state and chunks
@@ -57,7 +59,9 @@ class WorldManager {
         this.currentModelRegistry = null;
         this.engine3d.resetSkyColors();
         this.engine3d.resetSkyBox();
+        this.engine3d.setSkyColorSpinning(true);
         this.clearChunks();
+        this.lastTextureUpdate = 0;
     }
 
     clearChunks() {
@@ -65,12 +69,20 @@ class WorldManager {
             this.engine3d.removeNode(handle);
         }
 
+        this.props.clear();
         this.chunks.clear();
     }
 
     // Load necessary chunks and various elements based on the provided camera position
-    update(pos) {
+    update(pos, delta = 0) {
         if (!(this.currentWorld && this.currentModelRegistry)) return;
+
+        if (this.lastTextureUpdate > this.textureUpdatePeriod) {
+            this.currentModelRegistry.texturesNextFrame();
+            this.lastTextureUpdate = 0;
+        } else {
+            this.lastTextureUpdate += delta;
+        }
 
         const cX = Math.floor(pos.x / (this.chunkSide * cmToMRatio) + 0.5);
         const cZ = Math.floor(pos.z / (this.chunkSide * cmToMRatio) + 0.5);
@@ -126,6 +138,10 @@ class WorldManager {
                 // we just silently cancel the whole loading.
                 return;
             }
+
+            obj3d.matrixAutoUpdate = false;
+            obj3d.updateMatrix();
+            this.props.set(prop.id, obj3d);
         }
     }
 }

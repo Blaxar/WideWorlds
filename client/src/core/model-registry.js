@@ -34,9 +34,9 @@ class ModelRegistry {
         this.basicModels = new Map();
 
         this.loader = (new RWXLoader(loadingManager)).setRWXMaterialManager(this.materialManager)
-            .setPath(path);
+            .setPath(path).setFlatten(true);
         this.basicLoader = (new RWXLoader(loadingManager)).setRWXMaterialManager(this.basicMaterialManager)
-            .setPath(path);
+            .setPath(path).setFlatten(true);
     }
 
     /* Fetch an object from the registry, load it first if necessary and use placeholder if not found */
@@ -61,6 +61,12 @@ class ModelRegistry {
         }
 
         return (await this.basicModels.get(name)).clone();
+    }
+
+    /* Update all animated texture to their next frame */
+    texturesNextFrame() {
+        this.materialManager.texturesNextFrame();
+        this.basicMaterialManager.texturesNextFrame();
     }
 
     clear() {

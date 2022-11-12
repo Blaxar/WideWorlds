@@ -154,7 +154,7 @@ const onKeyDown = (event) => {
 const render = () => {
     const delta = engine3d.getDeltaTime();
     inputListener.step(delta);
-    worldManager?.update(engine3d.camera.position);
+    worldManager?.update(engine3d.camera.position, delta);
     if (engine3d.render(delta)) {
         requestAnimationFrame(render);
     }
