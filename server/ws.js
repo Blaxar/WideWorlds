@@ -20,10 +20,15 @@ class WsChannelManager {
             this.worldChannels[worldId] = { chat: {} };
         }
 
+        // Do not allow more than one connection per client, close the current one if any
+        if (this.worldChannels[worldId].chat[clientId])
+            this.worldChannels[worldId].chat[clientId].close();
+
         this.worldChannels[worldId].chat[clientId] = ws;
     }
 
     removeWorldChatConnection(worldId, clientId) {
+        this.worldChannels[worldId].chat[clientId].close();
         delete this.worldChannels[worldId].chat[clientId];
     }
 
@@ -33,10 +38,10 @@ class WsChannelManager {
             throw('World not found, can\'t send message');
         }
 
-        for (const [cid, ws] of Object.entries(worldChat)) {
-            const user = this.userCache.get(clientId);
-            if (!user) throw('User not found, can\'t send message');
+        const user = this.userCache.get(clientId);
+        if (!user) throw('User not found, can\'t send message');
 
+        for (const [cid, ws] of Object.entries(worldChat)) {
             const data = JSON.stringify({id: clientId,
                                          name: user.name,
                                          role: user.role,
@@ -45,18 +50,44 @@ class WsChannelManager {
         }
     }
 
-    // Each user will have its own WS chat endpoint
+    // Each user will have their on chat endpoint to receive messages on
     addUserChatConnection(userId, ws, clientId) {
         if (this.userChannels[userId] === undefined) {
             // No ongoing channel for this user, ready the base object first
-            this.userChannels[userId] = { chat: {} };
+            this.worldChannels[userId] = { chat: {} };
         }
 
-        this.userChannels[userId].chat[clientId] = ws;
+        // Do not allow more than one connection per client, close the current one if any
+        if (this.worldChannels[userId].chat[clientId])
+            this.worldChannels[userId].chat[clientId].close();
+
+        this.worldChannels[userId].chat[clientId] = ws;
     }
 
     removeUserChatConnection(userId, clientId) {
-        delete this.userChannels[userId].chat[clientId];
+        this.worldChannels[userId].chat[clientId].close();
+        delete this.worldChannels[userId].chat[clientId];
+    }
+
+    sendUserChatMessage(userId, clientId, msg) {
+        const userChat = this.worldChannels[userId]?.chat;
+        if (userChat === undefined) {
+            throw('Destination user not found, can\'t send message');
+        }
+
+        const user = this.userCache.get(clientId);
+        if (!user) throw('Source user not found, can\'t send message');
+
+        const data = JSON.stringify({id: clientId,
+                                     name: user.name,
+                                     role: user.role,
+                                     msg});
+
+        // We don't intend to broadcast to everyone... So we, of course, reply to the destination user but also
+        // to the original sender as well for the sake of providing them feedback of their own sending
+        if (userChat[userId]) userChat[userId].send(data);
+        if (userChat[clientId]) userChat[clientId].send(data);
+        // TODO: implement different behavior if the destination user is not connected ?
     }
 }
 
@@ -87,23 +118,14 @@ const spawnWsServer = async (server, secret, userCache) => {
     const wss = new WebSocketServer({noServer: true});
 
     wss.on('connection', (ws, request, entity, id, type, userId) => {
-        if (entity == 'test') {
-            ws.on('message', (data) => {
-                // TODO: parse actual messages
-                if (data == 'What is my id?') {
-                    ws.send(userId);
-                } else {
-                    ws.send('???');
-                }
-            });
-        } else if (entity == 'world') {
+        if (entity == 'world') {
             channelManager.addWorldChatConnection(id, ws, userId);
             ws.on('close', () => { channelManager.removeWorldChatConnection(id, userId); });
             ws.on('message', (data) => { channelManager.sendWorldChatMessage(id, userId, new TextDecoder().decode(data)); });
         } else if (entity == 'user') {
             channelManager.addUserChatConnection(id, ws, userId);
             ws.on('close', () => { channelManager.removeUserChatConnection(id, userId); });
-            ws.on('message', (data) => { /* TODO: broadcast message to private user chat using manager */ });
+            ws.on('message', (data) => { channelManager.sendUserChatMessage(id, userId, new TextDecoder().decode(data)); });
         }
     });
 
@@ -137,14 +159,11 @@ const spawnWsServer = async (server, secret, userCache) => {
                 else if (userMatch) {
                     wss.emit('connection', ws, request, 'user', userMatch[1], 'chat', userId);
                 }
-                else {
-                    wss.emit('connection', ws, request, 'test', null, null, userId);
-                }
             });
         });
     });
 
     return wss;
-}
+};
 
 export {spawnWsServer};

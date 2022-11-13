@@ -485,25 +485,23 @@ describe('http and ws servers', () => {
 
     // Testing websockets
 
-    it('WS connect - OK', async () => {
-        await request(base.server).ws('/ws')
+    it('WS user chat connect - OK', async () => {
+        await request(base.server).ws('/api/users/' + base.citizenId + '/ws/chat')
             .set('Authorization', 'Bearer ' + base.adminBearerToken)
-            .sendText('What is my id?')
-            .expectText(`${base.adminId}`)
             .sendText('What is up my dude?')
-            .expectText('???')
+            .expectText(`{"id":${base.adminId},"name":"xXx_B0b_xXx","role":"admin","msg":"What is up my dude?"}`)
             .close()
             .expectClosed();
     });
 
-    it('WS connect - Unauthorized', async () => {
-        await request(base.server).ws('/ws')
+    it('WS user chat connect - Unauthorized', async () => {
+        await request(base.server).ws('/api/users/' + base.citizenId + '/ws/chat')
             .set('Authorization', 'gibberish')
             .expectConnectionError(401);
     });
 
-    it('WS connect - Forbidden', async () => {
-        await request(base.server).ws('/ws')
+    it('WS user chat connect - Forbidden', async () => {
+        await request(base.server).ws('/api/users/' + base.citizenId + '/ws/chat')
             .set('Authorization', 'Bearer iNvAlId')
             .expectConnectionError(403);
     });
@@ -512,7 +510,7 @@ describe('http and ws servers', () => {
         await request(base.server).ws('/api/worlds/' + base.worldId + '/ws/chat')
             .set('Authorization', 'Bearer ' + base.adminBearerToken)
             .sendText('What is up my dude?')
-            .expectText('{"id":73,"name":"xXx_B0b_xXx","role":"admin","msg":"What is up my dude?"}')
+            .expectText(`{"id":${base.adminId},"name":"xXx_B0b_xXx","role":"admin","msg":"What is up my dude?"}`)
             .close()
             .expectClosed();
     });
