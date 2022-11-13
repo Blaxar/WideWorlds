@@ -41,17 +41,18 @@ const makeHttpTestBase = (port = 62931, dbFile = 'mocha-http-test-db.sqlite3', s
         citizenId: 0,
         now: 0,
         adminBearerToken: '',
-        citizenBearerToken: ''
-    }
+        citizenBearerToken: '',
+        userCache: new Map()
+    };
 
     const before = async () => {
         if (fs.existsSync(base.dbFile)) {
             throw("Test database file already exists, move it or delete it first.");
         }
 
-        base.server = await spawnHttpServer(base.dbFile, base.port, base.secret);
-        base.wss = await spawnWsServer(base.server, base.secret);
-    }
+        base.server = await spawnHttpServer(base.dbFile, base.port, base.secret, base.userCache);
+        base.wss = await spawnWsServer(base.server, base.secret, base.userCache);
+    };
 
     const beforeEach = async () => {
         // Create world in database, get its ID back
@@ -60,6 +61,9 @@ const makeHttpTestBase = (port = 62931, dbFile = 'mocha-http-test-db.sqlite3', s
         // Create users in database, get their IDs back
         base.adminId = await makeTestUser(TypeORM.getConnection(), 'xXx_B0b_xXx', '3p1cP4sSw0Rd', 'test@somemail.com', 'admin');
         base.citizenId = await makeTestUser(TypeORM.getConnection(), 'oOo_Al1ce_oOo', '3p1cP4sSw0Rd', 'test2@somemail.com', 'citizen');
+
+        base.userCache.set(base.adminId, {name: 'xXx_B0b_xXx', role: 'admin'});
+        base.userCache.set(base.citizenId, {name: 'oOo_Al1ce_oOo', role: 'citizen'});
 
         base.adminBearerToken = await request(base.server)
             .post('/api/login')
@@ -94,7 +98,7 @@ const makeHttpTestBase = (port = 62931, dbFile = 'mocha-http-test-db.sqlite3', s
                            'wall01.rwx', 'Some description.', 'create color red;');
         await makeTestProp(TypeORM.getConnection(), base.worldId, base.adminId, base.now, 100, -200, 300, 450, 900, 1350,
                            'wall02.rwx', 'Some other description.', 'create color blue;');
-    }
+    };
 
     const afterEach = async () => {
         // Fetch all the entities
@@ -105,7 +109,9 @@ const makeHttpTestBase = (port = 62931, dbFile = 'mocha-http-test-db.sqlite3', s
             const repository = TypeORM.getConnection().getRepository(entity.name);
             await repository.clear();
         }
-    }
+
+        base.userCache.clear();
+    };
 
     const after = async () => {
         await base.server.close();
@@ -113,10 +119,10 @@ const makeHttpTestBase = (port = 62931, dbFile = 'mocha-http-test-db.sqlite3', s
 
         // Wait for everything to be properly closed
         await new Promise(resolve => setTimeout(resolve, 1000));
-    }
+    };
 
     return {base, before, after, beforeEach, afterEach};
-}
+};
 
 export default makeHttpTestBase;
 export {makeTestWorld, makeTestUser, makeTestProp};

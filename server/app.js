@@ -21,4 +21,6 @@ const argv = yargs(process.argv)
 // Generate a new secret for each runtime
 const secret = randomBytes(64).toString('hex');
 
-spawnHttpServer(argv.db, argv.port, secret).then( server => spawnWsServer(server, secret));
+const userCache = new Map();
+
+spawnHttpServer(argv.db, argv.port, secret, userCache).then( server => spawnWsServer(server, secret, userCache));

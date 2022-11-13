@@ -7,7 +7,8 @@ const worldChatRegex = /^\/api\/worlds\/([0-9]+)\/ws\/chat$/;
 const userChatRegex = /^\/api\/users\/([0-9]+)\/ws\/chat$/;
 
 class WsChannelManager {
-    constructor() {
+    constructor(userCache) {
+        this.userCache = userCache;
         this.worldChannels = {};
         this.userChannels = {};
     }
@@ -33,7 +34,14 @@ class WsChannelManager {
         }
 
         for (const [cid, ws] of Object.entries(worldChat)) {
-            ws.send(msg);
+            const user = this.userCache.get(clientId);
+            if (!user) throw('User not found, can\'t send message');
+
+            const data = JSON.stringify({id: clientId,
+                                         name: user.name,
+                                         role: user.role,
+                                         msg});
+            ws.send(data);
         }
     }
 
@@ -52,8 +60,8 @@ class WsChannelManager {
     }
 }
 
-const spawnWsServer = async (server, secret) => {
-    const channelManager = new WsChannelManager();
+const spawnWsServer = async (server, secret, userCache) => {
+    const channelManager = new WsChannelManager(userCache);
     const authenticate = (req, onError, onSuccess) => {
         // Get Bearer token, we strip the 'Bearer' part
         const authMatch = req.headers['authorization']?.match(bearerRegex);

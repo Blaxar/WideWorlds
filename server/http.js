@@ -14,7 +14,7 @@ const minNbUsersPerPage = 1;
 const defaultNbUsersPerPage = 200;
 const maxNbUsersPerPage = defaultNbUsersPerPage*10;
 
-const spawnHttpServer = async (path, port, secret) => {
+const spawnHttpServer = async (path, port, secret, userCache) => {
     const authenticate = (req, res, next) => {
         // Get Bearer token, we strip the 'Bearer' part
         const authMatch = req.headers['authorization']?.match(bearerRegex);
@@ -45,6 +45,14 @@ const spawnHttpServer = async (path, port, secret) => {
 
         // Create http server
         const server = createServer(app);
+
+        // Load user cache
+        connection.manager.createQueryBuilder(User, 'user').getMany().then(users => {
+            // Fill-in the cache by binding IDs to names and roles
+            for (const user of users) {
+                userCache.set(user.id, (({name, role}) => ({name, role}))(user));
+            }
+        }); // TODO: handle error (if any)
 
         app.post('/api/login', (req, res) => {
             res.setHeader('Content-Type', 'application/json');
@@ -90,14 +98,14 @@ const spawnHttpServer = async (path, port, secret) => {
 
         app.get('/api/worlds/:id/props', authenticate, (req, res) => {
             res.setHeader('Content-Type', 'application/json');
-            const wid = req.params.id
+            const wid = req.params.id;
 
-            let minX = req.query.minX
-            let maxX = req.query.maxX
-            let minY = req.query.minY
-            let maxY = req.query.maxY
-            let minZ = req.query.minZ
-            let maxZ = req.query.maxZ
+            let minX = req.query.minX;
+            let maxX = req.query.maxX;
+            let minY = req.query.minY;
+            let maxY = req.query.maxY;
+            let minZ = req.query.minZ;
+            let maxZ = req.query.maxZ;
 
             // Get prop of single world using its id (return 404 if not found)
             connection.manager.createQueryBuilder(World, 'world')
@@ -111,7 +119,7 @@ const spawnHttpServer = async (path, port, secret) => {
 
                         // Get chunked list of props by filtering with provided XYZ boundaries (if any)
                         if (minX) {
-                            minX = parseInt(minX)
+                            minX = parseInt(minX);
 
                             if (!isFinite(minX)) {
                                 res.status(400).json({});
@@ -122,7 +130,7 @@ const spawnHttpServer = async (path, port, secret) => {
                         }
 
                         if (maxX) {
-                            maxX = parseInt(maxX)
+                            maxX = parseInt(maxX);
 
                             if (!isFinite(maxX)) {
                                 res.status(400).json({});
@@ -133,7 +141,7 @@ const spawnHttpServer = async (path, port, secret) => {
                         }
 
                         if (minY) {
-                            minY = parseInt(minY)
+                            minY = parseInt(minY);
 
                             if (!isFinite(minY)) {
                                 res.status(400).json({});
@@ -144,7 +152,7 @@ const spawnHttpServer = async (path, port, secret) => {
                         }
 
                         if (maxY) {
-                            maxY = parseInt(maxY)
+                            maxY = parseInt(maxY);
 
                             if (!isFinite(maxY)) {
                                 res.status(400).json({});
@@ -155,7 +163,7 @@ const spawnHttpServer = async (path, port, secret) => {
                         }
 
                         if (minZ) {
-                            minZ = parseInt(minZ)
+                            minZ = parseInt(minZ);
 
                             if (!isFinite(minZ)) {
                                 res.status(400).json({});
@@ -166,7 +174,7 @@ const spawnHttpServer = async (path, port, secret) => {
                         }
 
                         if (maxZ) {
-                            maxZ = parseInt(maxZ)
+                            maxZ = parseInt(maxZ);
 
                             if (!isFinite(maxZ)) {
                                 res.status(400).json({});

@@ -512,7 +512,7 @@ describe('http and ws servers', () => {
         await request(base.server).ws('/api/worlds/' + base.worldId + '/ws/chat')
             .set('Authorization', 'Bearer ' + base.adminBearerToken)
             .sendText('What is up my dude?')
-            .expectText('What is up my dude?')
+            .expectText('{"id":73,"name":"xXx_B0b_xXx","role":"admin","msg":"What is up my dude?"}')
             .close()
             .expectClosed();
     });
