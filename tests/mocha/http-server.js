@@ -486,12 +486,26 @@ describe('http and ws servers', () => {
     // Testing websockets
 
     it('WS user chat connect - OK', async () => {
-        await request(base.server).ws('/api/users/' + base.citizenId + '/ws/chat')
-            .set('Authorization', 'Bearer ' + base.adminBearerToken)
-            .sendText('What is up my dude?')
-            .expectText(`{"id":${base.adminId},"name":"xXx_B0b_xXx","role":"admin","msg":"What is up my dude?"}`)
-            .close()
-            .expectClosed();
+        await Promise.all([
+            // First: ready the receiver's chat by having them connect to their own private channel,
+            // this is so we can assess the message was well received
+            request(base.server).ws('/api/users/' + base.citizenId + '/ws/chat')
+                .set('Authorization', 'Bearer ' + base.citizenBearerToken)
+                .expectText(`{"delivered":true,"id":${base.adminId},"name":"xXx_B0b_xXx","role":"admin","msg":"What is up my dude?"}`) // Wait for the message to come in
+                .close()
+                .expectClosed(),
+            // Second: ready the sender's connection to the receiver's chat and send the message,
+            // note that a feedback of our own message is expected as well
+            request(base.server).ws('/api/users/' + base.citizenId + '/ws/chat')
+                .set('Authorization', 'Bearer ' + base.adminBearerToken)
+                .sendText('What is up my dude?') // Send the message
+                .expectText(`{"delivered":true,"id":${base.adminId},"name":"xXx_B0b_xXx","role":"admin","msg":"What is up my dude?"}`) // Expect a feedback of our own message
+                .wait(100) // Wait for the other side to disconnect
+                .sendText('Still there buddy?') // Send another message after the receiver went offline
+                .expectText(`{"delivered":false,"id":${base.adminId},"name":"xXx_B0b_xXx","role":"admin","msg":"Still there buddy?"}`) // Get notified that this one didn't get delivered
+                .close()
+                .expectClosed()
+        ]);
     });
 
     it('WS user chat connect - Unauthorized', async () => {
@@ -510,7 +524,7 @@ describe('http and ws servers', () => {
         await request(base.server).ws('/api/worlds/' + base.worldId + '/ws/chat')
             .set('Authorization', 'Bearer ' + base.adminBearerToken)
             .sendText('What is up my dude?')
-            .expectText(`{"id":${base.adminId},"name":"xXx_B0b_xXx","role":"admin","msg":"What is up my dude?"}`)
+            .expectText(`{"delivered":true,"id":${base.adminId},"name":"xXx_B0b_xXx","role":"admin","msg":"What is up my dude?"}`)
             .close()
             .expectClosed();
     });

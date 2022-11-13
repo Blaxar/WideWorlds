@@ -6,6 +6,8 @@ const bearerRegex = /^Bearer (.*)$/i;
 const worldChatRegex = /^\/api\/worlds\/([0-9]+)\/ws\/chat$/;
 const userChatRegex = /^\/api\/users\/([0-9]+)\/ws\/chat$/;
 
+const formatUserMessage = (delivered, id, name, role, msg) => JSON.stringify({delivered, id, name, role, msg});
+
 class WsChannelManager {
     constructor(userCache) {
         this.userCache = userCache;
@@ -21,8 +23,7 @@ class WsChannelManager {
         }
 
         // Do not allow more than one connection per client, close the current one if any
-        if (this.worldChannels[worldId].chat[clientId])
-            this.worldChannels[worldId].chat[clientId].close();
+        this.worldChannels[worldId].chat[clientId]?.close();
 
         this.worldChannels[worldId].chat[clientId] = ws;
     }
@@ -32,7 +33,7 @@ class WsChannelManager {
         delete this.worldChannels[worldId].chat[clientId];
     }
 
-    sendWorldChatMessage(worldId, clientId, msg) {
+    sendWorldChatMessage(clientId, worldId, msg) {
         const worldChat = this.worldChannels[worldId]?.chat;
         if (worldChat === undefined) {
             throw('World not found, can\'t send message');
@@ -41,53 +42,51 @@ class WsChannelManager {
         const user = this.userCache.get(clientId);
         if (!user) throw('User not found, can\'t send message');
 
+        const data = formatUserMessage(true, clientId, user.name, user.role, msg);
         for (const [cid, ws] of Object.entries(worldChat)) {
-            const data = JSON.stringify({id: clientId,
-                                         name: user.name,
-                                         role: user.role,
-                                         msg});
             ws.send(data);
         }
     }
 
     // Each user will have their on chat endpoint to receive messages on
-    addUserChatConnection(userId, ws, clientId) {
-        if (this.userChannels[userId] === undefined) {
-            // No ongoing channel for this user, ready the base object first
-            this.worldChannels[userId] = { chat: {} };
-        }
-
+    addUserChatConnection(ws, clientId) {
         // Do not allow more than one connection per client, close the current one if any
-        if (this.worldChannels[userId].chat[clientId])
-            this.worldChannels[userId].chat[clientId].close();
+        this.userChannels[clientId]?.close();
 
-        this.worldChannels[userId].chat[clientId] = ws;
+        this.userChannels[clientId] = ws;
     }
 
-    removeUserChatConnection(userId, clientId) {
-        this.worldChannels[userId].chat[clientId].close();
-        delete this.worldChannels[userId].chat[clientId];
+    removeUserChatConnection(clientId) {
+        this.userChannels[clientId]?.close();
+
+        delete this.userChannels[clientId];
     }
 
-    sendUserChatMessage(userId, clientId, msg) {
-        const userChat = this.worldChannels[userId]?.chat;
-        if (userChat === undefined) {
-            throw('Destination user not found, can\'t send message');
+    sendUserChatMessage(clientId, userId, msg) {
+        const userChat = this.userChannels[userId];
+        const clientChat = this.userChannels[clientId];
+
+        if (clientChat === undefined) {
+            throw('Source user not online, can\'t send message');
         }
 
         const user = this.userCache.get(clientId);
-        if (!user) throw('Source user not found, can\'t send message');
+        if (!user) throw('Source user not found in cache, can\'t send message');
 
-        const data = JSON.stringify({id: clientId,
-                                     name: user.name,
-                                     role: user.role,
-                                     msg});
+        let data = formatUserMessage(false, clientId, user.name, user.role, msg);
+        if (userChat === undefined) {
+            // Destination user is offline, notify sender about failure
+            clientChat.send(data);
+            return;
+        }
 
-        // We don't intend to broadcast to everyone... So we, of course, reply to the destination user but also
+        // Destination user is online
+        data = formatUserMessage(true, clientId, user.name, user.role, msg);
+
+        // We don't intend to broadcast to everyone... So we reply to the destination user but also
         // to the original sender as well for the sake of providing them feedback of their own sending
-        if (userChat[userId]) userChat[userId].send(data);
-        if (userChat[clientId]) userChat[clientId].send(data);
-        // TODO: implement different behavior if the destination user is not connected ?
+        userChat.send(data);
+        clientChat.send(data);
     }
 }
 
@@ -121,11 +120,11 @@ const spawnWsServer = async (server, secret, userCache) => {
         if (entity == 'world') {
             channelManager.addWorldChatConnection(id, ws, userId);
             ws.on('close', () => { channelManager.removeWorldChatConnection(id, userId); });
-            ws.on('message', (data) => { channelManager.sendWorldChatMessage(id, userId, new TextDecoder().decode(data)); });
+            ws.on('message', (data) => { channelManager.sendWorldChatMessage(userId, id, new TextDecoder().decode(data)); });
         } else if (entity == 'user') {
-            channelManager.addUserChatConnection(id, ws, userId);
-            ws.on('close', () => { channelManager.removeUserChatConnection(id, userId); });
-            ws.on('message', (data) => { channelManager.sendUserChatMessage(id, userId, new TextDecoder().decode(data)); });
+            channelManager.addUserChatConnection(ws, userId);
+            ws.on('close', () => { channelManager.removeUserChatConnection(userId); });
+            ws.on('message', (data) => { channelManager.sendUserChatMessage(userId, id, new TextDecoder().decode(data)); });
         }
     });
 
