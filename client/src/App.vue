@@ -6,6 +6,7 @@ import Login from './components/Login.vue';
 import WorldSelection from './components/WorldSelection.vue';
 import WorldView from './components/WorldView.vue';
 import TopBar from './components/TopBar.vue';
+import Chat from './components/Chat.vue';
 import ControlBindings from './components/ControlBindings.vue';
 import AppState, {AppStates} from './core/app-state.js';
 import ModelRegistry from './core/model-registry.js';
@@ -20,6 +21,7 @@ import {LoadingManager} from 'three';
 // Three.js context-related settings
 let engine3d = null;
 let user = null;
+let some_input_focused = false;
 const worldPathRegistry = new WorldPathRegistry(new LoadingManager());
 let worldManager = null;
 let storedKeyBindings = {};
@@ -58,6 +60,9 @@ const entranceHook = (state) => {
 };
 
 const exitHook = (state) => {
+    // Assume a cleared focus on state change to make up for 'focusout' event
+    // not firing when components are disapearing.
+    some_input_focused = false;
     console.log('Leaving "' + state + '" state.');
 };
 
@@ -143,14 +148,6 @@ const resizeRendererToDisplaySize = (renderer) => {
     return needResize;
 };
 
-const onKeyUp = (event) => {
-    inputListener.releaseKey(event.keyCode);
-}
-
-const onKeyDown = (event) => {
-    inputListener.pressKey(event.keyCode);
-}
-
 const render = () => {
     const delta = engine3d.getDeltaTime();
     inputListener.step(delta);
@@ -186,21 +183,36 @@ behaviorFactory.register('user', UserBehavior);
 
 const displayLogin = computed(() => main.state === AppStates.SIGNED_OUT);
 const displayWorldSelection = computed(() => main.state === AppStates.WORLD_UNLOADED && Object.values(main.worlds).length > 0);
-const displayTopbar = computed(() => main.state === AppStates.WORLD_LOADED);
+const displayEdgebars = computed(() => main.state === AppStates.WORLD_LOADED);
 
-document.addEventListener('keyup', onKeyUp, false);
-document.addEventListener('keydown', onKeyDown, false);
+/* Do not forward key events to the input listener if some html element is being focused */
+document.addEventListener('keyup', event => {
+    if (some_input_focused) return;
+    inputListener.releaseKey(event.keyCode);
+}, false);
+document.addEventListener('keydown', event => {
+    if (some_input_focused) return;
+    inputListener.pressKey(event.keyCode);
+}, false);
+
+document.addEventListener('focusin', event => {
+    some_input_focused = true;
+}, false);
+document.addEventListener('focusout', event => {
+    some_input_focused = false;
+}, false);
 
 </script>
 
 <template>
     <canvas id="main-3d-canvas"></canvas>
     <div id="overlay">
-    <TopBar v-if="displayTopbar" @leave="handleLeave">
+    <TopBar v-if="displayEdgebars" @leave="handleLeave">
     <template v-slot:control-bindings><ControlBindings :listener="inputListener" @keyBindingUpdated="handleKeyBindingUpdated" /></template>
     </TopBar>
     <Login v-if="displayLogin" @submit="handleLogin" />
     <WorldSelection v-if="displayWorldSelection" :worlds="Object.values(main.worlds)" @submit="handleWorldSelection" @cancel="handleWorldCancel" />
+    <Chat v-if="displayEdgebars" />
     </div>
 </template>
 

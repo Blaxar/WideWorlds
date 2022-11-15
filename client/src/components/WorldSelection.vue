@@ -31,7 +31,7 @@ const cancel = () => { emit('cancel'); }
 </script>
 
 <template>
-  <div class="world-selection window">
+  <div class="world-selection window prompt">
     <div class="title-bar"><div class="title-bar-text">{{ prompt }}</div></div>
     <form @submit.prevent="onSubmit">
     <table class="window-body">

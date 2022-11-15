@@ -6,13 +6,17 @@ body {
 }
 
 #overlay {
+    z-index: 1;
+    position: absolute;
     width: 100%;
     height: 100%;
     display: flex;
+    flex-direction: column;
+    justify-content: space-between;
 }
 
-.window {
-    margin: 40vh auto;
+.prompt {
+    margin: auto;
 }
 
 .login {
@@ -24,11 +28,17 @@ body {
 }
 
 .top-bar {
-    position: absolute;
-    z-index: 1;
-    margin: 0;
-    width: 100vw;
+    width: 100%;
     height: min-content;
+}
+
+.bottom-bar {
+    width: 100%;
+    height: min-content;
+}
+
+#chat-prompt {
+    width: 100%
 }
 
 .button-bar {
@@ -42,6 +52,6 @@ body {
 #main-3d-canvas {
     position: absolute;
     z-index: -1;
-    height: 100vh;
-    width: 100vw;
+    height: 100%;
+    width: 100%;
 }
