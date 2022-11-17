@@ -1,28 +1,28 @@
 <script setup>
 
 const props = defineProps({
-  prompt: {
-    type: String,
-    default: 'Log in'
-  },
-  usernamePlaceholder: {
-    type: String,
-    default: 'your username'
-  },
-  passwordPlaceholder: {
-    type: String,
-    default: 'your password'
-  },
-  buttonText: {
-    type: String,
-    default: 'Login'
-  },
-  username: {
-    type: String,
-  },
-  password: {
-    type: String,
-  }
+    prompt: {
+        type: String,
+        default: 'Log in'
+    },
+    usernamePlaceholder: {
+        type: String,
+        default: 'your username'
+    },
+    passwordPlaceholder: {
+        type: String,
+        default: 'your password'
+    },
+    buttonText: {
+        type: String,
+        default: 'Login'
+    },
+    username: {
+        type: String,
+    },
+    password: {
+        type: String,
+    }
 });
 
 const emit = defineEmits(['submit']);

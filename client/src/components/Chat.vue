@@ -3,10 +3,10 @@
 import {onMounted, onUnmounted, ref} from "vue";
 
 const props = defineProps({
-  promptPlaceholder: {
-    type: String,
-    default: 'Type here to chat'
-  }
+    promptPlaceholder: {
+        type: String,
+        default: 'Type here to chat'
+    }
 });
 
 onMounted(() => {

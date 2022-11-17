@@ -3,7 +3,8 @@ import request from 'superwstest';
 import * as assert from 'assert';
 
 // Testing http server
-describe('http and ws servers', () => {
+
+describe('http server', () => {
     const ctx = makeHttpTestBase();
     const base = ctx.base;
 
@@ -152,8 +153,8 @@ describe('http and ws servers', () => {
                 assert.equal(body[0].yaw, 0);
                 assert.equal(body[0].pitch, 0);
                 assert.equal(body[0].roll, 0);
-                assert.equal(body[0].name, 'wall01.rwx')
-                assert.equal(body[0].description, 'Some description.')
+                assert.equal(body[0].name, 'wall01.rwx');
+                assert.equal(body[0].description, 'Some description.');
                 assert.equal(body[0].action, 'create color red;');
 
                 // Assert second prop fields
@@ -481,63 +482,5 @@ describe('http and ws servers', () => {
             .set('Accept', 'application/json')
             .expect('Content-Type', /json/)
             .expect(403, done);
-    });
-
-    // Testing websockets
-
-    it('WS user chat connect - OK', async () => {
-        await Promise.all([
-            // First: ready the receiver's chat by having them connect to their own private channel,
-            // this is so we can assess the message was well received
-            request(base.server).ws('/api/users/' + base.citizenId + '/ws/chat')
-                .set('Authorization', 'Bearer ' + base.citizenBearerToken)
-                .expectText(`{"delivered":true,"id":${base.adminId},"name":"xXx_B0b_xXx","role":"admin","msg":"What is up my dude?"}`) // Wait for the message to come in
-                .close()
-                .expectClosed(),
-            // Second: ready the sender's connection to the receiver's chat and send the message,
-            // note that a feedback of our own message is expected as well
-            request(base.server).ws('/api/users/' + base.citizenId + '/ws/chat')
-                .set('Authorization', 'Bearer ' + base.adminBearerToken)
-                .sendText('What is up my dude?') // Send the message
-                .expectText(`{"delivered":true,"id":${base.adminId},"name":"xXx_B0b_xXx","role":"admin","msg":"What is up my dude?"}`) // Expect a feedback of our own message
-                .wait(100) // Wait for the other side to disconnect
-                .sendText('Still there buddy?') // Send another message after the receiver went offline
-                .expectText(`{"delivered":false,"id":${base.adminId},"name":"xXx_B0b_xXx","role":"admin","msg":"Still there buddy?"}`) // Get notified that this one didn't get delivered
-                .close()
-                .expectClosed()
-        ]);
-    });
-
-    it('WS user chat connect - Unauthorized', async () => {
-        await request(base.server).ws('/api/users/' + base.citizenId + '/ws/chat')
-            .set('Authorization', 'gibberish')
-            .expectConnectionError(401);
-    });
-
-    it('WS user chat connect - Forbidden', async () => {
-        await request(base.server).ws('/api/users/' + base.citizenId + '/ws/chat')
-            .set('Authorization', 'Bearer iNvAlId')
-            .expectConnectionError(403);
-    });
-
-    it('WS world chat connect - OK', async () => {
-        await request(base.server).ws('/api/worlds/' + base.worldId + '/ws/chat')
-            .set('Authorization', 'Bearer ' + base.adminBearerToken)
-            .sendText('What is up my dude?')
-            .expectText(`{"delivered":true,"id":${base.adminId},"name":"xXx_B0b_xXx","role":"admin","msg":"What is up my dude?"}`)
-            .close()
-            .expectClosed();
-    });
-
-    it('WS world chat connect - Unauthorized', async () => {
-        await request(base.server).ws('/api/worlds/' + base.worldId + '/ws/chat')
-            .set('Authorization', 'gibberish')
-            .expectConnectionError(401);
-    });
-
-    it('WS world chat connect - Forbidden', async () => {
-        await request(base.server).ws('/api/worlds/' + base.worldId + '/ws/chat')
-            .set('Authorization', 'Bearer iNvAlId')
-            .expectConnectionError(403);
     });
 });

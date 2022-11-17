@@ -1,4 +1,4 @@
-import url from 'url';
+import {URL} from 'url';
 import {WebSocketServer} from 'ws';
 import jwt from 'jsonwebtoken';
 
@@ -129,17 +129,35 @@ const spawnWsServer = async (server, secret, userCache) => {
     });
 
     server.on('upgrade', function upgrade(request, socket, head) {
-        const { pathname } = url.parse(request.url);
+        const { pathname, searchParams } = new URL(request.url, 'https://wideworlds.org'); // We don't care about the base
 
         const worldMatch = pathname.match(worldChatRegex);
         const userMatch = pathname.match(userChatRegex);
 
-        if (pathname != '/ws' && !worldMatch && !userMatch) {
+        if (!worldMatch && !userMatch) {
             socket.destroy();
             return;
         }
 
-        // We expect a valid JWT token provided in the header of the request
+        // We expect a valid JWT token provided either in the header of the request or as url parameter
+        if (!request.headers['authorization'])
+        {
+            // No headers token, try to fetch one from the parameters
+            const paramToken = searchParams.get('token');
+
+            if (paramToken)
+            {
+                request.headers['authorization'] = 'Bearer ' + decodeURIComponent(searchParams.get('token'));
+            }
+            else
+            {
+                // No parameters, can't go further
+                socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n');
+                socket.destroy();
+                return;
+            }
+        }
+
         authenticate(request, (err) => {
             if (err == 401) {
                 socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n');

@@ -3,22 +3,22 @@
 import {computed, reactive} from "vue";
 
 const props = defineProps({
-  leaveButtonText: {
-    type: String,
-    default: 'Leave'
-  },
-  cameraButtonText: {
-    type: String,
-    default: 'Change camera'
-  },
-  visibilityButtonText: {
-    type: String,
-    default: 'Change visibility'
-  },
-  controlsButtonText: {
-    type: String,
-    default: 'Controls'
-  }
+    leaveButtonText: {
+        type: String,
+        default: 'Leave'
+    },
+    cameraButtonText: {
+        type: String,
+        default: 'Change camera'
+    },
+    visibilityButtonText: {
+        type: String,
+        default: 'Change visibility'
+    },
+    controlsButtonText: {
+        type: String,
+        default: 'Controls'
+    }
 });
 
 const emit = defineEmits(['leave']);
