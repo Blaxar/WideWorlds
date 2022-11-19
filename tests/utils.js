@@ -124,5 +124,7 @@ const makeHttpTestBase = (port = 62931, dbFile = 'mocha-http-test-db.sqlite3', s
     return {base, before, after, beforeEach, afterEach};
 };
 
+const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
 export default makeHttpTestBase;
-export {makeTestWorld, makeTestUser, makeTestProp};
+export {makeTestWorld, makeTestUser, makeTestProp, sleep};

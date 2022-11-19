@@ -18,9 +18,9 @@ class ModelRegistry {
 
         const placeholderGeometry = new BufferGeometry();
         const positions = [
-            0.0,  0.2,  0.0,
-            -0.2,  0.0,  0.0,
-            0.2,  0.0,  0.0
+            0.0, 0.2, 0.0,
+            -0.2, 0.0, 0.0,
+            0.2, 0.0, 0.0
         ];
 
         placeholderGeometry.setAttribute('position', new BufferAttribute(new Float32Array(positions), 3));
