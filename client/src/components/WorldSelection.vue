@@ -16,16 +16,14 @@ const props = defineProps({
     worlds: {
         type: Array,
         default: []
-    },
-    worldId: {
-        type: Number,
-        default: null
     }
 });
 
+let worldId = null;
+
 const emit = defineEmits(['submit', 'cancel']);
 
-const onSubmit = () => { emit('submit', props.worldId); }
+const onSubmit = () => { emit('submit', worldId); }
 const cancel = () => { emit('cancel'); }
 
 </script>

@@ -16,18 +16,15 @@ const props = defineProps({
     buttonText: {
         type: String,
         default: 'Login'
-    },
-    username: {
-        type: String,
-    },
-    password: {
-        type: String,
     }
 });
 
+let username = null;
+let password = null;
+
 const emit = defineEmits(['submit']);
 
-const onSubmit = () => { emit('submit', {username: props.username, password: props.password}); }
+const onSubmit = () => { emit('submit', {username, password}); }
 
 </script>
 
