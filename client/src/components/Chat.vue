@@ -1,21 +1,46 @@
 <script setup>
 
-import {onMounted, onUnmounted, ref} from "vue";
+import {onMounted, onUnmounted, reactive} from "vue";
 
 const props = defineProps({
     promptPlaceholder: {
         type: String,
         default: 'Type here to chat'
+    },
+    maxMessageAmount: {
+        type: Number,
+        default: 6
+    },
+    worldChat: {
+        type: Promise,
+        required: true
     }
 });
 
+const messages = reactive([]);
+
 onMounted(() => {
-    // TODO
+    props.worldChat.then(chat => {
+        chat.onMessage(data => {
+            messages.push(JSON.parse(data));
+        });
+    });
 });
 
 onUnmounted(() => {
-    // TODO
+    props.worldChat.then(chat => {
+        chat.close();
+    });
 });
+
+const onSubmit = (event) => {
+    const inputField = event.target.getElementsByTagName('input')[0];
+    const value = inputField.value;
+    props.worldChat.then(chat => {
+        if (value) chat.send(value);
+    });
+    inputField.value = null;
+}
 
 </script>
 
@@ -23,10 +48,13 @@ onUnmounted(() => {
 
 <div class="bottom-bar window">
 <div class="window-body">
-    <pre>This is where chat content will be displayed,<br/>eventually...
+<pre id="chat-box">
+<span v-for="entry in messages.slice(-props.maxMessageAmount)">{{entry.name}}: {{entry.msg}}</span>
 </pre>
 </div>
-<input type="text" :placeholder="promptPlaceholder" id="chat-prompt">
+<form @submit.prevent="onSubmit">
+<input type="text" :placeholder="promptPlaceholder" id="chat-prompt" name="message" />
+</form>
 </div>
 
 </template>

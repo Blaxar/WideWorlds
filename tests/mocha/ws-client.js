@@ -17,7 +17,7 @@ describe('ws chat', () => {
     after(ctx.after);
 
     it('world chat', async () => {
-        const client = new WsClient(`ws://127.0.0.1:${base.port}`, base.citizenBearerToken);
+        const client = new WsClient(`ws://127.0.0.1:${base.port}/api`, base.citizenBearerToken);
         const chat = await client.worldChatConnect(base.worldId);
         let message = null;
         let closed = false;
@@ -45,8 +45,8 @@ describe('ws chat', () => {
     });
 
     it('user chat', async () => {
-        const citizenClient = new WsClient(`ws://127.0.0.1:${base.port}`, base.citizenBearerToken);
-        const adminClient = new WsClient(`ws://127.0.0.1:${base.port}`, base.adminBearerToken);
+        const citizenClient = new WsClient(`ws://127.0.0.1:${base.port}/api`, base.citizenBearerToken);
+        const adminClient = new WsClient(`ws://127.0.0.1:${base.port}/api`, base.adminBearerToken);
         const adminFromCitizenChat = await citizenClient.userChatConnect(base.adminId);
         const citizenFromAdminChat = await adminClient.userChatConnect(base.citizenId);
         let citizenMsg = null;

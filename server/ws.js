@@ -29,7 +29,7 @@ class WsChannelManager {
     }
 
     removeWorldChatConnection(worldId, clientId) {
-        this.worldChannels[worldId].chat[clientId].close();
+        this.worldChannels[worldId]?.chat[clientId]?.close();
         delete this.worldChannels[worldId].chat[clientId];
     }
 

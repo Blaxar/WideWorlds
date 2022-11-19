@@ -13,6 +13,7 @@ import ModelRegistry from './core/model-registry.js';
 import WorldPathRegistry from './core/world-path-registry.js';
 import WorldManager from './core/world-manager.js';
 import HttpClient from './core/http-client.js';
+import WsClient from './core/ws-client.js';
 import Engine3D from './core/engine-3d.js';
 import UserInput, {SubjectBehavior, SubjectBehaviorFactory, UserInputListener, qwertyBindings} from './core/user-input.js';
 import UserBehavior from './core/user-behavior.js';
@@ -24,12 +25,14 @@ let user = null;
 let some_input_focused = false;
 const worldPathRegistry = new WorldPathRegistry(new LoadingManager());
 let worldManager = null;
+let wsClient = null;
 let storedKeyBindings = {};
 
 // Define reactive states for Vue.js
 const main = reactive({
     state: AppStates.SIGNED_OUT,
-    worlds: {}
+    worlds: {},
+    worldId: null
 });
 
 // Ready local storage
@@ -45,8 +48,11 @@ if (!localStorage.getItem('keyBindings')) {
     }
 }
 
+const spawnWsClient = token => new WsClient(import.meta.env.VITE_SERVER_URL.replace(/http\:\/\//g, 'ws://') + '/api', token);
+
 if (localStorage.getItem('token')) {
     // If there's an authentication token in local storage: skip past the sign-in step
+    wsClient = spawnWsClient(localStorage.getItem('token'));
     main.state = AppStates.WORLD_UNLOADED;
 }
 
@@ -84,9 +90,14 @@ const clearWorldList = () => {
     main.worlds = {};
 };
 
+const getWorldChat = () => {
+    return wsClient.worldChatConnect(main.worldId); // Promise
+};
+
 const hooks = {
     [AppStates.SIGNED_OUT]: [state => {
         entranceHook(state);
+        wsClient = null;
         httpClient.clear();
         localStorage.removeItem('token');
     }, exitHook],
@@ -106,6 +117,7 @@ const handleLogin = (credentials) => {
     httpClient.login(credentials.username, credentials.password)
     .then((token) => {
         localStorage.setItem('token', token);
+        wsClient = spawnWsClient(token);
         appState.toWorldSelection();
     })
     .catch(error => {
@@ -119,6 +131,7 @@ const handleWorldSelection = (id) => {
     appState.loadWorld();
 
     worldManager.load(world).then(() => {
+        main.worldId = id;
         appState.readyWorld();
     });
 };
@@ -160,7 +173,7 @@ const render = () => {
 // As soon as the component is mounted: initialize Three.js 3D context and spool up rendering cycle
 onMounted(() => {
     document.addEventListener("keydown", event => {
-        if (event.ctrlKey) {
+        if (event.ctrlKey && !some_input_focused) {
             event.preventDefault();
         }
     });
@@ -212,7 +225,7 @@ document.addEventListener('focusout', event => {
     </TopBar>
     <Login v-if="displayLogin" @submit="handleLogin" />
     <WorldSelection v-if="displayWorldSelection" :worlds="Object.values(main.worlds)" @submit="handleWorldSelection" @cancel="handleWorldCancel" />
-    <Chat v-if="displayEdgebars" />
+    <Chat v-if="displayEdgebars" :worldChat="getWorldChat()" />
     </div>
 </template>
 

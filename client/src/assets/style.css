@@ -41,6 +41,10 @@ body {
     width: 100%
 }
 
+#chat-box span {
+    display: block;
+}
+
 .button-bar {
     height: min-content;
 }

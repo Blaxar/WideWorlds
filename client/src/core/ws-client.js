@@ -1,4 +1,4 @@
-import WebSocket from 'ws';
+import WebSocket from 'isomorphic-ws';
 
 class BaseWs {
     constructor(ws) {
@@ -46,7 +46,7 @@ class WsClient {
 
     worldChatConnect(id) {
         return new Promise((resolve, err) => {
-            const ws = new WebSocket(`${this.baseUrl}/api/worlds/${id}/ws/chat?token=${this.token}`);
+            const ws = new WebSocket(`${this.baseUrl}/worlds/${id}/ws/chat?token=${this.token}`);
 
             ws.addEventListener('error', event => {
                 err(event);
@@ -60,7 +60,7 @@ class WsClient {
 
     userChatConnect(id) {
         return new Promise((resolve, err) => {
-            const ws = new WebSocket(`${this.baseUrl}/api/users/${id}/ws/chat?token=${this.token}`);
+            const ws = new WebSocket(`${this.baseUrl}/users/${id}/ws/chat?token=${this.token}`);
 
             ws.addEventListener('error', event => {
                 err(event);
