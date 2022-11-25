@@ -1,39 +1,41 @@
 <script setup>
 
-import {computed, reactive} from "vue";
+import {computed, reactive} from 'vue';
 
+/* eslint-disable no-unused-vars */
 const props = defineProps({
-    leaveButtonText: {
-        type: String,
-        default: 'Leave'
-    },
-    cameraButtonText: {
-        type: String,
-        default: 'Change camera'
-    },
-    visibilityButtonText: {
-        type: String,
-        default: 'Change visibility'
-    },
-    controlsButtonText: {
-        type: String,
-        default: 'Controls'
-    }
+  leaveButtonText: {
+    type: String,
+    default: 'Leave',
+  },
+  cameraButtonText: {
+    type: String,
+    default: 'Change camera',
+  },
+  visibilityButtonText: {
+    type: String,
+    default: 'Change visibility',
+  },
+  controlsButtonText: {
+    type: String,
+    default: 'Controls',
+  },
 });
+/* eslint-enable no-unused-vars */
 
 const emit = defineEmits(['leave']);
 
 const state = reactive({
-    selected: null
+  selected: null,
 });
 
 const displayControls = computed(() => state.selected === 'controls');
-const leave = () => emit('leave');
 
 const select = (event) => {
-    state.selected = state.selected === event.target.name ? null : event.target.name;
-    if (state.selected === 'leave') emit('leave');
-}
+  state.selected = state.selected === event.target.name ? null :
+    event.target.name;
+  if (state.selected === 'leave') emit('leave');
+};
 </script>
 
 <template>

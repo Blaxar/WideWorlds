@@ -1,30 +1,38 @@
 <script setup>
 
+/* eslint-disable no-unused-vars */
 const props = defineProps({
-    prompt: {
-        type: String,
-        default: 'Select world'
-    },
-    selectButtonText: {
-        type: String,
-        default: 'Select'
-    },
-    cancelButtonText: {
-        type: String,
-        default: 'Cancel'
-    },
-    worlds: {
-        type: Array,
-        default: []
-    }
+  prompt: {
+    type: String,
+    default: 'Select world',
+  },
+  selectButtonText: {
+    type: String,
+    default: 'Select',
+  },
+  cancelButtonText: {
+    type: String,
+    default: 'Cancel',
+  },
+  worlds: {
+    type: Array,
+    default: () => [],
+  },
 });
+/* eslint-enable no-unused-vars */
 
+/* eslint-disable prefer-const */
 let worldId = null;
+/* eslint-enable prefer-const */
 
 const emit = defineEmits(['submit', 'cancel']);
 
-const onSubmit = () => { emit('submit', worldId); }
-const cancel = () => { emit('cancel'); }
+const onSubmit = () => {
+  emit('submit', worldId);
+};
+const cancel = () => {
+  emit('cancel');
+};
 
 </script>
 

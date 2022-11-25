@@ -31,7 +31,7 @@ describe('http client', () => {
         httpClient.login('xXx_B0b_xXx', 'UwU')
             .then(() => done('Login should not work here'))
             .catch(err => {
-                if(err == 401) done();
+                if(err.message == 401) done();
                 else done(err);
             });
     });
@@ -58,7 +58,7 @@ describe('http client', () => {
         httpClient.getWorlds()
             .then(() => done('Getting worlds should not work here'))
             .catch(err => {
-                if(err == 401) done();
+                if(err.message == 401) done();
                 else done(err);
             });
     });

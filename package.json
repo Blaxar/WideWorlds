@@ -6,6 +6,10 @@
   "main": "index.js",
   "scripts": {
     "test": "./node_modules/mocha/bin/mocha -R spec \"tests/mocha/*.js\"",
+    "lint-client-vue": "eslint --ext js,vue client/src/*.vue client/src/components/*.vue",
+    "lint-client-js": "eslint --ext js client/src/*.js client/src/core/*.js",
+    "lint-client": "npm run lint-client-vue && npm run lint-client-js",
+    "lint": "npm run lint-client",
     "server": "node server/app.js",
     "client-dev": "vite client",
     "client-build": "vite build client",
@@ -49,6 +53,9 @@
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^2.3.3",
+    "eslint": "^8.28.0",
+    "eslint-config-google": "^0.14.0",
+    "eslint-plugin-vue": "^9.8.0",
     "mocha": "^9.2.2",
     "supertest": "^6.2.2",
     "superwstest": "^2.0.1",
