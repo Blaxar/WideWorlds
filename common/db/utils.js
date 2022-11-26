@@ -8,18 +8,18 @@ const keyLength = 256;
 const saltLength = 128;
 
 const init = async (path) => {
-    return await TypeORM.createConnection({
-        type: 'sqlite',
-        database: path, 
-        entities: [UserSchema,
-                   WorldSchema,
-                   PropSchema],
-        synchronize: true
-    });
+  return await TypeORM.createConnection({
+    type: 'sqlite',
+    database: path,
+    entities: [UserSchema,
+      WorldSchema,
+      PropSchema],
+    synchronize: true,
+  });
 };
 
 const hashPassword = (password, salt) => {
-    return scryptSync(password, salt, keyLength).toString('base64');
-}
+  return scryptSync(password, salt, keyLength).toString('base64');
+};
 
 export {init, hashPassword, saltLength};
