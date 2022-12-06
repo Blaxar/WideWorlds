@@ -1,5 +1,5 @@
 import TypeORM from 'typeorm';
-import {scryptSync} from 'crypto';
+import {scryptSync, timingSafeEqual} from 'crypto';
 import UserSchema from './entity/UserSchema.js';
 import WorldSchema from './entity/WorldSchema.js';
 import PropSchema from './entity/PropSchema.js';
@@ -22,4 +22,9 @@ const hashPassword = (password, salt) => {
   return scryptSync(password, salt, keyLength).toString('base64');
 };
 
-export {init, hashPassword, saltLength};
+const checkPassword = (password, salt, hash64) => {
+  return timingSafeEqual(scryptSync(password, salt, keyLength),
+      Buffer.from(hash64, 'base64'));
+};
+
+export {init, hashPassword, saltLength, checkPassword};

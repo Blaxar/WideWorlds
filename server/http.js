@@ -67,7 +67,7 @@ const spawnHttpServer = async (path, port, secret, userCache) => {
       // Find user matching provided credentials (if any)
       connection.manager.createQueryBuilder(User, 'user')
           .where('user.name = :username', {username}).getOne().then((user) => {
-            if (user && user.password == db.hashPassword(password, user.salt)) {
+            if (user && db.checkPassword(password, user.salt, user.password)) {
               // Provided password is matching
               res.send({'id': user.id, 'role': user.role,
                 'token': jwt.sign({userId: user.id, userRole: user.role},
