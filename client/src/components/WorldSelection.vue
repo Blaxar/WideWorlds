@@ -1,5 +1,7 @@
 <script setup>
 
+import {onMounted, ref} from 'vue';
+
 /* eslint-disable no-unused-vars */
 const props = defineProps({
   prompt: {
@@ -18,21 +20,35 @@ const props = defineProps({
     type: Array,
     default: () => [],
   },
+  defaultWorldId: {
+    type: Number,
+    default: null,
+  },
 });
 /* eslint-enable no-unused-vars */
 
-/* eslint-disable prefer-const */
-let worldId = null;
-/* eslint-enable prefer-const */
+const worldId = ref(null);
+const availableWorldIds = new Set();
 
 const emit = defineEmits(['submit', 'cancel']);
 
 const onSubmit = () => {
-  emit('submit', worldId);
+  if (worldId.value !== null && availableWorldIds.has(worldId.value)) {
+    emit('submit', worldId.value);
+  }
 };
+
 const cancel = () => {
   emit('cancel');
 };
+
+onMounted(() => {
+  for (const {id} of props.worlds) {
+    availableWorldIds.add(id);
+  }
+
+  worldId.value = props.defaultWorldId;
+});
 
 </script>
 

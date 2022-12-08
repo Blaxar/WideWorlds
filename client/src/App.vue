@@ -25,6 +25,7 @@ const worldPathRegistry = new WorldPathRegistry(new LoadingManager());
 let worldManager = null;
 let wsClient = null;
 let storedKeyBindings = {};
+let defaultWorldId = null;
 
 // Define reactive states for Vue.js
 const main = reactive({
@@ -54,6 +55,12 @@ if (localStorage.getItem('token')) {
   // past the sign-in step
   wsClient = spawnWsClient(localStorage.getItem('token'));
   main.state = AppStates.WORLD_UNLOADED;
+}
+
+if (localStorage.getItem('defaultWorldId')) {
+  // Get the default world ID to select by default in the world
+  // selection screen, if any
+  defaultWorldId = parseInt(localStorage.getItem('defaultWorldId'));
 }
 
 // Ready http client for REST API usage
@@ -136,6 +143,10 @@ const handleWorldSelection = (id) => {
   appState.loadWorld();
 
   worldManager.load(world).then(() => {
+    // Mark this world as default choice for the world selection
+    // screen
+    defaultWorldId = id;
+    localStorage.setItem('defaultWorldId', id);
     main.worldId = id;
     appState.readyWorld();
   });
@@ -225,7 +236,7 @@ document.addEventListener('focusout', (event) => {
     <LoginForm v-if="displayLogin" @submit="handleLogin" />
     <WorldSelection v-if="displayWorldSelection"
     :worlds="Object.values(main.worlds)" @submit="handleWorldSelection"
-    @cancel="handleWorldCancel" />
+    :defaultWorldId="defaultWorldId" @cancel="handleWorldCancel" />
     <UserChat v-if="displayEdgebars" :worldChat="getWorldChat()" />
     </div>
 </template>
