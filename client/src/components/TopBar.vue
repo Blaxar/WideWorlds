@@ -20,6 +20,10 @@ const props = defineProps({
     type: String,
     default: 'Controls',
   },
+  avatars: {
+    type: Array,
+    default: () => [],
+  },
 });
 /* eslint-enable no-unused-vars */
 

@@ -1,3 +1,5 @@
+import {loadAvatarsZip} from '../../../common/avatars-dat-parser.js';
+
 const cmToMRatio = 0.01;
 const degToRadRatio = Math.PI / 180.0;
 
@@ -37,6 +39,8 @@ class WorldManager {
    * Takes in a world json description, parse it and set the 3D scene
    * accordingly
    * @param {world} world - World data object.
+   * @return {Promise} Promise of an object describing the content of
+   *                   the parsed avatars.dat file for this world.
    */
   async load(world) {
     if (this.currentWorld) this.unload();
@@ -65,6 +69,10 @@ class WorldManager {
           .getBasic(`${data.skybox}.rwx`);
       this.engine3d.setSkyBox(model);
     }
+
+    // TODO: customizable avatar.zip subpath and CORS disabling?
+    const res = await loadAvatarsZip(`${data.path}/avatars/avatars.zip`, true);
+    return res.avatars;
   }
 
   /** Clear current world data, reset engine3d state and chunks */

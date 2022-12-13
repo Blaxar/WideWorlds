@@ -26,6 +26,7 @@ let worldManager = null;
 let wsClient = null;
 let storedKeyBindings = {};
 let defaultWorldId = null;
+let worldAvatars = [];
 
 // Define reactive states for Vue.js
 const main = reactive({
@@ -142,12 +143,13 @@ const handleWorldSelection = (id) => {
   const world = main.worlds[id];
   appState.loadWorld();
 
-  worldManager.load(world).then(() => {
+  worldManager.load(world).then((avatars) => {
     // Mark this world as default choice for the world selection
     // screen
     defaultWorldId = id;
     localStorage.setItem('defaultWorldId', id);
     main.worldId = id;
+    worldAvatars = avatars;
     appState.readyWorld();
   });
 };
@@ -229,7 +231,7 @@ document.addEventListener('focusout', (event) => {
 <template>
     <canvas id="main-3d-canvas"></canvas>
     <div id="overlay">
-    <TopBar v-if="displayEdgebars" @leave="handleLeave">
+    <TopBar v-if="displayEdgebars" :avatars="worldAvatars" @leave="handleLeave">
     <template v-slot:control-bindings><ControlBindings :listener="inputListener"
     @keyBindingUpdated="handleKeyBindingUpdated" /></template>
     </TopBar>

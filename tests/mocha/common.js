@@ -1,4 +1,4 @@
-import parseAvatarDat from '../../common/avatar-dat-parser.js';
+import parseAvatarsDat from '../../common/avatars-dat-parser.js';
 import * as assert from 'assert';
 
 const sampleAvatarDat = "# animation registry version 0.3\r\n\
@@ -59,12 +59,31 @@ avatar\r\n\
   Disco=disco\r\n\
   Retourner=retourner\r\n\
   endexp\r\n\
+endavatar\r\n\
+# Above statements will be ignored (missing avatar section)\r\n\
+name=Squelette 01\r\n\
+  geometry=t_skelojack01.rwx\r\n\
+  beginimp\r\n\
+    walk=qwalkf2\r\n\
+    idle=qwait2\r\n\
+    wait=qblink\r\n\
+    endwait=qendwait\r\n\
+    run=qrun2\r\n\
+    fly=qfly2\r\n\
+    hover=qhover1\r\n\
+    swim=qswim\r\n\
+    float=qfloat\r\n\
+    sauter=qjump1\r\n\
+    fall=qfall1\r\n\
+  endimp\r\n\
+  beginexp\r\n\
+  endexp\r\n\
 endavatar\r\n";
 
 // Testing common utils
 describe('common', () => {
-  it('parseAvatarDat', () => {
-    const data = parseAvatarDat(sampleAvatarDat);
+  it('parseAvatarsDat', () => {
+    const data = parseAvatarsDat(sampleAvatarDat);
     assert.strictEqual(data.version, 3);
     assert.strictEqual(data.avatars.length, 2);
 
