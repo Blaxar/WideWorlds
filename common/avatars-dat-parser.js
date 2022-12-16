@@ -19,7 +19,7 @@ function parseAvatarsDat(fileContent) {
     // Sanitizing the line first, trim excess spaces and remove comments
     let match = line.match(/^(.*)#(?!\!)/);
 
-    if ( match && match[1]) {
+    if (match && match[1]) {
       line = match[1];
     }
 

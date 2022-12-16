@@ -1,9 +1,7 @@
 import RWXLoader, {RWXMaterialManager} from 'three-rwx-loader';
-import {Mesh, BufferGeometry, BufferAttribute, MeshBasicMaterial}
+import {Mesh, BufferGeometry, BufferAttribute, MeshBasicMaterial, sRGBEncoding}
   from 'three';
-import * as THREE from 'three';
-import * as JSZip from 'jszip';
-import JSZipUtils from 'jszip-utils';
+import * as fflate from 'fflate';
 
 /* Assume .rwx file extension if none is provided */
 const normalizePropName = (name) =>
@@ -18,12 +16,12 @@ class ModelRegistry {
    * @param {string} resourcePath - Full path to the textures folder.
    */
   constructor(loadingManager, path, resourcePath) {
-    this.textureEncoding = THREE.sRGBEncoding;
+    this.textureEncoding = sRGBEncoding;
 
     this.materialManager = new RWXMaterialManager(resourcePath,
-        '.jpg', '.zip', JSZip, JSZipUtils, false, this.textureEncoding);
+        '.jpg', '.zip', fflate, false, this.textureEncoding);
     this.basicMaterialManager = new RWXMaterialManager(resourcePath,
-        '.jpg', '.zip', JSZip, JSZipUtils, true, this.textureEncoding);
+        '.jpg', '.zip', fflate, true, this.textureEncoding);
 
     const placeholderGeometry = new BufferGeometry();
     const positions = [
