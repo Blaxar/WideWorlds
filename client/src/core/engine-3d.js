@@ -1,6 +1,8 @@
 import * as THREE from 'three';
 import * as utils3D from './utils-3d.js';
 
+const defaultUserHeight = 1.80;
+
 /**
  * Core 3D mangement class, meant to abstract several three.js
  * operations regarding scene handling.
@@ -18,13 +20,20 @@ class Engine3D {
     this.clock = new THREE.Clock();
     this.scene = new THREE.Scene();
     this.backgroundScene = new THREE.Scene();
+
+    // Handling user subjective view here
     const fov = 45;
     const aspect = 2;
     const near = 0.1;
     const far = 100;
+    this.user = new THREE.Group();
+    this.head = new THREE.Group();
+    this.tilt = new THREE.Group();
     this.camera = new THREE.PerspectiveCamera(fov, aspect, near, far);
-    this.camera.position.set(0, 1.80, 0);
-    this.camera.lookAt(new THREE.Vector3(0, 1.80, 1)); // Look to the north
+    this.head.position.set(0, defaultUserHeight, 0);
+    this.head.add(this.tilt);
+    this.user.add(this.head);
+    this.scene.add(this.user);
 
     // Ready the Octahedron for sky colors
     this.reversedOctahedron = utils3D.makeReversedOctahedron();
@@ -188,12 +197,22 @@ class Engine3D {
       this.reversedOctahedron.rotateY(deltaTime*0.2);
     }
 
-    this.reversedOctahedron.position.copy(this.camera.position);
+    // Adjust the camera position based on the user position
+    const tmpVec3 = new THREE.Vector3();
+    this.tilt.getWorldPosition(tmpVec3);
+    this.camera.position.copy(tmpVec3);
+
+    this.reversedOctahedron.position.copy(tmpVec3);
     if (this.skyBox) {
-      this.skyBox.position.set(this.camera.position.x,
-          this.camera.position.y - 1,
-          this.camera.position.z);
+      this.skyBox.position.set(tmpVec3.x,
+          tmpVec3.y - 1,
+          tmpVec3.z);
     }
+
+    const tmpQuat = new THREE.Quaternion();
+    this.tilt.getWorldQuaternion(tmpQuat);
+    this.camera.setRotationFromQuaternion(tmpQuat);
+    this.camera.rotateY(Math.PI);
 
     this.renderer.clear();
     this.renderer.render(this.backgroundScene, this.camera);

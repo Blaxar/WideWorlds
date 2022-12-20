@@ -14,6 +14,10 @@ class UserBehavior extends SubjectBehavior {
     super(subject);
     this.speed = baseSpeed; // m/s
     this.yAxis = new Vector3(0, 1, 0);
+
+    this.direction = new Vector3();
+    this.tmpVec3 = new Vector3();
+    this.tmpEul = new Euler();
   }
 
   /**
@@ -23,78 +27,81 @@ class UserBehavior extends SubjectBehavior {
   step(delta) {
     this.speed = this.run() ? baseSpeed * 2 : baseSpeed;
 
-    const direction = new Vector3();
-    this.subject.getWorldDirection(direction);
-    const originalDirection = direction.clone();
+    this.subject.tilt.getWorldDirection(this.direction);
+    this.tmpVec3.copy(this.direction);
 
     // Flatten the vector so we get a meaningful ground direction (plane XZ)
-    direction.setY(0);
-    direction.normalize();
+    this.direction.setY(0);
+    this.direction.normalize();
 
     // Angles between two vectors are always positive, so we need to check
     // how high the current line of sight is to determine the tilt direction
-    const tilt = originalDirection.y > 0 ?
-              direction.angleTo(originalDirection) :
-              - direction.angleTo(originalDirection);
+    const tilt = this.tmpVec3.y < 0 ?
+              this.direction.angleTo(this.tmpVec3) :
+              - this.direction.angleTo(this.tmpVec3);
 
-    direction.multiplyScalar(this.speed * delta);
+    this.direction.multiplyScalar(this.speed * delta);
 
-    if (this.lookUp()) {
+    if (this.lookDown()) {
       const deltaRotX = delta * this.speed / 2;
       if (tilt + deltaRotX > absTiltLimit) {
         // Do not look above the maximum allowed tilt angle
-        this.subject.rotateX(absTiltLimit - tilt);
+        this.tmpEul.x = absTiltLimit;
+        this.subject.tilt.setRotationFromEuler(this.tmpEul);
       } else {
-        this.subject.rotateX(deltaRotX);
+        this.subject.tilt.rotateX(deltaRotX);
       }
     }
 
-    if (this.lookDown()) {
+    if (this.lookUp()) {
       const deltaRotX = - delta * this.speed / 2;
       if (tilt + deltaRotX < - absTiltLimit) {
         // Do not look below the minimum allowed tilt angle
-        this.subject.rotateX(- absTiltLimit - tilt);
+        this.tmpEul.x = - absTiltLimit;
+        this.subject.tilt.setRotationFromEuler(this.tmpEul);
       } else {
-        this.subject.rotateX(deltaRotX);
+        this.subject.tilt.rotateX(deltaRotX);
       }
     }
 
     if (this.turnLeft() && !this.strafe()) {
-      this.subject.rotateOnWorldAxis(this.yAxis, delta * this.speed / 2);
+      this.subject.user.rotateOnWorldAxis(this.yAxis, delta * this.speed / 2);
     }
 
     if (this.turnRight() && !this.strafe()) {
-      this.subject.rotateOnWorldAxis(this.yAxis, - delta * this.speed / 2);
+      this.subject.user.rotateOnWorldAxis(this.yAxis, - delta * this.speed / 2);
     }
 
     if (this.moveUp() || this.jump()) {
       const d = new Vector3(0, delta * this.speed, 0);
-      this.subject.position.add(d);
+      this.subject.user.position.add(d);
     }
 
     if (this.moveDown() || this.crouch()) {
       const d = new Vector3(0, - delta * this.speed, 0);
-      this.subject.position.add(d);
+      this.subject.user.position.add(d);
     }
 
     if (this.forward()) {
-      this.subject.position.add(direction);
+      this.subject.user.position.add(this.direction);
     }
 
     if (this.backward()) {
-      this.subject.position.sub(direction);
+      this.subject.user.position.sub(this.direction);
     }
 
-    const d = direction.clone();
+    this.tmpVec3.copy(this.direction);
 
     if (this.left() || (this.turnLeft() && this.strafe())) {
-      d.applyEuler(new Euler(0, Math.PI / 2, 0, 'YXZ'));
-      this.subject.position.add(d);
+      this.tmpEul.set(0, Math.PI / 2, 0, 'YXZ');
+      this.tmpVec3.applyEuler(this.tmpEul);
+      this.subject.user.position.add(this.tmpVec3);
     }
 
     if (this.right() || (this.turnRight() && this.strafe())) {
-      d.applyEuler(new Euler(0, - Math.PI / 2, 0, 'YXZ'));
-      this.subject.position.add(d);
+      this.tmpEul.set(0, - Math.PI / 2, 0, 'YXZ');
+      this.tmpVec3.applyEuler(this.tmpEul);
+      this.subject.user.position.add(this.tmpVec3);
     }
   }
 }

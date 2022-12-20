@@ -188,7 +188,12 @@ onMounted(() => {
 
   const canvas = document.querySelector('#main-3d-canvas');
   engine3d = new Engine3D(canvas);
-  inputListener.setSubject('user', engine3d.camera);
+
+  // Update user position based on controls
+  // Note: we could be passing the whole engine3d object, this would work
+  //       as well, but let's be rigorous there and only expose the fields
+  //       we need.
+  inputListener.setSubject('user', {user: engine3d.user, tilt: engine3d.tilt});
 
   // Ready world path registry for object caching
   worldManager = new WorldManager(engine3d, worldPathRegistry, httpClient);
