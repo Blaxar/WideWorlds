@@ -27,6 +27,8 @@ let wsClient = null;
 let storedKeyBindings = {};
 let defaultWorldId = null;
 let worldAvatars = [];
+const thirdPersonCameraDistance = 8;
+let cameraMode = 0; // 0 is first person view, 1 is rear view, 2 is front view
 
 // Define reactive states for Vue.js
 const main = reactive({
@@ -139,6 +141,16 @@ const handleLogin = (credentials) => {
       });
 };
 
+// Update camera based on desired mode
+const updateCamera = (cycleMode = false) => {
+  if (cycleMode) cameraMode = (cameraMode + 1) % 3;
+
+  if (cameraMode == 0) engine3d.setCameraDistance(0);
+  else if (cameraMode == 1) {
+    engine3d.setCameraDistance(-thirdPersonCameraDistance);
+  } else engine3d.setCameraDistance(thirdPersonCameraDistance);
+};
+
 const handleWorldSelection = (id) => {
   const world = main.worlds[id];
   appState.loadWorld();
@@ -150,6 +162,7 @@ const handleWorldSelection = (id) => {
     localStorage.setItem('defaultWorldId', id);
     main.worldId = id;
     worldAvatars = avatars;
+    updateCamera();
     appState.readyWorld();
   });
 };
@@ -236,7 +249,8 @@ document.addEventListener('focusout', (event) => {
 <template>
     <canvas id="main-3d-canvas"></canvas>
     <div id="overlay">
-    <TopBar v-if="displayEdgebars" :avatars="worldAvatars" @leave="handleLeave">
+    <TopBar v-if="displayEdgebars" :avatars="worldAvatars" @leave="handleLeave"
+    @camera="updateCamera(true)">
     <template v-slot:control-bindings><ControlBindings :listener="inputListener"
     @keyBindingUpdated="handleKeyBindingUpdated" /></template>
     </TopBar>

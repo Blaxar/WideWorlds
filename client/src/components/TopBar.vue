@@ -1,6 +1,6 @@
 <script setup>
 
-import {computed, reactive} from 'vue';
+import {reactive} from 'vue';
 
 /* eslint-disable no-unused-vars */
 const props = defineProps({
@@ -10,11 +10,11 @@ const props = defineProps({
   },
   cameraButtonText: {
     type: String,
-    default: 'Change camera',
+    default: 'Change Camera',
   },
   visibilityButtonText: {
     type: String,
-    default: 'Change visibility',
+    default: 'Change Visibility',
   },
   controlsButtonText: {
     type: String,
@@ -27,18 +27,20 @@ const props = defineProps({
 });
 /* eslint-enable no-unused-vars */
 
-const emit = defineEmits(['leave']);
+const emit = defineEmits(['leave', 'camera']);
 
 const state = reactive({
-  selected: null,
+  displayControls: false,
 });
 
-const displayControls = computed(() => state.selected === 'controls');
-
 const select = (event) => {
-  state.selected = state.selected === event.target.name ? null :
-    event.target.name;
-  if (state.selected === 'leave') emit('leave');
+  const selected = event.target.name;
+
+  if (selected === 'leave') emit('leave');
+  else if (selected === 'camera') emit('camera');
+  else if (selected === 'controls') {
+    state.displayControls = !state.displayControls;
+  }
 };
 </script>
 
@@ -50,7 +52,7 @@ const select = (event) => {
     <button @click="select" name="controls">{{controlsButtonText}}</button>
     </div>
     <div class="settings-panel">
-    <slot name="control-bindings" v-if="displayControls" />
+    <slot name="control-bindings" v-if="state.displayControls" />
     </div>
     </div>
 </template>

@@ -79,6 +79,7 @@ class WorldManager {
   unload() {
     this.currentWorld = null;
     this.currentModelRegistry = null;
+    this.engine3d.setCameraDistance(0);
     this.engine3d.resetSkyColors();
     this.engine3d.resetSkyBox();
     this.engine3d.setSkyColorSpinning(true);
