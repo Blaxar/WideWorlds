@@ -46,7 +46,7 @@ class UserBehavior extends SubjectBehavior {
       const deltaRotX = delta * this.speed / 2;
       if (tilt + deltaRotX > absTiltLimit) {
         // Do not look above the maximum allowed tilt angle
-        this.tmpEul.x = absTiltLimit;
+        this.tmpEul.set(absTiltLimit, 0, 0, 'YXZ');
         this.subject.tilt.setRotationFromEuler(this.tmpEul);
       } else {
         this.subject.tilt.rotateX(deltaRotX);
@@ -57,7 +57,7 @@ class UserBehavior extends SubjectBehavior {
       const deltaRotX = - delta * this.speed / 2;
       if (tilt + deltaRotX < - absTiltLimit) {
         // Do not look below the minimum allowed tilt angle
-        this.tmpEul.x = - absTiltLimit;
+        this.tmpEul.set(- absTiltLimit, 0, 0, 'YXZ');
         this.subject.tilt.setRotationFromEuler(this.tmpEul);
       } else {
         this.subject.tilt.rotateX(deltaRotX);

@@ -176,6 +176,19 @@ const handleLeave = () => {
   appState.unloadWorld();
 };
 
+const handleAvatar = (avatarId) => {
+  // Remove focus from the selection menu
+  document.activeElement.blur();
+
+  // Avatar ID must be within bound
+  if (avatarId >= worldAvatars.length) return;
+
+  // Load avatar
+  worldManager.getAvatar(worldAvatars[avatarId].geometry).then((obj3d) => {
+    engine3d.setUserAvatar(obj3d);
+  });
+};
+
 const handleKeyBindingUpdated = (name, input) => {
   storedKeyBindings[name] = input;
   localStorage.setItem('keyBindings', JSON.stringify(storedKeyBindings));
@@ -250,7 +263,7 @@ document.addEventListener('focusout', (event) => {
     <canvas id="main-3d-canvas"></canvas>
     <div id="overlay">
     <TopBar v-if="displayEdgebars" :avatars="worldAvatars" @leave="handleLeave"
-    @camera="updateCamera(true)">
+    @camera="updateCamera(true)" @avatar="handleAvatar">
     <template v-slot:control-bindings><ControlBindings :listener="inputListener"
     @keyBindingUpdated="handleKeyBindingUpdated" /></template>
     </TopBar>

@@ -20,14 +20,14 @@ class Engine3D {
     this.clock = new THREE.Clock();
     this.scene = new THREE.Scene();
     this.backgroundScene = new THREE.Scene();
+    this.userHeight = defaultUserHeight;
 
-    const avatarGeometry = new THREE.BoxGeometry(1, defaultUserHeight, 1);
-    this.userAvatar = new THREE.Mesh(
-        avatarGeometry,
-        new THREE.MeshBasicMaterial({color: 0xff00ff, wireframe: true}),
-    );
-    this.userAvatar.position.set(0, defaultUserHeight / 2, 0);
-    this.scene.add(this.userAvatar);
+    this.user = new THREE.Group();
+    this.head = new THREE.Group();
+    this.tilt = new THREE.Group();
+
+    this.resetUserAvatar();
+    this.userAvatar.position.set(0, this.userHeight / 2, 0);
 
     // Handling user subjective view here
     const fov = 45;
@@ -37,11 +37,8 @@ class Engine3D {
 
     this.tmpVec3 = new THREE.Vector3();
     this.tmpQuat = new THREE.Quaternion();
-    this.user = new THREE.Group();
-    this.head = new THREE.Group();
-    this.tilt = new THREE.Group();
+
     this.camera = new THREE.PerspectiveCamera(fov, aspect, near, far);
-    this.head.position.set(0, defaultUserHeight, 0);
     this.head.add(this.tilt);
     this.user.add(this.head);
     this.scene.add(this.user);
@@ -200,6 +197,35 @@ class Engine3D {
   }
 
   /**
+   * Set user avatar
+   * @param {Object3D} obj3d - three.js 3D asset
+   */
+  setUserAvatar(obj3d) {
+    if (this.userAvatar) this.scene.remove(this.userAvatar);
+
+    const bbox = new THREE.Box3().setFromObject(obj3d);
+
+    this.userAvatar = obj3d;
+    this.userHeight = bbox.max.y - bbox.min.y;
+
+    this.head.position.set(0, this.userHeight, 0);
+    this.scene.add(this.userAvatar);
+  }
+
+  /**
+   * Reset user avatar to default test box
+   */
+  resetUserAvatar() {
+    const avatarGeometry = new THREE.BoxGeometry(1, this.userHeight, 1);
+    const userAvatar = new THREE.Mesh(
+        avatarGeometry,
+        new THREE.MeshBasicMaterial({color: 0xff00ff, wireframe: true}),
+    );
+
+    this.setUserAvatar(userAvatar);
+  }
+
+  /**
    * Rendering method to be called by the upper context
    * each time we need a new frame.
    * @param {number} deltaTime - Elapsed number of seconds since last update
@@ -222,13 +248,18 @@ class Engine3D {
 
     // Adjust the avatar and camera positions based on the user position
     this.user.getWorldPosition(this.tmpVec3);
-    this.tmpVec3.y += defaultUserHeight / 2;
+    this.tmpVec3.y += this.userHeight / 2;
     this.userAvatar.position.copy(this.tmpVec3);
     this.tilt.getWorldPosition(this.tmpVec3);
     this.camera.position.copy(this.tmpVec3);
 
     this.tilt.getWorldQuaternion(this.tmpQuat);
     this.camera.setRotationFromQuaternion(this.tmpQuat);
+
+    this.user.getWorldDirection(this.tmpVec3);
+    this.tmpVec3.y -= this.userHeight / 2;
+    this.tmpVec3.add(this.camera.position);
+    this.userAvatar.lookAt(this.tmpVec3);
 
     // Adjust the direction we're looking at base on the position of
     // the camera on the axis of view: if it's in front of the head:

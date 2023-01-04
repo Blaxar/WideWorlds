@@ -82,6 +82,7 @@ class WorldManager {
     this.engine3d.setCameraDistance(0);
     this.engine3d.resetSkyColors();
     this.engine3d.resetSkyBox();
+    this.engine3d.resetUserAvatar();
     this.engine3d.setSkyColorSpinning(true);
     this.clearChunks();
     this.lastTextureUpdate = 0;
@@ -130,6 +131,17 @@ class WorldManager {
     if (this.chunks.has(chunkId)) return;
 
     await this.reloadChunk(x, z);
+  }
+
+  /**
+   * Get a 3D avatar asset from the current world registry
+   * @param {string} name - Name of the 3D asset for the avatar.
+   * @return {Promise} Promise of a three.js 3D asset.
+   */
+  async getAvatar(name) {
+    const modelRegistry = this.currentModelRegistry;
+
+    return await modelRegistry.getAvatar(name);
   }
 
   /**

@@ -1,6 +1,6 @@
 <script setup>
 
-import {reactive} from 'vue';
+import {onMounted, reactive, ref} from 'vue';
 
 /* eslint-disable no-unused-vars */
 const props = defineProps({
@@ -24,10 +24,16 @@ const props = defineProps({
     type: Array,
     default: () => [],
   },
+  defaultAvatarId: {
+    type: Number,
+    default: null,
+  },
 });
 /* eslint-enable no-unused-vars */
 
-const emit = defineEmits(['leave', 'camera']);
+const emit = defineEmits(['leave', 'camera', 'avatar']);
+
+const avatarId = ref(null);
 
 const state = reactive({
   displayControls: false,
@@ -42,6 +48,15 @@ const select = (event) => {
     state.displayControls = !state.displayControls;
   }
 };
+
+const pickAvatar = () => {
+  emit('avatar', avatarId.value);
+};
+
+onMounted(() => {
+  avatarId.value = props.defaultAvatarId;
+});
+
 </script>
 
 <template>
@@ -50,6 +65,11 @@ const select = (event) => {
     <button @click="select" name="leave">{{leaveButtonText}}</button>
     <button @click="select" name="camera">{{cameraButtonText}}</button>
     <button @click="select" name="controls">{{controlsButtonText}}</button>
+    <select v-model="avatarId" @change="pickAvatar">
+    <option v-for="(a, id) in avatars" :key="id" :value="id">
+        {{ a.name }}
+      </option>
+    </select>
     </div>
     <div class="settings-panel">
     <slot name="control-bindings" v-if="state.displayControls" />

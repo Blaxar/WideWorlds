@@ -41,6 +41,7 @@ class ModelRegistry {
 
     this.models = new Map();
     this.basicModels = new Map();
+    this.avatarModels = new Map();
 
     this.loader = (new RWXLoader(loadingManager))
         .setRWXMaterialManager(this.materialManager)
@@ -48,6 +49,9 @@ class ModelRegistry {
     this.basicLoader = (new RWXLoader(loadingManager))
         .setRWXMaterialManager(this.basicMaterialManager)
         .setPath(path).setFlatten(true);
+    this.avatarLoader = (new RWXLoader(loadingManager))
+        .setRWXMaterialManager(this.materialManager)
+        .setPath(path).setFlatten(false);
   }
 
   /**
@@ -88,6 +92,25 @@ class ModelRegistry {
     return (await this.basicModels.get(name)).clone();
   }
 
+  /**
+   * Fetch an avatar from the registry, load it first if necessary and
+   * use placeholder if not found, all using light-sensitive materials
+   * @param {string} rawName - Name of the 3D avatar to load.
+   * @return {Promise} Promise of a three.js Object3D asset.
+   */
+  async getAvatar(rawName) {
+    const name = normalizePropName(rawName);
+    if (!this.avatarModels.has(name)) {
+      this.avatarModels.set(name, new Promise((resolve) => {
+        this.avatarLoader.load(name, (rwx) => {
+          rwx.name = name; resolve(rwx);
+        }, null, () => resolve(this.placeholder.clone()));
+      }));
+    }
+
+    return (await this.avatarModels.get(name)).clone();
+  }
+
   /** Update all animated texture to their next frame */
   texturesNextFrame() {
     this.materialManager.texturesNextFrame();
@@ -98,6 +121,7 @@ class ModelRegistry {
   clear() {
     this.models.clear();
     this.basicModels.clear();
+    this.avatarModels.clear();
   }
 }
 
