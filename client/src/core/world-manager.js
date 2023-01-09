@@ -184,6 +184,8 @@ class WorldManager {
           prop.roll * degToRadRatio / 10,
           'YZX');
 
+      modelRegistry.applyActionString(obj3d, prop.action);
+
       if (!this.engine3d.appendToNode(chunkNodeHandle, obj3d)) {
         // Could not append object to node, meaning node (chunk) no
         // longer exists, we just silently cancel the whole loading.

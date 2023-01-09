@@ -1,7 +1,8 @@
 import RWXLoader, {RWXMaterialManager} from 'three-rwx-loader';
-import {Mesh, BufferGeometry, BufferAttribute, MeshBasicMaterial, sRGBEncoding}
-  from 'three';
+import {Mesh, Group, BufferGeometry, BufferAttribute, MeshBasicMaterial,
+  sRGBEncoding} from 'three';
 import * as fflate from 'fflate';
+import {AWActionParser} from 'aw-action-parser';
 
 /* Assume .rwx file extension if none is provided */
 const normalizePropName = (name) =>
@@ -52,6 +53,8 @@ class ModelRegistry {
     this.avatarLoader = (new RWXLoader(loadingManager))
         .setRWXMaterialManager(this.materialManager)
         .setPath(path).setFlatten(false);
+
+    this.actionParser = new AWActionParser();
   }
 
   /**
@@ -122,6 +125,92 @@ class ModelRegistry {
     this.models.clear();
     this.basicModels.clear();
     this.avatarModels.clear();
+  }
+
+  /**
+   * Apply action string to the given 3D prop
+   * @param {Object3D} obj3d - 3D asset to apply the action string to.
+   * @param {string} actionString - Content of the action string.
+   */
+  applyActionString(obj3d, actionString) {
+    this.applyActionsRecursive(obj3d, this.actionParser.parse(actionString));
+  }
+
+  /**
+   * Recursively apply parsed action commands to the given 3D prop,
+   * for internal use by {@link applyActionString}
+   * @param {Object3D} obj3d - 3D asset to apply the action string to.
+   * @param {string} actions - Parsed action commands.
+   */
+  applyActionsRecursive(obj3d, actions) {
+    if (obj3d instanceof Group) {
+      // We are dealing with a group, this means we must
+      // perform a recursive call to its children
+
+      for (const child of actions.children) {
+        this.applyActionsRecursive(child, actions);
+      }
+
+      return;
+    } else if (!(obj3d instanceof Mesh)) {
+      // If the object is neither a Group nor a Mesh, then it's invalid
+      throw new Error('Invalid object type provided for action parsing');
+    }
+    // We only care for 'create' actions for the moment.
+    const createActions = actions.create ? actions.create : [];
+    const materials = [];
+
+    let materialChanged = false;
+
+    for (const material of obj3d.material) {
+      const rwxMaterial = material.userData.rwx.material.clone();
+      const originalSignature = material.name;
+
+      let texture = null;
+      let color = null;
+      let solid = true;
+      let visible = true;
+
+      for (const action of createActions) {
+        if (action.commandType === 'color') {
+          color = [action.color.r / 255.0,
+            action.color.g / 255.0,
+            action.color.b / 255.0];
+        } else if (action.commandType === 'texture') {
+          texture = action.texture;
+        } else if (action.commandType === 'visible') {
+          visible = action.value;
+        } else if (action.commandType === 'solid') {
+          solid = action.value;
+        }
+      }
+
+      if (texture) {
+        rwxMaterial.texture = texture;
+        rwxMaterial.mask = null;
+      } else if (color) {
+        rwxMaterial.color = color;
+        rwxMaterial.texture = null;
+        rwxMaterial.mask = null;
+      }
+
+      obj3d.userData.rwx.solid = solid;
+      obj3d.visible = visible;
+
+      const newSignature = rwxMaterial.getMatSignature();
+
+      if (newSignature != originalSignature) materialChanged = true;
+
+      if (!this.materialManager.hasThreeMaterialPack(newSignature)) {
+        // Material with those properties does not exist yet, we create it
+        this.materialManager.addRWXMaterial(rwxMaterial, newSignature);
+      }
+
+      materials.push(this.materialManager.getThreeMaterialPack(newSignature)
+          .threeMat);
+    }
+
+    if (materialChanged) obj3d.material = materials;
   }
 }
 
