@@ -1,13 +1,11 @@
 import {URL} from 'url';
 import {WebSocketServer} from 'ws';
 import jwt from 'jsonwebtoken';
+import {formatUserMessage} from '../common/ws-data-format.js';
 
 const bearerRegex = /^Bearer (.*)$/i;
 const worldChatRegex = /^\/api\/worlds\/([0-9]+)\/ws\/chat$/;
 const userChatRegex = /^\/api\/users\/([0-9]+)\/ws\/chat$/;
-
-const formatUserMessage = (delivered, id, name, role, msg) =>
-  JSON.stringify({delivered, id, name, role, msg});
 
 /** Core manager for WebSocket connections on the server */
 class WsChannelManager {
