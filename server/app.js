@@ -1,3 +1,7 @@
+/**
+ * @author Julien 'Blaxar' Bardagi <blaxar.waldarax@gmail.com>
+ */
+
 import {spawnHttpServer} from './http.js';
 import {spawnWsServer} from './ws.js';
 import yargs from 'yargs';

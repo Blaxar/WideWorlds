@@ -1,3 +1,7 @@
+/**
+ * @author Julien 'Blaxar' Bardagi <blaxar.waldarax@gmail.com>
+ */
+
 import WebSocket from 'isomorphic-ws';
 
 /** Base class for all WebSocket client wrappers */

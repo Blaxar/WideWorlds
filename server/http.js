@@ -1,3 +1,7 @@
+/**
+ * @author Julien 'Blaxar' Bardagi <blaxar.waldarax@gmail.com>
+ */
+
 import * as db from '../common/db/utils.js';
 import World from '../common/db/model/World.js';
 import Prop from '../common/db/model/Prop.js';

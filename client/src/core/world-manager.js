@@ -1,3 +1,7 @@
+/**
+ * @author Julien 'Blaxar' Bardagi <blaxar.waldarax@gmail.com>
+ */
+
 import {loadAvatarsZip} from '../../../common/avatars-dat-parser.js';
 
 const cmToMRatio = 0.01;

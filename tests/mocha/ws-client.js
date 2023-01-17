@@ -1,3 +1,7 @@
+/**
+ * @author Julien 'Blaxar' Bardagi <blaxar.waldarax@gmail.com>
+ */
+
 import makeHttpTestBase, {sleep} from '../utils.js';
 import * as assert from 'assert';
 import WsClient from '../../client/src/core/ws-client.js';

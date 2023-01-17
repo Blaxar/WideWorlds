@@ -1,3 +1,7 @@
+/**
+ * @author Julien 'Blaxar' Bardagi <blaxar.waldarax@gmail.com>
+ */
+
 const AppStates = {
   SIGNED_OUT: 'Signed Out',
   SIGNING_IN: 'Signing In',

@@ -1,3 +1,7 @@
+/**
+ * @author Julien 'Blaxar' Bardagi <blaxar.waldarax@gmail.com>
+ */
+
 /** HTTP client utility to interact with the server API */
 class HttpClient {
   /**

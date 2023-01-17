@@ -1,3 +1,7 @@
+/**
+ * @author Julien 'Blaxar' Bardagi <blaxar.waldarax@gmail.com>
+ */
+
 import parseAvatarsDat from '../../common/avatars-dat-parser.js';
 import * as assert from 'assert';
 

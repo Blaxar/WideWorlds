@@ -1,3 +1,7 @@
+/**
+ * @author Julien 'Blaxar' Bardagi <blaxar.waldarax@gmail.com>
+ */
+
 import {EntitySchema} from 'typeorm';
 import User from '../model/User.js';
 

@@ -1,3 +1,7 @@
+/**
+ * @author Julien 'Blaxar' Bardagi <blaxar.waldarax@gmail.com>
+ */
+
 import AppState, {AppStates} from '../../client/src/core/app-state.js';
 import * as assert from 'assert';
 

@@ -1,4 +1,7 @@
 <script setup>
+/**
+ * @author Julien 'Blaxar' Bardagi <blaxar.waldarax@gmail.com>
+ */
 
 import {onMounted, onUnmounted, reactive} from 'vue';
 

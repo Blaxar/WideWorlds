@@ -1,3 +1,7 @@
+/**
+ * @author Julien 'Blaxar' Bardagi <blaxar.waldarax@gmail.com>
+ */
+
 import TypeORM from 'typeorm';
 import {scryptSync, timingSafeEqual} from 'crypto';
 import UserSchema from './entity/UserSchema.js';

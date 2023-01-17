@@ -1,3 +1,7 @@
+/**
+ * @author Julien 'Blaxar' Bardagi <blaxar.waldarax@gmail.com>
+ */
+
 import makeHttpTestBase from '../utils.js';
 import request from 'superwstest';
 import * as assert from 'assert';

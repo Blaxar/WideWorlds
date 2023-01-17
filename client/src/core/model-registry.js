@@ -1,3 +1,7 @@
+/**
+ * @author Julien 'Blaxar' Bardagi <blaxar.waldarax@gmail.com>
+ */
+
 import RWXLoader, {RWXMaterialManager} from 'three-rwx-loader';
 import {Mesh, Group, BufferGeometry, BufferAttribute, MeshBasicMaterial,
   sRGBEncoding} from 'three';

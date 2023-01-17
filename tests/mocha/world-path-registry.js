@@ -1,3 +1,7 @@
+/**
+ * @author Julien 'Blaxar' Bardagi <blaxar.waldarax@gmail.com>
+ */
+
 import WorldPathRegistry from '../../client/src/core/world-path-registry.js';
 import ModelRegistry, {normalizePropName} from '../../client/src/core/model-registry.js';
 import {LoadingManager} from 'three';

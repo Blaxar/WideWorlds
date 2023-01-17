@@ -1,3 +1,7 @@
+/**
+ * @author Julien 'Blaxar' Bardagi <blaxar.waldarax@gmail.com>
+ */
+
 const roleLevels = {
   'tourist': 0,
   'citizen': 1,

@@ -1,4 +1,7 @@
 <script setup>
+/**
+ * @author Julien 'Blaxar' Bardagi <blaxar.waldarax@gmail.com>
+ */
 
 import {computed, reactive, onMounted} from 'vue';
 import LoginForm from './components/LoginForm.vue';

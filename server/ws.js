@@ -1,3 +1,7 @@
+/**
+ * @author Julien 'Blaxar' Bardagi <blaxar.waldarax@gmail.com>
+ */
+
 import {URL} from 'url';
 import {WebSocketServer} from 'ws';
 import jwt from 'jsonwebtoken';

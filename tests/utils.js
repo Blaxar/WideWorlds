@@ -1,3 +1,7 @@
+/**
+ * @author Julien 'Blaxar' Bardagi <blaxar.waldarax@gmail.com>
+ */
+
 import * as db from '../common/db/utils.js';
 import {spawnHttpServer} from '../server/http.js';
 import {spawnWsServer} from '../server/ws.js';

@@ -1,4 +1,7 @@
 <script setup>
+/**
+ * @author Julien 'Blaxar' Bardagi <blaxar.waldarax@gmail.com>
+ */
 
 /* eslint-disable no-unused-vars */
 const props = defineProps({

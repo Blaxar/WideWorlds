@@ -1,3 +1,7 @@
+/**
+ * @author Julien 'Blaxar' Bardagi <blaxar.waldarax@gmail.com>
+ */
+
 import {SubjectBehavior} from './user-input.js';
 import {Vector3, Euler} from 'three';
 

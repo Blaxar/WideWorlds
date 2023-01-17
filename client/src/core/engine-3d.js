@@ -1,3 +1,7 @@
+/**
+ * @author Julien 'Blaxar' Bardagi <blaxar.waldarax@gmail.com>
+ */
+
 import * as THREE from 'three';
 import * as utils3D from './utils-3d.js';
 

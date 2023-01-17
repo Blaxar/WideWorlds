@@ -1,4 +1,8 @@
 /**
+ * @author Julien 'Blaxar' Bardagi <blaxar.waldarax@gmail.com>
+ */
+
+/**
  * Format user message to send on a chat
  * @param {boolean} delivered - True if the message was correctly delivered,
  *                              false otherwise.

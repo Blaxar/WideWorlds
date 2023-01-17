@@ -1,3 +1,7 @@
+/**
+ * @author Julien 'Blaxar' Bardagi <blaxar.waldarax@gmail.com>
+ */
+
 import makeHttpTestBase from '../utils.js';
 import HttpClient from '../../client/src/core/http-client.js';
 import * as assert from 'assert';
