@@ -5,7 +5,8 @@
 import {URL} from 'url';
 import {WebSocketServer} from 'ws';
 import jwt from 'jsonwebtoken';
-import {formatUserMessage} from '../common/ws-data-format.js';
+import {formatUserMessage, forwardEntityState, entityType}
+  from '../common/ws-data-format.js';
 
 const bearerRegex = /^Bearer (.*)$/i;
 const worldChatRegex = /^\/api\/worlds\/([0-9]+)\/ws\/chat$/;
@@ -32,7 +33,7 @@ class WsChannelManager {
   addWorldChatConnection(worldId, ws, clientId) {
     if (this.worldChannels[worldId] === undefined) {
       // No ongoing channel for this world, ready the base object first
-      this.worldChannels[worldId] = {chat: {}};
+      this.worldChannels[worldId] = {chat: {}, state: {}};
     }
 
     // Do not allow more than one connection per client, close the
@@ -71,6 +72,58 @@ class WsChannelManager {
 
     const data = formatUserMessage(true, clientId, user.name, user.role, msg);
     for (const ws of Object.values(worldChat)) {
+      ws.send(data);
+    }
+  }
+
+  /**
+   * Create a new WebSocket world state connection
+   * @param {integer} worldId - ID of the world.
+   * @param {WebSocket} ws - WebSocket client instance.
+   * @param {integer} clientId - ID of the user to connect.
+   */
+  addWorldStateConnection(worldId, ws, clientId) {
+    if (this.worldChannels[worldId] === undefined) {
+      // No ongoing channel for this world, ready the base object first
+      this.worldChannels[worldId] = {chat: {}, state: {}};
+    }
+
+    // Do not allow more than one connection per client, close the
+    // current one if any
+    this.worldChannels[worldId].state[clientId]?.close();
+
+    this.worldChannels[worldId].state[clientId] = ws;
+  }
+
+  /**
+   * Remove an existing WebSocket world state connection
+   * @param {integer} worldId - ID of the world.
+   * @param {integer} clientId - ID of the user to disconnect.
+   */
+  removeWorldStateConnection(worldId, clientId) {
+    this.worldChannels[worldId]?.state[clientId]?.close();
+    delete this.worldChannels[worldId].state[clientId];
+  }
+
+  /**
+   * Update user world state
+   * @param {integer} clientId - ID of the user updating their state.
+   * @param {integer} worldId - ID of the world to broadcast the state to.
+   * @param {string} state - State to broadcast to the world.
+   */
+  updateWorldState(clientId, worldId, state) {
+    const worldState = this.worldChannels[worldId]?.state;
+    if (worldState === undefined) {
+      throw new Error('World not found, can\'t send message');
+    }
+
+    const user = this.userCache.get(clientId);
+    if (!user) {
+      throw new Error('User not found, can\'t update state');
+    }
+
+    const data = forwardEntityState(entityType.user, clientId, state);
+    for (const ws of Object.values(worldState)) {
       ws.send(data);
     }
   }

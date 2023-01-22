@@ -3,6 +3,9 @@
  */
 
 import parseAvatarsDat from '../../common/avatars-dat-parser.js';
+import {serializeEntityState, deserializeEntityState, forwardEntityState}
+  from '../../common/ws-data-format.js';
+import {epsEqual} from '../utils.js';
 import * as assert from 'assert';
 
 const sampleAvatarDat = "# animation registry version 0.3\r\n\
@@ -148,5 +151,81 @@ describe('common', () => {
     assert.strictEqual(secondExp['Danser'], 'danser');
     assert.strictEqual(secondExp['Disco'], 'disco');
     assert.strictEqual(secondExp['Retourner'], 'retourner');
+  });
+
+  it('(de)serializeEntityState', () => {
+    const entityType = 1;
+    const updateType = 2;
+    const entityId = 1337;
+    const x = 25.2;
+    const y = 30.25;
+    const z = -12.0;
+    const yaw = 3.1415;
+    const pitch = 1.2;
+    const roll = 2.5;
+
+    const state = serializeEntityState(entityType, updateType, entityId,
+                                       x, y, z, yaw, pitch, roll);
+
+    const uShortArray = new Uint16Array(state.buffer);
+    const uIntArray = new Uint32Array(state.buffer);
+    const floatArray = new Float32Array(state.buffer);
+
+    assert.strictEqual(uShortArray[0], entityType);
+    assert.strictEqual(uShortArray[1], updateType);
+    assert.strictEqual(uIntArray[1], entityId);
+    assert.ok(epsEqual(floatArray[2], x));
+    assert.ok(epsEqual(floatArray[3], y));
+    assert.ok(epsEqual(floatArray[4], z));
+    assert.ok(epsEqual(floatArray[5], yaw));
+    assert.ok(epsEqual(floatArray[6], pitch));
+    assert.ok(epsEqual(floatArray[7], roll));
+
+    const dictState = deserializeEntityState(state);
+
+    assert.strictEqual(dictState.entityType, entityType);
+    assert.strictEqual(dictState.updateType, updateType);
+    assert.strictEqual(dictState.entityId, entityId);
+    assert.ok(epsEqual(dictState.x, x));
+    assert.ok(epsEqual(dictState.y, y));
+    assert.ok(epsEqual(dictState.z, z));
+    assert.ok(epsEqual(dictState.yaw, yaw));
+    assert.ok(epsEqual(dictState.pitch, pitch));
+    assert.ok(epsEqual(dictState.roll, roll));
+  });
+
+  it('forwardEntityState', () => {
+    const entityType = 1;
+    const updateType = 2;
+    const entityId = 1337;
+    const x = 25.2;
+    const y = 30.25;
+    const z = -12.0;
+    const yaw = 3.1415;
+    const pitch = 1.2;
+    const roll = 2.5;
+
+    const state = serializeEntityState(entityType, updateType, entityId,
+                                       x, y, z, yaw, pitch, roll);
+
+    const fwrdState = forwardEntityState(entityType, entityId, state);
+
+    const uShortArray = new Uint16Array(fwrdState.buffer);
+    const uIntArray = new Uint32Array(fwrdState.buffer);
+    const floatArray = new Float32Array(fwrdState.buffer);
+
+    assert.strictEqual(uShortArray[0], entityType);
+    assert.strictEqual(uShortArray[1], updateType);
+    assert.strictEqual(uIntArray[1], entityId);
+    assert.ok(epsEqual(floatArray[2], x));
+    assert.ok(epsEqual(floatArray[3], y));
+    assert.ok(epsEqual(floatArray[4], z));
+    assert.ok(epsEqual(floatArray[5], yaw));
+    assert.ok(epsEqual(floatArray[6], pitch));
+    assert.ok(epsEqual(floatArray[7], roll));
+
+    assert.throws(() => forwardEntityState(entityType + 1, entityId, state), Error);
+    assert.throws(() => forwardEntityState(entityType, entityId + 1, state), Error);
+    assert.throws(() => forwardEntityState(entityType, entityId, "bad value"), Error);
   });
 });
