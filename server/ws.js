@@ -10,6 +10,7 @@ import {formatUserMessage, forwardEntityState, entityType}
 
 const bearerRegex = /^Bearer (.*)$/i;
 const worldChatRegex = /^\/api\/worlds\/([0-9]+)\/ws\/chat$/;
+const worldStateRegex = /^\/api\/worlds\/([0-9]+)\/ws\/state$/;
 const userChatRegex = /^\/api\/users\/([0-9]+)\/ws\/chat$/;
 
 /** Core manager for WebSocket connections on the server */
@@ -109,7 +110,7 @@ class WsChannelManager {
    * Update user world state
    * @param {integer} clientId - ID of the user updating their state.
    * @param {integer} worldId - ID of the world to broadcast the state to.
-   * @param {string} state - State to broadcast to the world.
+   * @param {Uint8Array} state - State to broadcast to the world.
    */
   updateWorldState(clientId, worldId, state) {
     const worldState = this.worldChannels[worldId]?.state;
@@ -214,16 +215,28 @@ const spawnWsServer = async (server, secret, userCache) => {
 
   wss.on('connection', (ws, request, entity, id, type, userId) => {
     if (entity == 'world') {
-      channelManager.addWorldChatConnection(id, ws, userId);
+      if (type == 'chat') {
+        channelManager.addWorldChatConnection(id, ws, userId);
 
-      ws.on('close', () => {
-        channelManager.removeWorldChatConnection(id, userId);
-      });
+        ws.on('close', () => {
+          channelManager.removeWorldChatConnection(id, userId);
+        });
 
-      ws.on('message', (data) => {
-        channelManager.sendWorldChatMessage(userId, id,
-            new TextDecoder().decode(data));
-      });
+        ws.on('message', (data) => {
+          channelManager.sendWorldChatMessage(userId, id,
+              new TextDecoder().decode(data));
+        });
+      } else if (type == 'state') {
+        channelManager.addWorldStateConnection(id, ws, userId);
+
+        ws.on('close', () => {
+          channelManager.removeWorldStateConnection(id, userId);
+        });
+
+        ws.on('message', (data) => {
+          channelManager.updateWorldState(userId, id, new Uint8Array(data));
+        });
+      }
     } else if (entity == 'user') {
       if (id == userId) {
         // The user is trying to connect to their own channel receive
@@ -248,9 +261,10 @@ const spawnWsServer = async (server, secret, userCache) => {
     const {pathname, searchParams} = new URL(request.url, 'https://wideworlds.org'); // We don't care about the base
 
     const worldMatch = pathname.match(worldChatRegex);
+    const stateMatch = pathname.match(worldStateRegex);
     const userMatch = pathname.match(userChatRegex);
 
-    if (!worldMatch && !userMatch) {
+    if (!worldMatch && !stateMatch && !userMatch) {
       socket.destroy();
       return;
     }
@@ -287,6 +301,9 @@ const spawnWsServer = async (server, secret, userCache) => {
         if (worldMatch) {
           wss.emit('connection', ws, request, 'world',
               worldMatch[1], 'chat', userId);
+        } else if (stateMatch) {
+          wss.emit('connection', ws, request, 'world',
+              stateMatch[1], 'state', userId);
         } else if (userMatch) {
           wss.emit('connection', ws, request, 'user',
               userMatch[1], 'chat', userId);

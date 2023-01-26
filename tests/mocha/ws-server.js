@@ -3,10 +3,26 @@
  */
 
 import makeHttpTestBase from '../utils.js';
+import {serializeEntityState} from '../../common/ws-data-format.js';
 import request from 'superwstest';
 import * as assert from 'assert';
 
 // Testing ws server
+
+const dummySerializeEntityState = (id) => {
+  const entityType = 1;
+  const updateType = 2;
+  const entityId = id;
+  const x = 25.2;
+  const y = 30.25;
+  const z = -12.0;
+  const yaw = 3.1415;
+  const pitch = 1.2;
+  const roll = 2.5;
+
+  return new Uint8Array(serializeEntityState(entityType, updateType, entityId,
+      x, y, z, yaw, pitch, roll).buffer);
+};
 
 describe('ws server', () => {
   const ctx = makeHttpTestBase();
@@ -132,6 +148,49 @@ describe('ws server', () => {
 
   it('WS world chat connect with parameters - Forbidden', async () => {
     await request(base.server).ws('/api/worlds/' + base.worldId + '/ws/chat?token=iNvAlId')
+        .expectConnectionError(403);
+  });
+
+  it('WS world state connect with headers - OK', async () => {
+    const state = dummySerializeEntityState(base.adminId);
+
+    await request(base.server).ws('/api/worlds/' + base.worldId + '/ws/state')
+        .set('Authorization', 'Bearer ' + base.adminBearerToken)
+        .sendBinary(state)
+        .expectBinary(state)
+        .close()
+        .expectClosed();
+  });
+
+  it('WS world state connect with parameters - OK', async () => {
+    const state = dummySerializeEntityState(base.adminId);
+
+    await request(base.server).ws('/api/worlds/' + base.worldId + '/ws/state?token=' + base.adminBearerToken)
+        .sendBinary(state)
+        .expectBinary(state)
+        .close()
+        .expectClosed();
+  });
+
+  it('WS world state connect with headers - Unauthorized', async () => {
+    await request(base.server).ws('/api/worlds/' + base.worldId + '/ws/state')
+        .set('Authorization', 'gibberish')
+        .expectConnectionError(401);
+  });
+
+  it('WS world state connect with parameters - Unauthorized', async () => {
+    await request(base.server).ws('/api/worlds/' + base.worldId + '/ws/state?gibberish=' + 'gibberish')
+        .expectConnectionError(401);
+  });
+
+  it('WS world state connect with headers - Forbidden', async () => {
+    await request(base.server).ws('/api/worlds/' + base.worldId + '/ws/state')
+        .set('Authorization', 'Bearer iNvAlId')
+        .expectConnectionError(403);
+  });
+
+  it('WS world state connect with parameters - Forbidden', async () => {
+    await request(base.server).ws('/api/worlds/' + base.worldId + '/ws/state?token=iNvAlId')
         .expectConnectionError(403);
   });
 });
