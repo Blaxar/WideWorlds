@@ -20,8 +20,8 @@ const dummySerializeEntityState = (id) => {
   const pitch = 1.2;
   const roll = 2.5;
 
-  return new Uint8Array(serializeEntityState(entityType, updateType, entityId,
-      x, y, z, yaw, pitch, roll).buffer);
+  return new serializeEntityState(entityType, updateType, entityId,
+      x, y, z, yaw, pitch, roll);
 };
 
 describe('ws server', () => {

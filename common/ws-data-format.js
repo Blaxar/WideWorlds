@@ -15,6 +15,8 @@ const updateType = {
   teleporting: 4,
 };
 
+const entityStateSize = 0x20;
+
 /**
  * Format user message to send on a chat
  * @param {boolean} delivered - True if the message was correctly delivered,
@@ -30,7 +32,7 @@ function formatUserMessage(delivered, id, name, role, msg) {
 }
 
 /*
- * User state data block is a binary sequence holding the following data:
+ * Entity state data block is a binary sequence holding the following data:
  *
  * 0x00 | Entity type, 2 bytes ushort |
  * 0x02 | Update type, 2 bytes ushort |
@@ -142,5 +144,52 @@ function forwardEntityState(entityType, entityId, state) {
   return state;
 }
 
+/**
+ * Pack several entity state payloads into a single payload
+ * @param {array} entityStates - Array of entity state payloads.
+ * @return {Uint8Array} Entity state binary payload pack
+ */
+function packEntityStates(entityStates) {
+  const entityStatePack = new Uint8Array(4 + entityStateSize *
+      entityStates.length);
+  const uIntArray = new Uint32Array(entityStatePack.buffer);
+  uIntArray[0] = entityStates.length; // Start with the number of entries
+
+  entityStates.forEach((state, i) => {
+    validateState(state);
+    entityStatePack.set(state, 4 + i * entityStateSize);
+  });
+
+  return entityStatePack;
+}
+
+/**
+ * Unpack entity state payload bundle into an array of individual payloads
+ * @param {Uint8Array} entityStatePack - Entity state binary payload pack
+ * @return {array} Array of entity state payloads.
+ */
+function unpackEntityStates(entityStatePack) {
+  const uIntArray = new Uint32Array(entityStatePack.buffer);
+  const nbEntityStates = uIntArray[0];
+  const entityStates = [];
+
+  if (entityStatePack.length != (4 + nbEntityStates * entityStateSize)) {
+    throw new Error('Invalid payload pack size');
+  }
+
+  for (let i = 0; i < nbEntityStates; i++) {
+    const begin = 4 + i * entityStateSize;
+    const end = begin + entityStateSize;
+
+    const state = new Uint8Array(entityStatePack
+        .slice(begin, end).buffer);
+    validateState(state);
+    entityStates.push(state);
+  }
+
+  return entityStates;
+}
+
 export {formatUserMessage, serializeEntityState, deserializeEntityState,
-  forwardEntityState, entityType, updateType};
+  forwardEntityState, packEntityStates, unpackEntityStates,
+  entityType, updateType, entityStateSize};

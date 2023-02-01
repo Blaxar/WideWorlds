@@ -3,7 +3,8 @@
  */
 
 import parseAvatarsDat from '../../common/avatars-dat-parser.js';
-import {serializeEntityState, deserializeEntityState, forwardEntityState}
+import {serializeEntityState, deserializeEntityState, forwardEntityState,
+  packEntityStates, unpackEntityStates, entityStateSize}
   from '../../common/ws-data-format.js';
 import {epsEqual} from '../utils.js';
 import * as assert from 'assert';
@@ -86,6 +87,21 @@ name=Squelette 01\r\n\
   beginexp\r\n\
   endexp\r\n\
 endavatar\r\n";
+
+const dummySerializeEntityState = (offset = 0) => {
+  const entityType = 1 + offset;
+  const updateType = 2 + offset;
+  const entityId = 3 + offset;
+  const x = 25.2 + offset;
+  const y = 30.25 + offset;
+  const z = -12.0 + offset;
+  const yaw = 3.1415 + offset;
+  const pitch = 1.2 + offset;
+  const roll = 2.5 + offset;
+
+  return serializeEntityState(entityType, updateType, entityId,
+      x, y, z, yaw, pitch, roll);
+};
 
 // Testing common utils
 describe('common', () => {
@@ -227,5 +243,43 @@ describe('common', () => {
     assert.throws(() => forwardEntityState(entityType + 1, entityId, state), Error);
     assert.throws(() => forwardEntityState(entityType, entityId + 1, state), Error);
     assert.throws(() => forwardEntityState(entityType, entityId, "bad value"), Error);
+  });
+
+  it('(un)packEntityStates', () => {
+    /* Try packing first */
+    const entityStates = [dummySerializeEntityState(0),
+      dummySerializeEntityState(1), dummySerializeEntityState(2)];
+
+    /* Fiddle with the payload length and type to trigger an exception */
+    assert.throws(() => packEntityStates(['some string']), Error);
+    assert.throws(() => packEntityStates([new Uint8Array(2)]), Error);
+
+    const pack = packEntityStates(entityStates);
+
+    let uIntArray = new Uint32Array(pack.buffer);
+    let nbEntityStates = uIntArray[0];
+
+    assert.strictEqual(nbEntityStates, 3);
+    assert.strictEqual(pack.length, 4 + 3 * entityStateSize);
+
+    /* Try unpacking and validating equality */
+    const unpacked = unpackEntityStates(pack);
+    assert.strictEqual(unpacked.length, 3);
+    assert.equal(JSON.stringify(entityStates[0]), JSON.stringify(unpacked[0]));
+    assert.equal(JSON.stringify(entityStates[1]), JSON.stringify(unpacked[1]));
+    assert.equal(JSON.stringify(entityStates[2]), JSON.stringify(unpacked[2]));
+
+    const emptyPack = packEntityStates([]);
+
+    uIntArray = new Uint32Array(emptyPack.buffer);
+    nbEntityStates = uIntArray[0];
+
+    assert.strictEqual(nbEntityStates, 0);
+    assert.strictEqual(emptyPack.length, 4);
+
+    /* Fiddle with the payload length to trigger an exception */
+    const badPack = new Uint8Array(pack.length + 1);
+    badPack.set(pack, 0);
+    assert.throws(() => unpackEntityStates(badPack), Error);
   });
 });
