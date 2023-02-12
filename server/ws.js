@@ -5,7 +5,7 @@
 import {URL} from 'url';
 import {WebSocketServer} from 'ws';
 import jwt from 'jsonwebtoken';
-import {formatUserMessage, forwardEntityState, entityType}
+import {formatUserMessage, forwardEntityState, packEntityStates, entityType}
   from '../common/ws-data-format.js';
 
 const bearerRegex = /^Bearer (.*)$/i;
@@ -18,11 +18,36 @@ class WsChannelManager {
   /**
    * @constructor
    * @param {map} userCache - Map of users indexed by ID
+   * @param {integer} broadcastIntervalMs - Interval of time (in ms) between
+   *                                        each broadcasting of world states
    */
-  constructor(userCache) {
+  constructor(userCache, broadcastIntervalMs = 50) {
     this.userCache = userCache;
     this.worldChannels = {};
     this.userChannels = {};
+    this.worldStateBuffers = {};
+    this.broadcastIntervalMs = broadcastIntervalMs;
+    this.broadcastLoop = null;
+  }
+
+  /** Start broadcasting world state updates */
+  startBroadcasting() {
+    this.broadcastLoop = setInterval(
+        () => {
+          this.broadcastWorldStates();
+        },
+        this.broadcastIntervalMs,
+    );
+  }
+
+  /** Stop broadcasting world state updates */
+  stopBroadcasting() {
+    if (!this.broadcastLoop) {
+      throw new Error('No ongoing broadcast of world state updates');
+    }
+
+    clearInterval(this.broadcastLoop);
+    this.broadcastLoop = null;
   }
 
   /**
@@ -89,6 +114,11 @@ class WsChannelManager {
       this.worldChannels[worldId] = {chat: {}, state: {}};
     }
 
+    if (this.worldStateBuffers[worldId] === undefined) {
+      // No ongoing state buffer for this world, ready the base object first
+      this.worldStateBuffers[worldId] = new Map();
+    }
+
     // Do not allow more than one connection per client, close the
     // current one if any
     this.worldChannels[worldId].state[clientId]?.close();
@@ -103,6 +133,7 @@ class WsChannelManager {
    */
   removeWorldStateConnection(worldId, clientId) {
     this.worldChannels[worldId]?.state[clientId]?.close();
+    this.worldStateBuffers[worldId]?.delete(clientId);
     delete this.worldChannels[worldId].state[clientId];
   }
 
@@ -115,7 +146,7 @@ class WsChannelManager {
   updateWorldState(clientId, worldId, state) {
     const worldState = this.worldChannels[worldId]?.state;
     if (worldState === undefined) {
-      throw new Error('World not found, can\'t send message');
+      throw new Error('World not found, can\'t update state');
     }
 
     const user = this.userCache.get(clientId);
@@ -123,9 +154,26 @@ class WsChannelManager {
       throw new Error('User not found, can\'t update state');
     }
 
-    const data = forwardEntityState(entityType.user, clientId, state);
-    for (const ws of Object.values(worldState)) {
-      ws.send(data);
+    this.worldStateBuffers[worldId].set(clientId,
+        forwardEntityState(entityType.user, clientId, state));
+  }
+
+  /**
+   * Broadcast all world states
+   */
+  broadcastWorldStates() {
+    for (const [worldId, bufferMap] of Object.entries(this.worldStateBuffers)) {
+      const worldState = this.worldChannels[worldId]?.state;
+
+      if (worldState === undefined) continue;
+
+      const payload = packEntityStates(
+          Array.from(bufferMap, ([clientId, state]) => state),
+      );
+
+      for (const ws of Object.values(worldState)) {
+        ws.send(payload);
+      }
     }
   }
 
@@ -188,7 +236,7 @@ class WsChannelManager {
 }
 
 const spawnWsServer = async (server, secret, userCache) => {
-  const channelManager = new WsChannelManager(userCache);
+  const wsChannelManager = new WsChannelManager(userCache);
   const authenticate = (req, onError, onSuccess) => {
     // Get Bearer token, we strip the 'Bearer' part
     const authMatch = req.headers['authorization']?.match(bearerRegex);
@@ -216,25 +264,25 @@ const spawnWsServer = async (server, secret, userCache) => {
   wss.on('connection', (ws, request, entity, id, type, userId) => {
     if (entity == 'world') {
       if (type == 'chat') {
-        channelManager.addWorldChatConnection(id, ws, userId);
+        wsChannelManager.addWorldChatConnection(id, ws, userId);
 
         ws.on('close', () => {
-          channelManager.removeWorldChatConnection(id, userId);
+          wsChannelManager.removeWorldChatConnection(id, userId);
         });
 
         ws.on('message', (data) => {
-          channelManager.sendWorldChatMessage(userId, id,
+          wsChannelManager.sendWorldChatMessage(userId, id,
               new TextDecoder().decode(data));
         });
       } else if (type == 'state') {
-        channelManager.addWorldStateConnection(id, ws, userId);
+        wsChannelManager.addWorldStateConnection(id, ws, userId);
 
         ws.on('close', () => {
-          channelManager.removeWorldStateConnection(id, userId);
+          wsChannelManager.removeWorldStateConnection(id, userId);
         });
 
         ws.on('message', (data) => {
-          channelManager.updateWorldState(userId, id, new Uint8Array(data));
+          wsChannelManager.updateWorldState(userId, id, new Uint8Array(data));
         });
       }
     } else if (entity == 'user') {
@@ -242,16 +290,16 @@ const spawnWsServer = async (server, secret, userCache) => {
         // The user is trying to connect to their own channel receive
         // messages, they will now be reachable by other users and
         // will be considered online
-        channelManager.addUserChatConnection(ws, userId);
+        wsChannelManager.addUserChatConnection(ws, userId);
 
         ws.on('close', () => {
           // User goes offline
-          channelManager.removeUserChatConnection(userId);
+          wsChannelManager.removeUserChatConnection(userId);
         });
       }
 
       ws.on('message', (data) => {
-        channelManager.sendUserChatMessage(userId, id,
+        wsChannelManager.sendUserChatMessage(userId, id,
             new TextDecoder().decode(data));
       });
     }
@@ -312,7 +360,7 @@ const spawnWsServer = async (server, secret, userCache) => {
     });
   });
 
-  return wss;
+  return {wss, wsChannelManager};
 };
 
 export {spawnWsServer};

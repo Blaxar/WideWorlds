@@ -3,7 +3,8 @@
  */
 
 import makeHttpTestBase from '../utils.js';
-import {serializeEntityState} from '../../common/ws-data-format.js';
+import {serializeEntityState, packEntityStates}
+  from '../../common/ws-data-format.js';
 import request from 'superwstest';
 import * as assert from 'assert';
 
@@ -30,9 +31,15 @@ describe('ws server', () => {
 
   before(ctx.before);
 
-  beforeEach(ctx.beforeEach);
+  beforeEach(async () => {
+    await ctx.beforeEach();
+    base.wsChannelManager.startBroadcasting();
+  });
 
-  afterEach(ctx.afterEach);
+  afterEach(async () => {
+    base.wsChannelManager.stopBroadcasting();
+    await ctx.afterEach();
+  });
 
   after(ctx.after);
 
@@ -153,21 +160,23 @@ describe('ws server', () => {
 
   it('WS world state connect with headers - OK', async () => {
     const state = dummySerializeEntityState(base.adminId);
+    const packedState = packEntityStates([state]);
 
     await request(base.server).ws('/api/worlds/' + base.worldId + '/ws/state')
         .set('Authorization', 'Bearer ' + base.adminBearerToken)
         .sendBinary(state)
-        .expectBinary(state)
+        .expectBinary(packedState)
         .close()
         .expectClosed();
   });
 
   it('WS world state connect with parameters - OK', async () => {
     const state = dummySerializeEntityState(base.adminId);
+    const packedState = packEntityStates([state]);
 
     await request(base.server).ws('/api/worlds/' + base.worldId + '/ws/state?token=' + base.adminBearerToken)
         .sendBinary(state)
-        .expectBinary(state)
+        .expectBinary(packedState)
         .close()
         .expectClosed();
   });

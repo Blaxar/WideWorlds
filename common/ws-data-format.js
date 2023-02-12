@@ -60,7 +60,7 @@ function formatUserMessage(delivered, id, name, role, msg) {
  */
 function serializeEntityState(entityType, updateType, entityId, x, y, z,
     yaw, pitch, roll) {
-  const state = new Uint8Array(0x20);
+  const state = new Uint8Array(entityStateSize);
   const uShortArray = new Uint16Array(state.buffer);
   const uIntArray = new Uint32Array(state.buffer);
   const floatArray = new Float32Array(state.buffer);
@@ -89,7 +89,7 @@ function validateState(state) {
   }
 
   // Validate payload length
-  if (state.length != 0x20) {
+  if (state.length != entityStateSize) {
     throw new Error('Invalid payload length for entity state');
   }
 }
