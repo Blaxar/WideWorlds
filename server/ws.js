@@ -306,7 +306,8 @@ const spawnWsServer = async (server, secret, userCache) => {
   });
 
   server.on('upgrade', function upgrade(request, socket, head) {
-    const {pathname, searchParams} = new URL(request.url, 'https://wideworlds.org'); // We don't care about the base
+    const {pathname, searchParams} = new URL(request.url, 'https://wideworlds.org');
+    // We don't care about the base
 
     const worldMatch = pathname.match(worldChatRegex);
     const stateMatch = pathname.match(worldStateRegex);

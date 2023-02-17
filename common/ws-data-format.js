@@ -15,7 +15,9 @@ const updateType = {
   teleporting: 4,
 };
 
-const entityStateSize = 0x20;
+const entityStateSize = 0x24;
+const localEndiannessCue = 0x11223344;
+const otherEndiannessCue = 0x44332211;
 
 /**
  * Format user message to send on a chat
@@ -34,15 +36,16 @@ function formatUserMessage(delivered, id, name, role, msg) {
 /*
  * Entity state data block is a binary sequence holding the following data:
  *
- * 0x00 | Entity type, 2 bytes ushort |
- * 0x02 | Update type, 2 bytes ushort |
- * 0x04 | Entity ID, 4 bytes uint |
- * 0x08 | X position, 4 bytes float (in meters) |
- * 0x0c | Y position, 4 bytes float (in meters) |
- * 0x10 | Z position, 4 bytes float (in meters) |
- * 0x14 | Yaw, 4 bytes float (in radians) |
- * 0x18 | Pitch, 4 bytes float (in radians) |
- * 0x1c | Roll, 4 bytes float (in radians) |
+ * 0x00 | Endianness cue, 4 bytes |
+ * 0x04 | Entity type, 2 bytes ushort |
+ * 0x06 | Update type, 2 bytes ushort |
+ * 0x08 | Entity ID, 4 bytes uint |
+ * 0x0c | X position, 4 bytes float (in meters) |
+ * 0x10 | Y position, 4 bytes float (in meters) |
+ * 0x14 | Z position, 4 bytes float (in meters) |
+ * 0x18 | Yaw, 4 bytes float (in radians) |
+ * 0x1c | Pitch, 4 bytes float (in radians) |
+ * 0x20 | Roll, 4 bytes float (in radians) |
  */
 
 /**
@@ -65,24 +68,31 @@ function serializeEntityState(entityType, updateType, entityId, x, y, z,
   const uIntArray = new Uint32Array(state.buffer);
   const floatArray = new Float32Array(state.buffer);
 
-  uShortArray[0] = entityType;
-  uShortArray[1] = updateType;
-  uIntArray[1] = entityId;
-  floatArray[2] = x;
-  floatArray[3] = y;
-  floatArray[4] = z;
-  floatArray[5] = yaw;
-  floatArray[6] = pitch;
-  floatArray[7] = roll;
+  uIntArray[0] = localEndiannessCue;
+  uShortArray[2] = entityType;
+  uShortArray[3] = updateType;
+  uIntArray[2] = entityId;
+  floatArray[3] = x;
+  floatArray[4] = y;
+  floatArray[5] = z;
+  floatArray[6] = yaw;
+  floatArray[7] = pitch;
+  floatArray[8] = roll;
 
   return state;
 }
 
 /**
- * Validate binary payload of entity state, throws if invalid
+ * Validate binary payload of entity state, performs endianness
+ * conversion if needed, throws if invalid
  * @param {Uint8Array} state - Entity state binary payload.
+ * @param {integer} expectedEndiannessCue - Expected endianness cue.
+ * @param {integer} oppositeEndiannessCue - opposite endianness cue.
+ * @return {Uint8Array} Valid binary payload for entity state
  */
-function validateState(state) {
+function validateEntityState(state,
+    expectedEndiannessCue = localEndiannessCue,
+    oppositeEndiannessCue = otherEndiannessCue) {
   // Validate payload type
   if (! state instanceof Uint8Array) {
     throw new Error('Invalid payload type for entity state');
@@ -92,6 +102,39 @@ function validateState(state) {
   if (state.length != entityStateSize) {
     throw new Error('Invalid payload length for entity state');
   }
+
+  let validState = state;
+
+  const endiannessCue = (new Uint32Array(state.buffer))[0];
+
+  if (endiannessCue != expectedEndiannessCue) {
+    if (endiannessCue != oppositeEndiannessCue) {
+      throw new Error('Unknown endian for entity state payload');
+    }
+
+    // Mismatching endianness: flip everything
+    validState = new Uint8Array(entityStateSize);
+    const uInt32 = new Uint32Array(validState.buffer);
+    uInt32[0] = expectedEndiannessCue;
+
+    // Entity type
+    validState[4] = state[5];
+    validState[5] = state[4];
+
+    // Update type
+    validState[6] = state[7];
+    validState[7] = state[6];
+
+    // All the remaining 4-byte entries
+    for (let i = 8; i < entityStateSize; i += 4) {
+      validState[i] = state[1 + 3];
+      validState[i + 1] = state[i + 2];
+      validState[i + 2] = state[i + 1];
+      validState[i + 3] = state[i];
+    }
+  }
+
+  return validState;
 }
 
 /**
@@ -100,21 +143,21 @@ function validateState(state) {
  * @return {object} Entity state in object form
  */
 function deserializeEntityState(state) {
-  validateState(state);
+  const validState = validateEntityState(state);
 
-  const uShortArray = new Uint16Array(state.buffer);
-  const uIntArray = new Uint32Array(state.buffer);
-  const floatArray = new Float32Array(state.buffer);
+  const uShortArray = new Uint16Array(validState.buffer);
+  const uIntArray = new Uint32Array(validState.buffer);
+  const floatArray = new Float32Array(validState.buffer);
 
-  const entityType = uShortArray[0];
-  const updateType = uShortArray[1];
-  const entityId = uIntArray[1];
-  const x = floatArray[2];
-  const y = floatArray[3];
-  const z = floatArray[4];
-  const yaw = floatArray[5];
-  const pitch = floatArray[6];
-  const roll = floatArray[7];
+  const entityType = uShortArray[2];
+  const updateType = uShortArray[3];
+  const entityId = uIntArray[2];
+  const x = floatArray[3];
+  const y = floatArray[4];
+  const z = floatArray[5];
+  const yaw = floatArray[6];
+  const pitch = floatArray[7];
+  const roll = floatArray[8];
 
   return {entityType, updateType, entityId, x, y, z, yaw, pitch, roll};
 }
@@ -127,21 +170,21 @@ function deserializeEntityState(state) {
  * @return {Uint8Array} Entity state binary payload
  */
 function forwardEntityState(entityType, entityId, state) {
-  validateState(state);
+  const validState = validateEntityState(state);
 
   // Validate that the entity type and ID are matching the data block
-  const uShortArray = new Uint16Array(state.buffer);
-  const uIntArray = new Uint32Array(state.buffer);
+  const uShortArray = new Uint16Array(validState.buffer);
+  const uIntArray = new Uint32Array(validState.buffer);
 
-  if (uShortArray[0] != entityType) {
+  if (uShortArray[2] != entityType) {
     throw new Error('Mismatching entity type in entity state');
   }
 
-  if (uIntArray[1] != entityId) {
+  if (uIntArray[2] != entityId) {
     throw new Error('Mismatching entity ID in entity state');
   }
 
-  return state;
+  return validState;
 }
 
 /**
@@ -150,17 +193,56 @@ function forwardEntityState(entityType, entityId, state) {
  * @return {Uint8Array} Entity state binary payload pack
  */
 function packEntityStates(entityStates) {
-  const entityStatePack = new Uint8Array(4 + entityStateSize *
+  const entityStatePack = new Uint8Array(8 + entityStateSize *
       entityStates.length);
   const uIntArray = new Uint32Array(entityStatePack.buffer);
-  uIntArray[0] = entityStates.length; // Start with the number of entries
+  uIntArray[0] = localEndiannessCue; // Start with the endianness cue...
+  uIntArray[1] = entityStates.length; // ...followed by the number of entries
 
   entityStates.forEach((state, i) => {
-    validateState(state);
-    entityStatePack.set(state, 4 + i * entityStateSize);
+    entityStatePack.set(validateEntityState(state), 8 + i * entityStateSize);
   });
 
   return entityStatePack;
+}
+
+/**
+ * Validate binary payload of entity state, throws if invalid,
+ * return endian-correct number of entries in the pack
+ * @param {Uint8Array} statePack - Entity state pack binary payload.
+ * @param {integer} expectedEndiannessCue - Expected endianness cue.
+ * @param {integer} oppositeEndiannessCue - opposite endianness cue.
+ * @return {integer} Number of entries in the pack
+ */
+function validateEntityStatePack(statePack,
+    expectedEndiannessCue = localEndiannessCue,
+    oppositeEndiannessCue = otherEndiannessCue) {
+  // Validate payload type
+  if (! statePack instanceof Uint8Array) {
+    throw new Error('Invalid payload type for entity state pack');
+  }
+
+  const uIntArray = new Uint32Array(statePack.buffer);
+
+  const endiannessCue = uIntArray[0];
+  let nbEntityStates = uIntArray[1];
+
+  if (endiannessCue != expectedEndiannessCue) {
+    if (endiannessCue != oppositeEndiannessCue) {
+      throw new Error('Unknown endian for entity state pack payload');
+    }
+
+    const newUint8 = new Uint8Array(4);
+
+    newUint8[0] = statePack[7];
+    newUint8[1] = statePack[6];
+    newUint8[2] = statePack[5];
+    newUint8[3] = statePack[4];
+
+    nbEntityStates = (new Uint32Array(newUint8.buffer))[0];
+  }
+
+  return nbEntityStates;
 }
 
 /**
@@ -169,27 +251,27 @@ function packEntityStates(entityStates) {
  * @return {array} Array of entity state payloads.
  */
 function unpackEntityStates(entityStatePack) {
-  const uIntArray = new Uint32Array(entityStatePack.buffer);
-  const nbEntityStates = uIntArray[0];
-  const entityStates = [];
+  const nbEntityStates = validateEntityStatePack(entityStatePack);
 
-  if (entityStatePack.length != (4 + nbEntityStates * entityStateSize)) {
+  if (entityStatePack.length != (8 + nbEntityStates * entityStateSize)) {
     throw new Error('Invalid payload pack size');
   }
 
+  const entityStates = [];
+
   for (let i = 0; i < nbEntityStates; i++) {
-    const begin = 4 + i * entityStateSize;
+    const begin = 8 + i * entityStateSize;
     const end = begin + entityStateSize;
 
     const state = new Uint8Array(entityStatePack
         .slice(begin, end).buffer);
-    validateState(state);
-    entityStates.push(state);
+    entityStates.push(validateEntityState(state));
   }
 
   return entityStates;
 }
 
 export {formatUserMessage, serializeEntityState, deserializeEntityState,
-  forwardEntityState, packEntityStates, unpackEntityStates,
-  entityType, updateType, entityStateSize};
+  forwardEntityState, packEntityStates, unpackEntityStates, entityType,
+  updateType, entityStateSize, localEndiannessCue, otherEndiannessCue,
+  validateEntityState, validateEntityStatePack};

@@ -4,7 +4,8 @@
 
 import parseAvatarsDat from '../../common/avatars-dat-parser.js';
 import {serializeEntityState, deserializeEntityState, forwardEntityState,
-  packEntityStates, unpackEntityStates, entityStateSize}
+  packEntityStates, unpackEntityStates, entityStateSize, localEndiannessCue,
+  otherEndiannessCue, validateEntityState, validateEntityStatePack}
   from '../../common/ws-data-format.js';
 import {epsEqual} from '../utils.js';
 import * as assert from 'assert';
@@ -181,21 +182,22 @@ describe('common', () => {
     const roll = 2.5;
 
     const state = serializeEntityState(entityType, updateType, entityId,
-                                       x, y, z, yaw, pitch, roll);
+        x, y, z, yaw, pitch, roll);
 
     const uShortArray = new Uint16Array(state.buffer);
     const uIntArray = new Uint32Array(state.buffer);
     const floatArray = new Float32Array(state.buffer);
 
-    assert.strictEqual(uShortArray[0], entityType);
-    assert.strictEqual(uShortArray[1], updateType);
-    assert.strictEqual(uIntArray[1], entityId);
-    assert.ok(epsEqual(floatArray[2], x));
-    assert.ok(epsEqual(floatArray[3], y));
-    assert.ok(epsEqual(floatArray[4], z));
-    assert.ok(epsEqual(floatArray[5], yaw));
-    assert.ok(epsEqual(floatArray[6], pitch));
-    assert.ok(epsEqual(floatArray[7], roll));
+    assert.strictEqual(uIntArray[0], localEndiannessCue);
+    assert.strictEqual(uShortArray[2], entityType);
+    assert.strictEqual(uShortArray[3], updateType);
+    assert.strictEqual(uIntArray[2], entityId);
+    assert.ok(epsEqual(floatArray[3], x));
+    assert.ok(epsEqual(floatArray[4], y));
+    assert.ok(epsEqual(floatArray[5], z));
+    assert.ok(epsEqual(floatArray[6], yaw));
+    assert.ok(epsEqual(floatArray[7], pitch));
+    assert.ok(epsEqual(floatArray[8], roll));
 
     const dictState = deserializeEntityState(state);
 
@@ -222,7 +224,7 @@ describe('common', () => {
     const roll = 2.5;
 
     const state = serializeEntityState(entityType, updateType, entityId,
-                                       x, y, z, yaw, pitch, roll);
+        x, y, z, yaw, pitch, roll);
 
     const fwrdState = forwardEntityState(entityType, entityId, state);
 
@@ -230,15 +232,16 @@ describe('common', () => {
     const uIntArray = new Uint32Array(fwrdState.buffer);
     const floatArray = new Float32Array(fwrdState.buffer);
 
-    assert.strictEqual(uShortArray[0], entityType);
-    assert.strictEqual(uShortArray[1], updateType);
-    assert.strictEqual(uIntArray[1], entityId);
-    assert.ok(epsEqual(floatArray[2], x));
-    assert.ok(epsEqual(floatArray[3], y));
-    assert.ok(epsEqual(floatArray[4], z));
-    assert.ok(epsEqual(floatArray[5], yaw));
-    assert.ok(epsEqual(floatArray[6], pitch));
-    assert.ok(epsEqual(floatArray[7], roll));
+    assert.strictEqual(uIntArray[0], localEndiannessCue);
+    assert.strictEqual(uShortArray[2], entityType);
+    assert.strictEqual(uShortArray[3], updateType);
+    assert.strictEqual(uIntArray[2], entityId);
+    assert.ok(epsEqual(floatArray[3], x));
+    assert.ok(epsEqual(floatArray[4], y));
+    assert.ok(epsEqual(floatArray[5], z));
+    assert.ok(epsEqual(floatArray[6], yaw));
+    assert.ok(epsEqual(floatArray[7], pitch));
+    assert.ok(epsEqual(floatArray[8], roll));
 
     assert.throws(() => forwardEntityState(entityType + 1, entityId, state), Error);
     assert.throws(() => forwardEntityState(entityType, entityId + 1, state), Error);
@@ -248,7 +251,7 @@ describe('common', () => {
   it('(un)packEntityStates', () => {
     /* Try packing first */
     const entityStates = [dummySerializeEntityState(0),
-      dummySerializeEntityState(1), dummySerializeEntityState(2)];
+        dummySerializeEntityState(1), dummySerializeEntityState(2)];
 
     /* Fiddle with the payload length and type to trigger an exception */
     assert.throws(() => packEntityStates(['some string']), Error);
@@ -257,10 +260,12 @@ describe('common', () => {
     const pack = packEntityStates(entityStates);
 
     let uIntArray = new Uint32Array(pack.buffer);
-    let nbEntityStates = uIntArray[0];
+    let endiannessCue = uIntArray[0];
+    let nbEntityStates = uIntArray[1];
 
+    assert.strictEqual(endiannessCue, localEndiannessCue);
     assert.strictEqual(nbEntityStates, 3);
-    assert.strictEqual(pack.length, 4 + 3 * entityStateSize);
+    assert.strictEqual(pack.length, 8 + 3 * entityStateSize);
 
     /* Try unpacking and validating equality */
     const unpacked = unpackEntityStates(pack);
@@ -272,14 +277,56 @@ describe('common', () => {
     const emptyPack = packEntityStates([]);
 
     uIntArray = new Uint32Array(emptyPack.buffer);
-    nbEntityStates = uIntArray[0];
+    endiannessCue = uIntArray[0];
+    nbEntityStates = uIntArray[1];
 
+    assert.strictEqual(endiannessCue, localEndiannessCue);
     assert.strictEqual(nbEntityStates, 0);
-    assert.strictEqual(emptyPack.length, 4);
+    assert.strictEqual(emptyPack.length, 8);
 
     /* Fiddle with the payload length to trigger an exception */
     const badPack = new Uint8Array(pack.length + 1);
     badPack.set(pack, 0);
     assert.throws(() => unpackEntityStates(badPack), Error);
+  });
+
+  it('endianness handling', () => {
+    /* Test state validation: unknown endian */
+    let state = dummySerializeEntityState(0);
+    state[0] = 0xaa;
+
+    assert.throws(() => validateEntityState(state), Error);
+
+    /* Test state validation: other endian */
+    state = dummySerializeEntityState(0);
+    let otherState = validateEntityState(state, otherEndiannessCue, localEndiannessCue);
+    let uInt32 = new Uint32Array(otherState.buffer);
+    let endiannessCue = uInt32[0];
+
+    assert.strictEqual(endiannessCue, otherEndiannessCue);
+    assert.notEqual(JSON.stringify(state.slice(4)), JSON.stringify(otherState.slice(4)));
+    otherState = validateEntityState(state);
+    assert.equal(JSON.stringify(state), JSON.stringify(otherState));
+
+    uInt32 = new Uint32Array(otherState.buffer);
+    endiannessCue = uInt32[0];
+
+    assert.strictEqual(endiannessCue, localEndiannessCue);
+
+    /* Test state pack validation: unknown endian */
+    let pack = packEntityStates([dummySerializeEntityState(0),
+        dummySerializeEntityState(1), dummySerializeEntityState(2)]);
+    pack[0] = 0xbb;
+
+    assert.throws(() => validateEntityStatePack(pack), Error);
+
+    /* Test state pack validation: endian switching */
+    pack = packEntityStates([dummySerializeEntityState(0),
+        dummySerializeEntityState(1), dummySerializeEntityState(2)]);
+    let nbEntityStates = validateEntityStatePack(pack, otherEndiannessCue, localEndiannessCue);
+
+    assert.notEqual(nbEntityStates, 3);
+    nbEntityStates = validateEntityStatePack(pack);
+    assert.strictEqual(nbEntityStates, 3);
   });
 });

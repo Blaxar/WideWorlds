@@ -26,11 +26,10 @@ const makeTestUser = async (connection, name, password, email, role) => {
 };
 
 const makeTestProp = async (connection, worldId, userId, date, x, y, z, yaw,
-                            pitch, roll, name, description, action) => {
-                              return (await connection.manager.save([new Prop(undefined, worldId, userId, date, x, y, z,
-                                                                              yaw, pitch, roll, name, description,
-                                                                              action)]))[0].id;
-                            };
+    pitch, roll, name, description, action) => {
+  return (await connection.manager.save([new Prop(undefined, worldId, userId, date, x, y, z,
+      yaw, pitch, roll, name, description, action)]))[0].id;
+};
 
 const makeHttpTestBase = (port = 62931, dbFile = 'mocha-http-test-db.sqlite3', secret = crypto.randomBytes(64).toString('hex')) => {
   const base = {
