@@ -19,19 +19,6 @@ const entityStateSize = 0x24;
 const localEndiannessCue = 0x11223344;
 const otherEndiannessCue = 0x44332211;
 
-/**
- * Format user message to send on a chat
- * @param {boolean} delivered - True if the message was correctly delivered,
- *                              false otherwise.
- * @param {integer} id - ID of the sending user.
- * @param {string} name - Name of the user.
- * @param {string} role - Role of the user.
- * @param {string} msg - Message to send.
- * @return {string} Stringified json websocket payload to send.
- */
-function formatUserMessage(delivered, id, name, role, msg) {
-  return JSON.stringify({delivered, id, name, role, msg});
-}
 
 /*
  * Entity state data block is a binary sequence holding the following data:
@@ -47,6 +34,33 @@ function formatUserMessage(delivered, id, name, role, msg) {
  * 0x1c | Pitch, 4 bytes float (in radians) |
  * 0x20 | Roll, 4 bytes float (in radians) |
  */
+
+const entityStateSchema = {
+  entityCue: [0x00, 0x04],
+  entityType: [0x04, 0x02],
+  updateType: [0x06, 0x02],
+  entityId: [0x08, 0x04],
+  x: [0x0c, 0x04],
+  y: [0x10, 0x04],
+  z: [0x14, 0x04],
+  yaw: [0x18, 0x04],
+  pitch: [0x1c, 0x04],
+  roll: [0x20, 0x04],
+};
+
+/**
+ * Format user message to send on a chat
+ * @param {boolean} delivered - True if the message was correctly delivered,
+ *                              false otherwise.
+ * @param {integer} id - ID of the sending user.
+ * @param {string} name - Name of the user.
+ * @param {string} role - Role of the user.
+ * @param {string} msg - Message to send.
+ * @return {string} Stringified json websocket payload to send.
+ */
+function formatUserMessage(delivered, id, name, role, msg) {
+  return JSON.stringify({delivered, id, name, role, msg});
+}
 
 /**
  * Serialize binary payload of entity state
@@ -83,6 +97,29 @@ function serializeEntityState(entityType, updateType, entityId, x, y, z,
 }
 
 /**
+ * Flip endian on entity state binary payload, for internal use only
+ * @param {Uint8Array} state - Entity state binary payload.
+ * @return {Uint8Array} Endian-flipped binary payload for entity state.
+ */
+function flipEntityStateEndian(state) {
+  if (state.length != entityStateSize) {
+    throw new Error('Invalid payload length for entity state');
+  }
+
+  const flippedState = new Uint8Array(entityStateSize);
+
+  for (const [address, size] of Object.values(entityStateSchema)) {
+    const maxOffset = size - 1;
+
+    for (let i = 0; i < size; i++) {
+      flippedState[address + i] = state[address + maxOffset - i];
+    }
+  }
+
+  return flippedState;
+}
+
+/**
  * Validate binary payload of entity state, performs endianness
  * conversion if needed, throws if invalid
  * @param {Uint8Array} state - Entity state binary payload.
@@ -113,25 +150,7 @@ function validateEntityState(state,
     }
 
     // Mismatching endianness: flip everything
-    validState = new Uint8Array(entityStateSize);
-    const uInt32 = new Uint32Array(validState.buffer);
-    uInt32[0] = expectedEndiannessCue;
-
-    // Entity type
-    validState[4] = state[5];
-    validState[5] = state[4];
-
-    // Update type
-    validState[6] = state[7];
-    validState[7] = state[6];
-
-    // All the remaining 4-byte entries
-    for (let i = 8; i < entityStateSize; i += 4) {
-      validState[i] = state[1 + 3];
-      validState[i + 1] = state[i + 2];
-      validState[i + 2] = state[i + 1];
-      validState[i + 3] = state[i];
-    }
+    validState = flipEntityStateEndian(state);
   }
 
   return validState;
