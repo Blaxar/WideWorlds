@@ -8,6 +8,8 @@ import {Mesh, Group, BufferGeometry, BufferAttribute, MeshBasicMaterial,
 import * as fflate from 'fflate';
 import {AWActionParser} from 'aw-action-parser';
 
+const unknownObjectName = '_unknown_';
+
 /* Assume .rwx file extension if none is provided */
 const normalizePropName = (name) =>
   name.match(/.+\.([a-zA-Z0-9]+)$/) ? name : name + '.rwx';
@@ -42,7 +44,7 @@ class ModelRegistry {
 
     this.placeholder = new Mesh(placeholderGeometry,
         [new MeshBasicMaterial({color: 0x000000})]);
-    this.placeholder.name = 'unknown';
+    this.placeholder.name = unknownObjectName;
 
     this.models = new Map();
     this.basicModels = new Map();
@@ -166,7 +168,14 @@ class ModelRegistry {
 
     let materialChanged = false;
 
+    // This is a placeholder object, nothing to do
+    if (obj3d.name === unknownObjectName) return;
+
     for (const material of obj3d.material) {
+      if (!material.userData.rwx) {
+        throw new Error('Material is missing RWX metadata');
+      }
+
       const rwxMaterial = material.userData.rwx.material.clone();
       const originalSignature = material.name;
 

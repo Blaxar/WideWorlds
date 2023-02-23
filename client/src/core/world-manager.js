@@ -74,9 +74,16 @@ class WorldManager {
       this.engine3d.setSkyBox(model);
     }
 
-    // TODO: customizable avatar.zip subpath and CORS disabling?
-    const res = await loadAvatarsZip(`${data.path}/avatars/avatars.zip`, true);
-    return res.avatars;
+    try {
+      // TODO: customizable avatars.zip subpath and CORS disabling?
+      const res =
+          await loadAvatarsZip(`${data.path}/avatars/avatars.zip`, true);
+      return res.avatars;
+    } catch (e) {
+      console.error(e, e.stack);
+    }
+
+    return [];
   }
 
   /** Clear current world data, reset engine3d state and chunks */
@@ -188,7 +195,11 @@ class WorldManager {
           prop.roll * degToRadRatio / 10,
           'YZX');
 
-      modelRegistry.applyActionString(obj3d, prop.action);
+      try {
+        modelRegistry.applyActionString(obj3d, prop.action);
+      } catch (e) {
+        console.error(e, e.stack());
+      }
 
       if (!this.engine3d.appendToNode(chunkNodeHandle, obj3d)) {
         // Could not append object to node, meaning node (chunk) no
