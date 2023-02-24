@@ -3,7 +3,8 @@
  */
 
 import WorldPathRegistry from '../../client/src/core/world-path-registry.js';
-import ModelRegistry, {normalizePropName} from '../../client/src/core/model-registry.js';
+import ModelRegistry, {normalizePropName, unknownObjectName}
+  from '../../client/src/core/model-registry.js';
 import {LoadingManager} from 'three';
 import * as assert from 'assert';
 
@@ -22,10 +23,10 @@ describe('WorldPathRegistry and ModelRegistry', () => {
     assert.equal(registry.models.size, 0);
 
     const model = await registry.get('notfound.rwx');
-    assert.equal(model.name, 'unknown');
+    assert.equal(model.name, unknownObjectName);
 
     const basicModel = await registry.getBasic('notfound.rwx');
-    assert.equal(basicModel.name, 'unknown');
+    assert.equal(basicModel.name, unknownObjectName);
 
     assert.equal(registry.models.size, 1);
     assert.equal(registry.basicModels.size, 1);

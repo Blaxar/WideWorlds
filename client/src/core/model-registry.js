@@ -228,4 +228,4 @@ class ModelRegistry {
 }
 
 export default ModelRegistry;
-export {normalizePropName};
+export {normalizePropName, unknownObjectName};
