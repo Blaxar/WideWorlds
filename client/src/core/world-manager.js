@@ -195,6 +195,7 @@ class WorldManager {
           prop.roll * degToRadRatio / 10,
           'YZX');
 
+      obj3d.userData.description = prop.description;
       try {
         modelRegistry.applyActionString(obj3d, prop.action);
       } catch (e) {
