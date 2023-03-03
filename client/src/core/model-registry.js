@@ -2,13 +2,16 @@
  * @author Julien 'Blaxar' Bardagi <blaxar.waldarax@gmail.com>
  */
 
-import RWXLoader, {RWXMaterialManager} from 'three-rwx-loader';
+import RWXLoader, {
+  RWXMaterialManager, pictureTag,
+} from 'three-rwx-loader';
 import {Mesh, Group, BufferGeometry, BufferAttribute, MeshBasicMaterial,
-  sRGBEncoding} from 'three';
+  sRGBEncoding, TextureLoader, Color} from 'three';
 import * as fflate from 'fflate';
 import {AWActionParser} from 'aw-action-parser';
 
 const unknownObjectName = '_unknown_';
+const imageService = 'https://images.weserv.nl/?url=';
 
 /* Assume .rwx file extension if none is provided */
 const normalizePropName = (name) =>
@@ -59,7 +62,8 @@ class ModelRegistry {
     this.avatarLoader = (new RWXLoader(loadingManager))
         .setRWXMaterialManager(this.materialManager)
         .setPath(path).setFlatten(false);
-
+    this.pictureLoader = new TextureLoader();
+    this.pictureLoader.textureEncoding = sRGBEncoding;
     this.actionParser = new AWActionParser();
   }
 
@@ -183,6 +187,7 @@ class ModelRegistry {
       let color = null;
       let solid = true;
       let visible = true;
+      let picture = null;
 
       for (const action of createActions) {
         if (action.commandType === 'color') {
@@ -195,6 +200,8 @@ class ModelRegistry {
           visible = action.value;
         } else if (action.commandType === 'solid') {
           solid = action.value;
+        } else if (action.commandType === 'picture') {
+          picture = action.resource;
         }
       }
 
@@ -206,7 +213,6 @@ class ModelRegistry {
         rwxMaterial.texture = null;
         rwxMaterial.mask = null;
       }
-
       obj3d.userData.rwx.solid = solid;
       obj3d.visible = visible;
 
@@ -219,8 +225,30 @@ class ModelRegistry {
         this.materialManager.addRWXMaterial(rwxMaterial, newSignature);
       }
 
+      const lastMatId = materials.length;
       materials.push(this.materialManager.getThreeMaterialPack(newSignature)
           .threeMat);
+
+      // Check if we need to apply a picture
+      //  and if said picture can be applied here to begin with...
+      if (picture && obj3d.userData.taggedMaterials[pictureTag]
+          ?.includes(lastMatId)) {
+        const url = imageService + picture;
+
+        // Doing the above ensures us the new array of materials
+        //  will be updated, so if a picture is applied:
+        //   it will actually be visible
+        materialChanged = true;
+
+        this.pictureLoader.load(url, (image) => {
+          image.encoding = sRGBEncoding;
+
+          materials[lastMatId] = materials[lastMatId].clone();
+          materials[lastMatId].color = new Color(1.0, 1.0, 1.0);
+          materials[lastMatId].map = image;
+          materials[lastMatId].needsUpdate = true;
+        });
+      }
     }
 
     if (materialChanged) obj3d.material = materials;
