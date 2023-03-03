@@ -3,10 +3,10 @@
  */
 
 import RWXLoader, {
-  RWXMaterialManager, pictureTag,
+  RWXMaterialManager, pictureTag, signTag,
 } from 'three-rwx-loader';
 import {Mesh, Group, BufferGeometry, BufferAttribute, MeshBasicMaterial,
-  sRGBEncoding, TextureLoader, Color} from 'three';
+  sRGBEncoding, TextureLoader, Color, CanvasTexture} from 'three';
 import * as fflate from 'fflate';
 import {AWActionParser} from 'aw-action-parser';
 
@@ -188,6 +188,7 @@ class ModelRegistry {
       let solid = true;
       let visible = true;
       let picture = null;
+      const sign = [];
 
       for (const action of createActions) {
         if (action.commandType === 'color') {
@@ -202,6 +203,10 @@ class ModelRegistry {
           solid = action.value;
         } else if (action.commandType === 'picture') {
           picture = action.resource;
+        } else if (action.commandType === 'sign') {
+          sign.text = action.text || obj3d.userData.description;
+          sign.bcolor = action.bcolor;
+          sign.color = action.color;
         }
       }
 
@@ -249,9 +254,127 @@ class ModelRegistry {
           materials[lastMatId].needsUpdate = true;
         });
       }
+
+      // Check if we need to apply a sign
+      //  and if said sign can be applied here to begin with...
+      if (sign && obj3d.userData.taggedMaterials[signTag]
+          ?.includes(lastMatId)) {
+        materialChanged = true;
+
+        materials[lastMatId] = materials[lastMatId].clone();
+        materials[lastMatId].color = new Color(1.0, 1.0, 1.0);
+        materials[lastMatId].map = new CanvasTexture(
+            this.textCanvas(
+                sign.text,
+                materials[lastMatId].userData.ratio,
+                sign.color,
+                sign.bcolor,
+            ),
+        );
+        materials[lastMatId].map.encoding = sRGBEncoding;
+      }
     }
 
     if (materialChanged) obj3d.material = materials;
+  }
+
+  /**
+   * Draws an HTMLCanvasElement as a CanvasTexture on top of a Sign object
+   * for internal use by {@link applyActionsRecursive}
+   * @param {string} text - Sign text to write on the canvas
+   * @param {integer} ratio - Sign ratio, to make the text fit
+   * @param {Array.<integer>} color - Text colour for the canvas
+   * @param {Array.<integer>} bcolor - Background colour for the canvas
+   * @return {CanvasTexture} Sign Canvas Texture
+  */
+  textCanvas(text = '', ratio = 1,
+      color = {r: 255, g: 255, b: 255},
+      bcolor = {r: 0, g: 0, b: 255}) {
+    const canvas = document.createElement('canvas');
+    canvas.width = ratio > 1 ? 256 : 256 * ratio;
+    canvas.height = ratio > 1 ? 256 / ratio : 256;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = `rgb(${bcolor.r}, ${bcolor.g}, ${bcolor.b})`;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = `rgb(${color.r}, ${color.g}, ${color.b})`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+
+    const fontSizes = [120, 50, 40, 30, 20, 10, 5];
+    let fontIndex = 0;
+
+    const words = text.split(/([ \n])/);
+    let lines = [''];
+    const maxWidth = canvas.width * 0.95;
+    const maxHeight = (canvas.height * 0.95) / ratio;
+
+    ctx.font = `${fontSizes[fontIndex]}px Arial`;
+
+    // TODO: use a proper way to get line height from font size
+    const fontSizeToHeightRatio = 1;
+    let lineHeight = fontSizes[fontIndex] * fontSizeToHeightRatio;
+
+    let curWordIndex = 0;
+
+    let tentativeWord;
+    let tentativeLine;
+
+    while (curWordIndex < words.length) {
+      const curLine = lines.length - 1;
+
+      if (words[curWordIndex] === '\n') {
+        tentativeWord = '';
+      } else {
+        tentativeWord = words[curWordIndex];
+      }
+
+      if (lines[curLine].length > 0) {
+        tentativeLine = lines[curLine] + tentativeWord;
+      } else {
+        tentativeLine = tentativeWord;
+      }
+
+      if (
+        words[curWordIndex] !== '\n' &&
+        ctx.measureText(tentativeLine).width <= maxWidth
+      ) {
+        // TODO: use actualBoundingBoxLeft and actualBoundingBoxRight
+        //  instead of .width
+        // Adding word to end of line
+        lines[curLine] = tentativeLine;
+        curWordIndex += 1;
+      } else if (
+        ctx.measureText(tentativeWord).width <= maxWidth &&
+        lineHeight * (curLine + 1) <= maxHeight
+      ) {
+        // Adding word as a new line
+        lines.push(tentativeWord);
+        curWordIndex += 1;
+      } else if (fontIndex < fontSizes.length - 1) {
+        // Retry all with smaller font size
+        fontIndex += 1;
+        ctx.font = `${fontSizes[fontIndex]}px Arial`;
+        lineHeight = fontSizes[fontIndex] * fontSizeToHeightRatio;
+        lines = [''];
+        curWordIndex = 0;
+      } else {
+        // Min font size reached, add word as new line anyway
+        lines.push(tentativeWord);
+        curWordIndex += 1;
+      }
+    }
+
+    lines.forEach((line, i) => {
+      ctx.fillText(
+          line,
+          canvas.width / 2,
+          canvas.height / 2 +
+            i * lineHeight -
+            ((lines.length - 1) * lineHeight) / 2,
+      );
+    });
+
+    return canvas;
   }
 }
 
