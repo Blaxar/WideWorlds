@@ -3,7 +3,6 @@
  */
 
 import {loadAvatarsZip} from '../../../common/avatars-dat-parser.js';
-
 const cmToMRatio = 0.01;
 const degToRadRatio = Math.PI / 180.0;
 
@@ -25,7 +24,7 @@ class WorldManager {
    *                                       before moving animated textures to
    *                                       their next frame.
    */
-  constructor(engine3d, worldPathRegistry, httpClient, chunkSide = 2000,
+  constructor(engine3d, worldPathRegistry, httpClient, chunkSide = 20 * 100,
       textureUpdatePeriod = 0.20) {
     this.engine3d = engine3d;
     this.worldPathRegistry = worldPathRegistry;
@@ -37,6 +36,7 @@ class WorldManager {
     this.chunks = new Map();
     this.props = new Map();
     this.lastTextureUpdate = 0;
+    this.sprites = [];
   }
 
   /**
@@ -97,6 +97,7 @@ class WorldManager {
     this.engine3d.setSkyColorSpinning(true);
     this.clearChunks();
     this.lastTextureUpdate = 0;
+    this.sprites = [];
   }
 
   /** Clear all chunks */
@@ -122,6 +123,12 @@ class WorldManager {
       this.lastTextureUpdate = 0;
     } else {
       this.lastTextureUpdate += delta;
+    }
+
+    for (const sprite of this.sprites) {
+      sprite.lookAt(this.engine3d.camera.position);
+      sprite.rotation.set(0, sprite.rotation.y, 0);
+      sprite.updateMatrix();
     }
 
     const cX = Math.floor(pos.x / (this.chunkSide * cmToMRatio) + 0.5);
@@ -196,6 +203,10 @@ class WorldManager {
           'YZX');
 
       obj3d.userData.description = prop.description;
+
+      if (obj3d.userData.rwx.axisAlignment !== 'none') {
+        this.sprites.push(obj3d);
+      }
       try {
         modelRegistry.applyActionString(obj3d, prop.action);
       } catch (e) {

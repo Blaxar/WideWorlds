@@ -215,6 +215,7 @@ onMounted(() => {
     }
   });
 
+
   const canvas = document.querySelector('#main-3d-canvas');
   engine3d = new Engine3D(canvas);
 
@@ -228,6 +229,7 @@ onMounted(() => {
   worldManager = new WorldManager(engine3d, worldPathRegistry, httpClient);
 
   engine3d.start();
+
   requestAnimationFrame(render);
 });
 
@@ -259,6 +261,45 @@ document.addEventListener('focusin', (event) => {
 document.addEventListener('focusout', (event) => {
   someInputFocused = false;
 }, false);
+document.addEventListener('pointermove', (event) => {
+  onPointerMove(engine3d, event);
+}, false);
+
+// Temporary debug thing that we'll remove when we properly handle mouse events.
+document.addEventListener('click', (event) => {
+  if (someInputFocused) return;
+  const intersects =
+    engine3d.clickRaycaster.intersectObjects(engine3d.scene.children, true);
+
+  for (let i = 0; i < intersects.length; i++) {
+    if ((intersects.length > 0) && (intersects[i].object.visible) &&
+        (intersects[i].object.name.length > 0)) {
+      engine3d.lastClickedObject = intersects[i].object;
+      console.log(engine3d.lastClickedObject);
+      console.log('Avatar Pos: ' +
+        engine3d.user.position.x, engine3d.user.position.y,
+      engine3d.user.position.z);
+
+      return;
+    }
+  }
+}, false);
+
+document.addEventListener('contextmenu', (event) => {
+  if (someInputFocused) return;
+  event.preventDefault();
+  // inputListener.onRightClick(engine3d, event);
+}, false);
+
+/**
+ * Sets our Pointer object's X and Y coordinates for Raycasting
+ * @param {Engine3D} engine3d - A reference to the 3D Engine
+ * @param {PointerEvent} event
+ */
+function onPointerMove(engine3d, event) {
+  engine3d.pointer.x = ( event.clientX / window.innerWidth ) * 2 - 1;
+  engine3d.pointer.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
+}
 
 </script>
 

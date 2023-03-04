@@ -5,7 +5,12 @@
 import {SubjectBehavior} from './user-input.js';
 import {Vector3, Euler} from 'three';
 
-const baseSpeed = 3.0; // m/s
+// Speeds are in metres/s
+const groundSpeed = [5.0, 10.0];
+// const flySpeed = [5.0, 24.0];
+const lookSpeed = [2, 3.5];
+const turnSpeed = [2.0, 3.0];
+
 const absTiltLimit = Math.PI / 2 * 0.95; // radians
 
 /** Define the behavior of the local user in the 3D space based on key inputs */
@@ -16,7 +21,11 @@ class UserBehavior extends SubjectBehavior {
    */
   constructor(subject) {
     super(subject);
-    this.speed = baseSpeed; // m/s
+    this.speed = groundSpeed[0]; // m/s
+    // this.fSpeed = flySpeed[0];
+    this.lSpeed = lookSpeed[0];
+    this.tSpeed = turnSpeed[0];
+
     this.yAxis = new Vector3(0, 1, 0);
 
     this.direction = new Vector3();
@@ -29,8 +38,10 @@ class UserBehavior extends SubjectBehavior {
    * @param {number} delta - Elapsed number of seconds since last call.
    */
   step(delta) {
-    this.speed = this.run() ? baseSpeed * 3 : baseSpeed * 2;
-
+    this.speed = groundSpeed[+this.run()];
+    // this.fSpeed = flySpeed[+this.run()];
+    this.lSpeed = lookSpeed[+this.run()];
+    this.tSpeed = turnSpeed[+this.run()];
     this.subject.tilt.getWorldDirection(this.direction);
     this.tmpVec3.copy(this.direction);
 
@@ -47,7 +58,7 @@ class UserBehavior extends SubjectBehavior {
     this.direction.multiplyScalar(this.speed * delta);
 
     if (this.lookDown()) {
-      const deltaRotX = delta * this.speed / 2;
+      const deltaRotX = delta * this.lSpeed;
       if (tilt + deltaRotX > absTiltLimit) {
         // Do not look above the maximum allowed tilt angle
         this.tmpEul.set(absTiltLimit, 0, 0, 'YXZ');
@@ -58,7 +69,7 @@ class UserBehavior extends SubjectBehavior {
     }
 
     if (this.lookUp()) {
-      const deltaRotX = - delta * this.speed / 2;
+      const deltaRotX = - delta * this.lSpeed;
       if (tilt + deltaRotX < - absTiltLimit) {
         // Do not look below the minimum allowed tilt angle
         this.tmpEul.set(- absTiltLimit, 0, 0, 'YXZ');
@@ -69,11 +80,11 @@ class UserBehavior extends SubjectBehavior {
     }
 
     if (this.turnLeft() && !this.strafe()) {
-      this.subject.user.rotateOnWorldAxis(this.yAxis, delta * this.speed / 2);
+      this.subject.user.rotateOnWorldAxis(this.yAxis, delta * this.tSpeed);
     }
 
     if (this.turnRight() && !this.strafe()) {
-      this.subject.user.rotateOnWorldAxis(this.yAxis, - delta * this.speed / 2);
+      this.subject.user.rotateOnWorldAxis(this.yAxis, - delta * this.tSpeed);
     }
 
     if (this.moveUp() || this.jump()) {
