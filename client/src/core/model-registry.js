@@ -188,7 +188,8 @@ class ModelRegistry {
       let solid = true;
       let visible = true;
       let picture = null;
-      const sign = [];
+      const sign = {};
+      const scale = {};
 
       for (const action of createActions) {
         if (action.commandType === 'color') {
@@ -207,6 +208,8 @@ class ModelRegistry {
           sign.text = action.text || obj3d.userData.description;
           sign.bcolor = action.bcolor;
           sign.color = action.color;
+        } else if (action.commandType === 'scale') {
+          scale.factor = action.factor;
         }
       }
 
@@ -217,6 +220,9 @@ class ModelRegistry {
         rwxMaterial.color = color;
         rwxMaterial.texture = null;
         rwxMaterial.mask = null;
+      }
+      if (scale.factor) {
+        obj3d.scale.copy(scale.factor);
       }
       obj3d.userData.rwx.solid = solid;
       obj3d.visible = visible;

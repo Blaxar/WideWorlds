@@ -29,7 +29,7 @@ class UserBehavior extends SubjectBehavior {
    * @param {number} delta - Elapsed number of seconds since last call.
    */
   step(delta) {
-    this.speed = this.run() ? baseSpeed * 2 : baseSpeed;
+    this.speed = this.run() ? baseSpeed * 3 : baseSpeed * 2;
 
     this.subject.tilt.getWorldDirection(this.direction);
     this.tmpVec3.copy(this.direction);
