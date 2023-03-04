@@ -34,7 +34,7 @@ class Engine3D {
     this.userAvatar.position.set(0, this.userHeight / 2, 0);
 
     // Handling user subjective view here
-    const fov = 45;
+    const fov = 50;
     const aspect = 2;
     const near = 0.1;
     const far = 100;
@@ -47,6 +47,9 @@ class Engine3D {
     this.user.add(this.head);
     this.scene.add(this.user);
     this.cameraDistance = 0;
+    this.clickRaycaster = new THREE.Raycaster();
+    this.pointer = new THREE.Vector2();
+    this.lastClickedObject = null;
 
     // Ready the Octahedron for sky colors
     this.reversedOctahedron = utils3D.makeReversedOctahedron();
@@ -264,6 +267,9 @@ class Engine3D {
     this.tmpVec3.y -= this.userHeight / 2;
     this.tmpVec3.add(this.camera.position);
     this.userAvatar.lookAt(this.tmpVec3);
+
+    this.clickRaycaster.setFromCamera(this.pointer, this.camera);
+
 
     // Adjust the direction we're looking at base on the position of
     // the camera on the axis of view: if it's in front of the head:

@@ -19,6 +19,7 @@ const UserInput = [
   'crouch',
 ];
 
+
 const qwertyBindings = {
   forward: 87, // W
   backward: 83, // S
