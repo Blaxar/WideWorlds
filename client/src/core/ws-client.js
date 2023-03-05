@@ -2,6 +2,8 @@
  * @author Julien 'Blaxar' Bardagi <blaxar.waldarax@gmail.com>
  */
 
+import {unpackEntityStates, serializeEntityState, deserializeEntityState}
+  from '../../../common/ws-data-format.js';
 import WebSocket from 'isomorphic-ws';
 
 /** Base class for all WebSocket client wrappers */
@@ -70,6 +72,45 @@ class UserChat extends BaseWs {
   }
 }
 
+/** Wrapped WebSocket connection to a world state */
+class WorldState extends BaseWs {
+  /**
+   * @constructor
+   * @param {WebSocket} ws - WebSocket client to wrap.
+   */
+  constructor(ws) {
+    super(ws);
+  }
+
+  /**
+   * Send entity state through the WebSocket client
+   * @param {data} state - Plain entity state to serialize and send.
+   */
+  send(state) {
+    this.ws.send(serializeEntityState(state));
+  };
+
+  /**
+   * Register a callback for the 'message' event on the WebSocket client
+   * @param {function} cb - Callback function to register.
+   */
+  onMessage(cb) {
+    this.ws.addEventListener('message', (event) => {
+      // Unpack individual entries first
+      const states = unpackEntityStates(new Uint8Array(event.data));
+      const entries = [];
+
+      // Deserialize each individual entry and push it to the final list
+      for (const state of states) {
+        entries.push(deserializeEntityState(state));
+      }
+
+      // Pass the list of plain json objects to the callback
+      cb(entries);
+    });
+  }
+}
+
 /** Main provider of WebSocket connections to various remote endpoints */
 class WsClient {
   /**
@@ -123,7 +164,28 @@ class WsClient {
       });
     });
   }
+
+  /**
+   * Spawn a new world state connection
+   * @param {integer} id - ID of the world to connect to.
+   * @return {Promise} Promise of an already-opened WorldState connection.
+   */
+  worldStateConnect(id) {
+    return new Promise((resolve, err) => {
+      const ws = new WebSocket(
+          `${this.baseUrl}/worlds/${id}/ws/state?token=${this.token}`,
+      );
+
+      ws.addEventListener('error', (event) => {
+        err(event);
+      });
+
+      ws.addEventListener('open', (event) => {
+        resolve(new WorldState(ws));
+      });
+    });
+  }
 }
 
 export default WsClient;
-export {WorldChat, UserChat};
+export {WorldChat, UserChat, WorldState};

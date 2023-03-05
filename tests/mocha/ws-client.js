@@ -3,20 +3,44 @@
  */
 
 import makeHttpTestBase, {sleep} from '../utils.js';
+import {serializeEntityState, packEntityStates, deserializeEntityState, entityType}
+  from '../../common/ws-data-format.js';
 import * as assert from 'assert';
 import WsClient from '../../client/src/core/ws-client.js';
 
 // Testing ws client
 
-describe('ws chat', () => {
+const dummyEntityState = (id) => {
+  const entityType = 1;
+  const updateType = 2;
+  const entityId = id;
+  const x = 25.2;
+  const y = 30.25;
+  const z = -12.0;
+  const yaw = 3.1415;
+  const pitch = 1.2;
+  const roll = 2.5;
+
+  // Serialize and deserialize to ensure stable floating number precision
+  return deserializeEntityState(serializeEntityState({entityType, updateType, entityId,
+      x, y, z, yaw, pitch, roll}));
+};
+
+describe('ws client', () => {
   const ctx = makeHttpTestBase();
   const base = ctx.base;
 
   before(ctx.before);
 
-  beforeEach(ctx.beforeEach);
+  beforeEach(async () => {
+    await ctx.beforeEach();
+    base.wsChannelManager.startBroadcasting();
+  });
 
-  afterEach(ctx.afterEach);
+  afterEach(async () => {
+    base.wsChannelManager.stopBroadcasting();
+    await ctx.afterEach();
+  });
 
   after(ctx.after);
 
@@ -104,5 +128,37 @@ describe('ws chat', () => {
     await sleep(100);
 
     assert.strictEqual(closed, 4);
+  });
+
+  it('world state', async () => {
+    const state = dummyEntityState(base.citizenId);
+
+    const client = new WsClient(`ws://127.0.0.1:${base.port}/api`, base.citizenBearerToken);
+    const states = await client.worldStateConnect(base.worldId);
+    let message = null;
+    let closed = false;
+
+    states.onMessage((msg) => {
+      message = msg;
+    });
+
+    states.onClose((event) => {
+      closed = true;
+    });
+
+    assert.strictEqual(message, null);
+    assert.strictEqual(closed, false);
+
+    states.send(state);
+    await sleep(150);
+
+    // The deserialized payloads should be identical
+    assert.equal(message.length, 1);
+    assert.equal(JSON.stringify(message[0]), JSON.stringify(state));
+
+    states.close();
+    await sleep(100);
+
+    assert.strictEqual(closed, true);
   });
 });

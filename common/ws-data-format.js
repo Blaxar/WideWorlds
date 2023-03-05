@@ -75,8 +75,8 @@ function formatUserMessage(delivered, id, name, role, msg) {
  * @param {float} roll - Roll (in radians).
  * @return {Uint8Array} Entity state binary payload
  */
-function serializeEntityState(entityType, updateType, entityId, x, y, z,
-    yaw, pitch, roll) {
+function serializeEntityState({entityType, updateType, entityId, x, y, z,
+  yaw, pitch, roll}) {
   const state = new Uint8Array(entityStateSize);
   const uShortArray = new Uint16Array(state.buffer);
   const uIntArray = new Uint32Array(state.buffer);

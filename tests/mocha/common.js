@@ -100,8 +100,8 @@ const dummySerializeEntityState = (offset = 0) => {
   const pitch = 1.2 + offset;
   const roll = 2.5 + offset;
 
-  return serializeEntityState(entityType, updateType, entityId,
-      x, y, z, yaw, pitch, roll);
+  return serializeEntityState({entityType, updateType, entityId,
+      x, y, z, yaw, pitch, roll});
 };
 
 // Testing common utils
@@ -181,8 +181,8 @@ describe('common', () => {
     const pitch = 1.2;
     const roll = 2.5;
 
-    const state = serializeEntityState(entityType, updateType, entityId,
-        x, y, z, yaw, pitch, roll);
+    const state = serializeEntityState({entityType, updateType, entityId,
+        x, y, z, yaw, pitch, roll});
 
     const uShortArray = new Uint16Array(state.buffer);
     const uIntArray = new Uint32Array(state.buffer);
@@ -223,8 +223,8 @@ describe('common', () => {
     const pitch = 1.2;
     const roll = 2.5;
 
-    const state = serializeEntityState(entityType, updateType, entityId,
-        x, y, z, yaw, pitch, roll);
+    const state = serializeEntityState({entityType, updateType, entityId,
+        x, y, z, yaw, pitch, roll});
 
     const fwrdState = forwardEntityState(entityType, entityId, state);
 
