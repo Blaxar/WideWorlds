@@ -8,7 +8,7 @@ import * as utils3D from './utils-3d.js';
 const defaultUserHeight = 1.80;
 
 /**
- * Core 3D mangement class, meant to abstract several three.js
+ * Core 3D management class, meant to abstract several three.js
  * operations regarding scene handling.
  */
 class Engine3D {
@@ -50,6 +50,10 @@ class Engine3D {
     this.clickRaycaster = new THREE.Raycaster();
     this.pointer = new THREE.Vector2();
     this.lastClickedObject = null;
+
+    // Double buffered entity map, to be used each frame for rendering
+    this.entities = new THREE.Group();
+    this.scene.add(this.entities);
 
     // Ready the Octahedron for sky colors
     this.reversedOctahedron = utils3D.makeReversedOctahedron();
@@ -122,6 +126,7 @@ class Engine3D {
   /** Remove the current skybox (if any) */
   resetSkyBox() {
     if (this.skyBox) this.backgroundScene.remove(this.skyBox);
+    this.skyBox = null;
   }
 
   /**
