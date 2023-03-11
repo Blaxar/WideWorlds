@@ -49,7 +49,7 @@ class UserBehavior extends SubjectBehavior {
     this.direction.setY(0);
     this.direction.normalize();
 
-    // Angles between two vectors are always positive, so we need to check
+    // Angles between two 3D vectors are always positive, so we need to check
     // how high the current line of sight is to determine the tilt direction
     const tilt = this.tmpVec3.y < 0 ?
               this.direction.angleTo(this.tmpVec3) :

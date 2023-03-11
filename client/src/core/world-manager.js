@@ -3,6 +3,8 @@
  */
 
 import {loadAvatarsZip} from '../../../common/avatars-dat-parser.js';
+import {Vector3, Vector2} from 'three';
+
 const cmToMRatio = 0.01;
 const degToRadRatio = Math.PI / 180.0;
 
@@ -37,6 +39,8 @@ class WorldManager {
     this.props = new Map();
     this.lastTextureUpdate = 0;
     this.sprites = [];
+    this.cameraDirection = new Vector3();
+    this.xzDirection = new Vector2();
   }
 
   /**
@@ -98,6 +102,8 @@ class WorldManager {
     this.clearChunks();
     this.lastTextureUpdate = 0;
     this.sprites = [];
+    this.cameraDirection.set(0, 0, 0);
+    this.xzDirection.set(0, 0);
   }
 
   /** Clear all chunks */
@@ -125,9 +131,13 @@ class WorldManager {
       this.lastTextureUpdate += delta;
     }
 
+    // Compute the direction (XZ plane) the camera is facing to
+    this.engine3d.camera.getWorldDirection(this.cameraDirection);
+    this.xzDirection.set(this.cameraDirection.x, this.cameraDirection.z);
+    const facingAngle = - this.xzDirection.angle() - Math.PI / 2;
+
     for (const sprite of this.sprites) {
-      sprite.lookAt(this.engine3d.camera.position);
-      sprite.rotation.set(0, sprite.rotation.y, 0);
+      sprite.rotation.set(0, facingAngle, 0);
       sprite.updateMatrix();
     }
 
@@ -204,9 +214,10 @@ class WorldManager {
 
       obj3d.userData.description = prop?.description;
 
-      if (obj3d.userData.rwx.axisAlignment !== 'none') {
+      if (obj3d.userData.rwx?.axisAlignment !== 'none') {
         this.sprites.push(obj3d);
       }
+
       try {
         modelRegistry.applyActionString(obj3d, prop.action);
       } catch (e) {
