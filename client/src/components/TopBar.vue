@@ -29,7 +29,7 @@ const props = defineProps({
   },
   defaultAvatarId: {
     type: Number,
-    default: null,
+    default: 0,
   },
 });
 /* eslint-enable no-unused-vars */
@@ -58,6 +58,7 @@ const pickAvatar = () => {
 
 onMounted(() => {
   avatarId.value = props.defaultAvatarId;
+  pickAvatar();
 });
 
 </script>
@@ -69,7 +70,7 @@ onMounted(() => {
     <button @click="select" name="camera">{{cameraButtonText}}</button>
     <button @click="select" name="controls">{{controlsButtonText}}</button>
     <select v-model="avatarId" @change="pickAvatar">
-    <option v-for="(a, id) in avatars" :key="id" :value="id">
+      <option v-for="(a, id) in avatars" :key="id" :value="id">
         {{ a.name }}
       </option>
     </select>
