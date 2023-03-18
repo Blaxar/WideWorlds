@@ -257,6 +257,7 @@ class ModelRegistry {
           materials[lastMatId] = materials[lastMatId].clone();
           materials[lastMatId].color = new Color(1.0, 1.0, 1.0);
           materials[lastMatId].map = image;
+          materials[lastMatId].transparent = true;
           materials[lastMatId].needsUpdate = true;
         });
       }
