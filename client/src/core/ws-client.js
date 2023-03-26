@@ -175,6 +175,7 @@ class WsClient {
       const ws = new WebSocket(
           `${this.baseUrl}/worlds/${id}/ws/state?token=${this.token}`,
       );
+      ws.binaryType = 'arraybuffer';
 
       ws.addEventListener('error', (event) => {
         err(event);

@@ -29,4 +29,5 @@ const secret = randomBytes(64).toString('hex');
 const userCache = new Map();
 
 spawnHttpServer(argv.db, argv.port, secret, userCache)
-    .then( (server) => spawnWsServer(server, secret, userCache).wss);
+    .then((server) => spawnWsServer(server, secret, userCache))
+    .then((wss) => wss.wsChannelManager.startBroadcasting());

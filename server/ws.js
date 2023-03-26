@@ -154,6 +154,7 @@ class WsChannelManager {
       throw new Error('User not found, can\'t update state');
     }
 
+    // TODO: catch error if any and log it somewhere
     this.worldStateBuffers[worldId].set(clientId,
         forwardEntityState(entityType.user, clientId, state));
   }

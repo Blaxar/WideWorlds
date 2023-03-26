@@ -55,12 +55,12 @@ class HttpClient {
       else throw new Error(response.status);
     })
         .then((json) => {
-          if (json.token) return json.token;
+          if (json.token) return {id: json.id, token: json.token};
           else throw new Error('Missing authorization token');
         })
-        .then((token) => {
+        .then(({id, token}) => {
           this.setAuthToken(token);
-          return token;
+          return {id, token};
         });
   }
 

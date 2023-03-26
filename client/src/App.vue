@@ -13,20 +13,24 @@ import AppState, {AppStates} from './core/app-state.js';
 import WorldPathRegistry from './core/world-path-registry.js';
 import WorldManager from './core/world-manager.js';
 import HttpClient from './core/http-client.js';
+import EntityManager from './core/entity-manager.js';
 import WsClient from './core/ws-client.js';
 import Engine3D from './core/engine-3d.js';
-import {SubjectBehaviorFactory,
-  UserInputListener, qwertyBindings}
+import {SubjectBehaviorFactory, UserInputListener, qwertyBindings}
   from './core/user-input.js';
 import UserBehavior from './core/user-behavior.js';
-import {LoadingManager} from 'three';
+import {entityType, updateType} from '../../common/ws-data-format.js';
+import {LoadingManager, Group, BoxGeometry, Mesh, MeshBasicMaterial}
+  from 'three';
 
 // Three.js context-related settings
 let engine3d = null;
 let someInputFocused = false;
 const worldPathRegistry = new WorldPathRegistry(new LoadingManager());
 let worldManager = null;
+let worldState = null;
 let wsClient = null;
+let entityManager = null;
 let storedKeyBindings = {};
 let defaultWorldId = null;
 let worldAvatars = [];
@@ -56,10 +60,11 @@ if (!localStorage.getItem('keyBindings')) {
 
 const spawnWsClient = (token) => new WsClient(import.meta.env.VITE_SERVER_URL.replace(/http\:\/\//g, 'ws://') + '/api', token);
 
-if (localStorage.getItem('token')) {
+if (localStorage.getItem('token') && localStorage.getItem('userId')) {
   // If there's an authentication token in local storage: we skip
   // past the sign-in step
   wsClient = spawnWsClient(localStorage.getItem('token'));
+  main.userId = parseInt(localStorage.getItem('userId'));
   main.state = AppStates.WORLD_UNLOADED;
 }
 
@@ -113,6 +118,7 @@ const hooks = {
     wsClient = null;
     httpClient.clear();
     localStorage.removeItem('token');
+    localStorage.removeItem('userId');
   }, exitHook],
   [AppStates.SIGNING_IN]: [entranceHook, exitHook],
   [AppStates.WORLD_UNLOADED]: [(state) => {
@@ -133,8 +139,10 @@ const handleLogin = (credentials) => {
   appState.signIn();
 
   httpClient.login(credentials.username, credentials.password)
-      .then((token) => {
+      .then(({id, token}) => {
         localStorage.setItem('token', token);
+        localStorage.setItem('userId', id);
+        main.userId = id;
         wsClient = spawnWsClient(token);
         appState.toWorldSelection();
       })
@@ -166,6 +174,12 @@ const handleWorldSelection = (id) => {
     main.worldId = id;
     worldAvatars = avatars;
     updateCamera();
+    worldState = wsClient.worldStateConnect(id);
+    worldState.then((state) => {
+      state.onMessage((data) => {
+        entityManager.update(data);
+      });
+    });
     appState.readyWorld();
   });
 };
@@ -176,6 +190,9 @@ const handleWorldCancel = () => {
 
 const handleLeave = () => {
   worldManager.unload();
+  worldState.then((state) => {
+    state.close();
+  });
   appState.unloadWorld();
 };
 
@@ -201,6 +218,27 @@ const render = () => {
   const delta = engine3d.getDeltaTime();
   inputListener.step(delta);
   worldManager?.update(engine3d.camera.position, delta);
+  entityManager?.setLocalUserId(main.userId);
+
+  // Notify the server of the local user state (position, orientation...)
+  // TODO: throttle this probably
+  if (main.userId !== null && worldState) {
+    const localUserState = {
+      entityType: entityType.user,
+      updateType: updateType.moving,
+      entityId: main.userId,
+      x: engine3d.user.position.x,
+      y: engine3d.user.position.y,
+      z: engine3d.user.position.z,
+      yaw: engine3d.user.rotation.y,
+      pitch: engine3d.user.rotation.x,
+      roll: engine3d.user.rotation.z,
+    };
+
+    worldState.then((state) => state.send(localUserState));
+  }
+
+  entityManager?.step(delta);
   if (engine3d.render(delta)) {
     requestAnimationFrame(render);
   }
@@ -225,8 +263,20 @@ onMounted(() => {
   //       we need.
   inputListener.setSubject('user', {user: engine3d.user, tilt: engine3d.tilt});
 
+  // TODO: Use actual avatars for each remote user once there is a way
+  //       for the server to communicate this to the client.
+  const placeholderAvatarGeometry = new BoxGeometry(1, 1.80, 1);
+  const placeholderAvatarMesh = new Mesh(
+      placeholderAvatarGeometry,
+      new MeshBasicMaterial({color: 0xff00ff, wireframe: true}),
+  );
+  placeholderAvatarMesh.position.setY(0.90);
+  const placeholderAvatar = new Group();
+  placeholderAvatar.add(placeholderAvatarMesh);
+
   // Ready world path registry for object caching
   worldManager = new WorldManager(engine3d, worldPathRegistry, httpClient);
+  entityManager = new EntityManager(engine3d.entities, placeholderAvatar);
 
   engine3d.start();
 

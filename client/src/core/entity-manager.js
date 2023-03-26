@@ -21,10 +21,10 @@ class EntityManager {
    * @param {number} avgUpdateTime - Initial guess for the average elapsed time
    *                                 (in seconds) between each update.
    */
-  constructor(group, placeholder, localUserId, avgUpdateTime = 0.05) {
+  constructor(group, placeholder, localUserId = null, avgUpdateTime = 0.05) {
     this.group = group;
     this.placeholder = placeholder;
-    this.localUserId = localUserId;
+    this.setLocalUserId(localUserId);
     this.avgUpdateTime = avgUpdateTime;
     this.entityData = new Map();
     this.entityData.set('users', {buffers: [new Map(), new Map()], id: 0});
@@ -37,6 +37,14 @@ class EntityManager {
     this.newRot = new Quaternion();
     this.tmpVec3 = new Vector3();
     this.tmpEuler = new Euler();
+  }
+
+  /**
+   * Set the ID of the local user
+   * @param {integer} id - ID of the local user.
+   */
+  setLocalUserId(id) {
+    this.localUserId = id;
   }
 
   /**

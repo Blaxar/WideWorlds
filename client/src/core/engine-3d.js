@@ -108,6 +108,11 @@ class Engine3D {
         new THREE.BufferAttribute(colors, 3));
   }
 
+  /** Clear the 3D scene of all live entities */
+  clearEntities() {
+    this.entities.clear();
+  }
+
   /**
    * Change the current sky box
    * @param {Object3D} model - Asset to use as skybox.
