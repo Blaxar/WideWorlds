@@ -21,11 +21,9 @@ const makeEntityState = (id, uType, x = 0, y = 0, z = 0, yaw = 0, pitch = 0, rol
 describe('entity-manager', () => {
   it('constructor', () => {
     const group = new THREE.Group();
-    const placeholder = new THREE.Group();
-    const entityManager = new EntityManager(group, placeholder, 2, 0.01);
+    const entityManager = new EntityManager(group, 2, 0.01);
 
     assert.strictEqual(entityManager.group, group);
-    assert.strictEqual(entityManager.placeholder, placeholder);
     assert.strictEqual(entityManager.localUserId, 2);
     assert.strictEqual(entityManager.avgUpdateTime, 0.01);
     assert.ok(entityManager.entityData instanceof Map);
@@ -43,20 +41,22 @@ describe('entity-manager', () => {
 
   it('sampleUpdateTime', () => {
     const group = new THREE.Group();
-    const placeholder = new THREE.Group();
-    const entityManager = new EntityManager(group, placeholder, 2, 0.01);
+    const entityManager = new EntityManager(group, 2, 0.01);
 
     assert.strictEqual(entityManager.avgUpdateTime, 0.01);
+    assert.strictEqual(entityManager.getAvgUpdateTimeMs(), 10);
     assert.strictEqual(entityManager.updateTimeSamples.length, 0);
 
     // Sample once, average update time won't be updated yet
     entityManager.sampleUpdateTime(1.0);
     assert.strictEqual(entityManager.avgUpdateTime, 0.01);
+    assert.strictEqual(entityManager.getAvgUpdateTimeMs(), 10);
     assert.strictEqual(entityManager.updateTimeSamples.length, 1);
 
     // Sample once again: the average update time should be updated
     entityManager.sampleUpdateTime(1.5);
     assert.ok(epsEqual(entityManager.avgUpdateTime, 0.5));
+    assert.strictEqual(entityManager.getAvgUpdateTimeMs(), 500);
     assert.strictEqual(entityManager.updateTimeSamples.length, 2);
 
     // Sample a few more times to fill the sample queue up
@@ -64,12 +64,14 @@ describe('entity-manager', () => {
     entityManager.sampleUpdateTime(2.5);
     entityManager.sampleUpdateTime(3.0);
     assert.ok(epsEqual(entityManager.avgUpdateTime, 0.5));
+    assert.strictEqual(entityManager.getAvgUpdateTimeMs(), 500);
     assert.strictEqual(entityManager.updateTimeSamples.length, 5);
 
     // Sample once more: should not overflow and remove the first
     // inserted value
     entityManager.sampleUpdateTime(3.5);
     assert.ok(epsEqual(entityManager.avgUpdateTime, 0.5));
+    assert.strictEqual(entityManager.getAvgUpdateTimeMs(), 500);
     assert.strictEqual(entityManager.updateTimeSamples.length, 5);
     assert.strictEqual(entityManager.updateTimeSamples[0], 1.5);
 
@@ -81,14 +83,14 @@ describe('entity-manager', () => {
     entityManager.sampleUpdateTime(7.0);
     entityManager.sampleUpdateTime(8.0);
     assert.ok(epsEqual(entityManager.avgUpdateTime, 1.0));
+    assert.strictEqual(entityManager.getAvgUpdateTimeMs(), 1000);
     assert.strictEqual(entityManager.updateTimeSamples.length, 5);
     assert.strictEqual(entityManager.updateTimeSamples[0], 4.0);
   });
 
   it('update and step', () => {
     const group = new THREE.Group();
-    const placeholder = new THREE.Group();
-    const entityManager = new EntityManager(group, placeholder, 2, 0.01); // local user ID is 2
+    const entityManager = new EntityManager(group, 2, 0.01); // local user ID is 2
 
     const users = [makeEntityState(1, updateType.joining), makeEntityState(2, updateType.joining),
         makeEntityState(3, updateType.joining, 1., -1., 2., Math.PI / 2.)];

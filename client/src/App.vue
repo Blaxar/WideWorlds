@@ -20,8 +20,7 @@ import {SubjectBehaviorFactory, UserInputListener, qwertyBindings}
   from './core/user-input.js';
 import UserBehavior from './core/user-behavior.js';
 import {entityType, updateType} from '../../common/ws-data-format.js';
-import {LoadingManager, Group, BoxGeometry, Mesh, MeshBasicMaterial}
-  from 'three';
+import {LoadingManager} from 'three';
 
 // Three.js context-related settings
 let engine3d = null;
@@ -36,6 +35,7 @@ let defaultWorldId = null;
 let worldAvatars = [];
 const thirdPersonCameraDistance = 8;
 let cameraMode = 0; // 0 is first person view, 1 is rear view, 2 is front view
+let lastAvatarUpdate = 0;
 
 // Define reactive states for Vue.js
 const main = reactive({
@@ -205,7 +205,7 @@ const handleAvatar = (avatarId) => {
 
   // Load avatar
   worldManager.getAvatar(worldAvatars[avatarId].geometry).then((obj3d) => {
-    engine3d.setUserAvatar(obj3d);
+    engine3d.setUserAvatar(obj3d, avatarId);
   });
 };
 
@@ -220,9 +220,8 @@ const render = () => {
   worldManager?.update(engine3d.camera.position, delta);
   entityManager?.setLocalUserId(main.userId);
 
-  // Notify the server of the local user state (position, orientation...)
-  // TODO: throttle this probably
-  if (main.userId !== null && worldState) {
+  if (main.userId !== null && worldState && entityManager &&
+      lastAvatarUpdate < Date.now() - entityManager.getAvgUpdateTimeMs() / 2) {
     const localUserState = {
       entityType: entityType.user,
       updateType: updateType.moving,
@@ -233,9 +232,11 @@ const render = () => {
       yaw: engine3d.user.rotation.y,
       pitch: engine3d.user.rotation.x,
       roll: engine3d.user.rotation.z,
+      dataBlock0: engine3d.user.userData.avatarId,
     };
 
     worldState.then((state) => state.send(localUserState));
+    lastAvatarUpdate = Date.now();
   }
 
   entityManager?.step(delta);
@@ -262,21 +263,18 @@ onMounted(() => {
   //       as well, but let's be rigorous there and only expose the fields
   //       we need.
   inputListener.setSubject('user', {user: engine3d.user, tilt: engine3d.tilt});
-
-  // TODO: Use actual avatars for each remote user once there is a way
-  //       for the server to communicate this to the client.
-  const placeholderAvatarGeometry = new BoxGeometry(1, 1.80, 1);
-  const placeholderAvatarMesh = new Mesh(
-      placeholderAvatarGeometry,
-      new MeshBasicMaterial({color: 0xff00ff, wireframe: true}),
-  );
-  placeholderAvatarMesh.position.setY(0.90);
-  const placeholderAvatar = new Group();
-  placeholderAvatar.add(placeholderAvatarMesh);
-
   // Ready world path registry for object caching
   worldManager = new WorldManager(engine3d, worldPathRegistry, httpClient);
-  entityManager = new EntityManager(engine3d.entities, placeholderAvatar);
+  entityManager = new EntityManager(engine3d.entities, null,
+      0.05,
+      (node, avatarId) => { // Set callback for entity avatar update
+        if (avatarId >= worldAvatars.length) return;
+
+        worldManager.getAvatar(worldAvatars[avatarId].geometry)
+            .then((obj3d) => {
+              engine3d.setEntityAvatar(node, obj3d, avatarId);
+            });
+      });
 
   engine3d.start();
 

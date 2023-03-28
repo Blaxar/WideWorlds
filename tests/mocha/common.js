@@ -99,9 +99,14 @@ const dummySerializeEntityState = (offset = 0) => {
   const yaw = 3.1415 + offset;
   const pitch = 1.2 + offset;
   const roll = 2.5 + offset;
+  const dataBlock0 = offset;
+  const dataBlock1 = offset + 1;
+  const dataBlock2 = offset + 2;
+  const dataBlock3 = offset + 3;
 
-  return serializeEntityState({entityType, updateType, entityId,
-      x, y, z, yaw, pitch, roll});
+  return serializeEntityState({entityType, updateType, entityId, x,
+      y, z, yaw, pitch, roll, dataBlock0, dataBlock1, dataBlock2,
+      dataBlock3});
 };
 
 // Testing common utils

@@ -216,10 +216,12 @@ class Engine3D {
   /**
    * Set user avatar
    * @param {Object3D} obj3d - three.js 3D asset
+   * @param {integer} avatarId - Id of the avatar.
    */
-  setUserAvatar(obj3d) {
+  setUserAvatar(obj3d, avatarId) {
     if (this.userAvatar) this.scene.remove(this.userAvatar);
 
+    this.user.userData.avatarId = avatarId;
     const bbox = new THREE.Box3().setFromObject(obj3d);
 
     this.userAvatar = obj3d;
@@ -227,6 +229,23 @@ class Engine3D {
 
     this.head.position.set(0, this.userHeight, 0);
     this.scene.add(this.userAvatar);
+  }
+
+  /**
+   * Set entity avatar
+   * @param {Group} entity - three.js group to put the avatar in.
+   * @param {Object3D} avatar - three.js 3D asset for the avatar.
+   * @param {integer} avatarId - Id of the avatar.
+   */
+  setEntityAvatar(entity, avatar, avatarId) {
+    if (entity.userData.avatarId !== avatarId) {
+      // Avatar must be changed
+      const bbox = new THREE.Box3().setFromObject(avatar);
+      entity.userData.avatarId = avatarId;
+      entity.clear();
+      avatar.position.setY((bbox.max.y - bbox.min.y) / 2);
+      entity.add(avatar);
+    }
   }
 
   /**

@@ -12,6 +12,7 @@ const lookSpeed = [2, 3.5];
 const turnSpeed = [2.0, 3.0];
 
 const absTiltLimit = Math.PI / 2 * 0.95; // radians
+const twicePi = Math.PI * 2;
 
 /** Define the behavior of the local user in the 3D space based on key inputs */
 class UserBehavior extends SubjectBehavior {
@@ -80,11 +81,17 @@ class UserBehavior extends SubjectBehavior {
     }
 
     if (this.turnLeft() && !this.strafe()) {
-      this.subject.user.rotateOnWorldAxis(this.yAxis, delta * this.tSpeed);
+      const rot = this.subject.user.rotation;
+      let rotY = (rot.y + delta * this.tSpeed) % twicePi;
+      if (rotY < 0) rotY += twicePi;
+      this.subject.user.rotation.set(rot.x, rotY, rot.z, 'YXZ');
     }
 
     if (this.turnRight() && !this.strafe()) {
-      this.subject.user.rotateOnWorldAxis(this.yAxis, - delta * this.tSpeed);
+      const rot = this.subject.user.rotation;
+      let rotY = (rot.y - delta * this.tSpeed) % twicePi;
+      if (rotY < 0) rotY += twicePi;
+      this.subject.user.rotation.set(rot.x, rotY, rot.z, 'YXZ');
     }
 
     if (this.moveUp() || this.jump()) {

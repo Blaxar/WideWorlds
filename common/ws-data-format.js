@@ -15,7 +15,7 @@ const updateType = {
   teleporting: 4,
 };
 
-const entityStateSize = 0x24;
+const entityStateSize = 0x2c;
 const localEndiannessCue = 0x11223344;
 const otherEndiannessCue = 0x44332211;
 
@@ -33,6 +33,10 @@ const otherEndiannessCue = 0x44332211;
  * 0x18 | Yaw, 4 bytes float (in radians) |
  * 0x1c | Pitch, 4 bytes float (in radians) |
  * 0x20 | Roll, 4 bytes float (in radians) |
+ * 0x24 | Data block 0, 2 bytes |
+ * 0x26 | Data block 1, 2 bytes |
+ * 0x28 | Data block 2, 2 bytes |
+ * 0x2a | Data block 3, 2 bytes |
  */
 
 const entityStateSchema = {
@@ -46,6 +50,10 @@ const entityStateSchema = {
   yaw: [0x18, 0x04],
   pitch: [0x1c, 0x04],
   roll: [0x20, 0x04],
+  dataBlock0: [0x24, 0x02],
+  dataBlock1: [0x26, 0x02],
+  dataBlock2: [0x28, 0x02],
+  dataBlock3: [0x2a, 0x02],
 };
 
 /**
@@ -73,10 +81,15 @@ function formatUserMessage(delivered, id, name, role, msg) {
  * @param {float} yaw - Yaw (in radians).
  * @param {float} pitch - Pitch (in radians).
  * @param {float} roll - Roll (in radians).
+ * @param {short} dataBlock0 - First data block.
+ * @param {short} dataBlock1 - Second data block.
+ * @param {short} dataBlock2 - Third data block.
+ * @param {short} dataBlock3 - Fourth data block.
  * @return {Uint8Array} Entity state binary payload
  */
 function serializeEntityState({entityType, updateType, entityId, x, y, z,
-  yaw, pitch, roll}) {
+  yaw, pitch, roll, dataBlock0 = 0, dataBlock1 = 0, dataBlock2 = 0,
+  dataBlock3 = 0}) {
   const state = new Uint8Array(entityStateSize);
   const uShortArray = new Uint16Array(state.buffer);
   const uIntArray = new Uint32Array(state.buffer);
@@ -92,6 +105,10 @@ function serializeEntityState({entityType, updateType, entityId, x, y, z,
   floatArray[6] = yaw;
   floatArray[7] = pitch;
   floatArray[8] = roll;
+  uShortArray[18] = dataBlock0;
+  uShortArray[19] = dataBlock1;
+  uShortArray[20] = dataBlock2;
+  uShortArray[21] = dataBlock3;
 
   return state;
 }
@@ -177,8 +194,13 @@ function deserializeEntityState(state) {
   const yaw = floatArray[6];
   const pitch = floatArray[7];
   const roll = floatArray[8];
+  const dataBlock0 = uShortArray[18];
+  const dataBlock1 = uShortArray[19];
+  const dataBlock2 = uShortArray[20];
+  const dataBlock3 = uShortArray[21];
 
-  return {entityType, updateType, entityId, x, y, z, yaw, pitch, roll};
+  return {entityType, updateType, entityId, x, y, z, yaw, pitch, roll,
+    dataBlock0, dataBlock1, dataBlock2, dataBlock3};
 }
 
 /**

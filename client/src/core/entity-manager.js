@@ -3,7 +3,7 @@
  */
 
 import {entityType} from '../../../common/ws-data-format.js';
-import {Vector3, Quaternion, Euler} from 'three';
+import {Group, Vector3, Quaternion, Euler} from 'three';
 
 const userNodeNameRegex = /^user#([0-9]+)$/i;
 const nbUpdateTimeSamples = 5;
@@ -16,16 +16,18 @@ class EntityManager {
   /**
    * @constructor
    * @param {Group} group - three.js group object to put the entities in.
-   * @param {Object3D} placeholder - three.js 3D placeholder for entities.
    * @param {integer} localUserId - ID of the local user.
    * @param {number} avgUpdateTime - Initial guess for the average elapsed time
    *                                 (in seconds) between each update.
+   * @param {function} setEntityAvatar - Callback function to set avatars on
+   *                                     entities (to be called each frame).
    */
-  constructor(group, placeholder, localUserId = null, avgUpdateTime = 0.05) {
+  constructor(group, localUserId = null, avgUpdateTime = 0.05,
+      setEntityAvatar = () => {}) {
     this.group = group;
-    this.placeholder = placeholder;
     this.setLocalUserId(localUserId);
     this.avgUpdateTime = avgUpdateTime;
+    this.setEntityAvatar = setEntityAvatar;
     this.entityData = new Map();
     this.entityData.set('users', {buffers: [new Map(), new Map()], id: 0});
     this.updateTimeSamples = [];
@@ -37,6 +39,14 @@ class EntityManager {
     this.newRot = new Quaternion();
     this.tmpVec3 = new Vector3();
     this.tmpEuler = new Euler();
+  }
+
+  /**
+   * Get the average time between two updates from the server
+   * @return {integer} Average update time (in milliseconds).
+   */
+  getAvgUpdateTimeMs() {
+    return parseInt(this.avgUpdateTime * 1000);
   }
 
   /**
@@ -173,10 +183,11 @@ class EntityManager {
       if (userMatch && userMatch[1]) {
         if (userBuffer.has(parseInt(userMatch[1]))) {
           // Update scenario
+          const user = userBuffer.get(parseInt(userMatch[1]));
+          this.setEntityAvatar(node, user.dataBlock0);
           node.userData.progress =
             this.resetProgress ? 0. : node.userData.progress;
-          this.interpolateEntity(node,
-              userBuffer.get(parseInt(userMatch[1])), deltaTime);
+          this.interpolateEntity(node, user, deltaTime);
         } else {
           // Node for user is in the scene but not in the entity buffer:
           // it must be removed
@@ -203,13 +214,13 @@ class EntityManager {
 
       const userNodeName = `user#${user.entityId}`;
 
-      // TODO: use proper avatars
-      const obj3d = this.placeholder.clone();
+      const obj3d = new Group();
       obj3d.name = userNodeName;
       obj3d.userData.progress = 0.;
       this.group.add(obj3d);
       obj3d.matrixAutoUpdate = false;
       this.initializeEntity(obj3d, userBuffer.get(user.entityId));
+      this.setEntityAvatar(obj3d, user.dataBlock0);
     }
   }
 }
