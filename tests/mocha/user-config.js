@@ -28,7 +28,7 @@ describe('UserConfig', () => {
     const configKey = `mochaTestConfig${Date.now()}`;
     const userConfig = new UserConfig(configKey, storage);
 
-    assert.strictEqual(userConfig.at('controls').at('keyBindings').at('forward').value(),
+    assert.strictEqual(userConfig.at('controls').at('keyBindings').value('forward'),
         userConfig.config.controls.keyBindings.forward);
     assert.throws(() => userConfig.at('IdoNotExist'), Error);
     assert.throws(() => userConfig.at('controls').at('DontKnow'), Error);
@@ -41,11 +41,22 @@ describe('UserConfig', () => {
     const configKey = `mochaTestConfig${Date.now()}`;
     const userConfig = new UserConfig(configKey, storage);
 
+    let firstValue = 0;
+    let secondValue = 0;
+
+    userConfig.at('controls').at('keyBindings').onUpdate('backward', (v) => { firstValue = v; });
+    userConfig.at('controls').at('keyBindings').onUpdate('backward', (v) => { secondValue = v; });
+    assert.strictEqual(firstValue, 0);
+    assert.strictEqual(secondValue, 0);
     userConfig.at('controls').at('keyBindings').set('backward', 200);
-    assert.strictEqual(userConfig.at('controls').at('keyBindings').at('backward').value(), 200);
+    assert.strictEqual(firstValue, 200);
+    assert.strictEqual(secondValue, 200);
+
+    assert.strictEqual(userConfig.at('controls').at('keyBindings').value('backward'), 200);
     assert.throws(() => userConfig.at('controls').at('keyBindings').set('centerward', 200), Error);
     assert.throws(() => userConfig.at('controls').at('keyBindings').at('backward').set('noseward', 200), Error);
     assert.throws(() => userConfig.at('controls').set('keyBindings', 200), Error);
+    assert.throws(() => userConfig.at('controls').at('keyBindings').onUpdate('footward', () => {}), Error);
 
     // Value should have been saved to storage
     const stored = JSON.parse(storage.getItem(configKey));
