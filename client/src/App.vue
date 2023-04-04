@@ -8,7 +8,7 @@ import LoginForm from './components/LoginForm.vue';
 import WorldSelection from './components/WorldSelection.vue';
 import TopBar from './components/TopBar.vue';
 import UserChat from './components/UserChat.vue';
-import ControlBindings from './components/ControlBindings.vue';
+import UserSettings from './components/UserSettings.vue';
 import AppState, {AppStates} from './core/app-state.js';
 import WorldPathRegistry from './core/world-path-registry.js';
 import WorldManager from './core/world-manager.js';
@@ -356,7 +356,7 @@ function onPointerMove(engine3d, event) {
     <div id="overlay">
     <TopBar v-if="displayEdgebars" :avatars="worldAvatars" @leave="handleLeave"
     @camera="updateCamera(true)" @avatar="handleAvatar">
-    <template v-slot:control-bindings><ControlBindings :listener="inputListener"
+    <template v-slot:settings><UserSettings :listener="inputListener"
     @keyBindingUpdated="handleKeyBindingUpdated" /></template>
     </TopBar>
     <LoginForm v-if="displayLogin" @submit="handleLogin" />

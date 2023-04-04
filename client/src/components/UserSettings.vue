@@ -109,8 +109,9 @@ onUnmounted(() => {
 </script>
 
 <template>
-
 <table :key="componentKey">
+    <tr><th scope="col" class="controls-header">Controls</th>
+    <th scope="col">Key Bindings</th></tr>
     <tr v-for="name in userInputs" :key="name">
     <td>{{ formatLabel(name) }}</td>
     <td>

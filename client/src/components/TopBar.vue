@@ -19,9 +19,9 @@ const props = defineProps({
     type: String,
     default: 'Change Visibility',
   },
-  controlsButtonText: {
+  settingsButtonText: {
     type: String,
-    default: 'Controls',
+    default: 'Settings',
   },
   avatars: {
     type: Array,
@@ -39,7 +39,7 @@ const emit = defineEmits(['leave', 'camera', 'avatar']);
 const avatarId = ref(null);
 
 const state = reactive({
-  displayControls: false,
+  displaySettings: false,
 });
 
 const select = (event) => {
@@ -47,8 +47,8 @@ const select = (event) => {
 
   if (selected === 'leave') emit('leave');
   else if (selected === 'camera') emit('camera');
-  else if (selected === 'controls') {
-    state.displayControls = !state.displayControls;
+  else if (selected === 'settings') {
+    state.displaySettings = !state.displaySettings;
   }
 };
 
@@ -68,7 +68,7 @@ onMounted(() => {
     <div class="button-bar">
     <button @click="select" name="leave">{{leaveButtonText}}</button>
     <button @click="select" name="camera">{{cameraButtonText}}</button>
-    <button @click="select" name="controls">{{controlsButtonText}}</button>
+    <button @click="select" name="settings">{{settingsButtonText}}</button>
     <select v-model="avatarId" @change="pickAvatar">
       <option v-for="(a, id) in avatars" :key="id" :value="id">
         {{ a.name }}
@@ -76,7 +76,7 @@ onMounted(() => {
     </select>
     </div>
     <div class="settings-panel">
-    <slot name="control-bindings" v-if="state.displayControls" />
+    <slot name="settings" v-if="state.displaySettings" />
     </div>
     </div>
 </template>
