@@ -12,21 +12,28 @@ import { tmpdir } from 'node:os';
 // Testing Core application state machine
 describe('UserConfig', () => {
   it('UserConfig constructor', async () => {
+    let startConfigStr = '';
+
+    const onLoad = (config) => {
+      startConfigStr = JSON.stringify(config);
+    };
+
     const tmpDir = await mkdtemp(join(tmpdir(), 'ww-test'));
     const storage = new LocalStorage(tmpDir);
     const configKey = `mochaTestConfig${Date.now()}`;
-    const userConfig = new UserConfig(configKey, storage);
+    const userConfig = new UserConfig(configKey, onLoad, storage);
 
     assert.strictEqual(userConfig.storage, storage);
     assert.strictEqual(userConfig.configKey, configKey);
     assert.equal(JSON.stringify(userConfig.config), JSON.stringify(defaultConfig));
+    assert.equal(startConfigStr, JSON.stringify(defaultConfig));
   });
 
   it('UserConfig at', async () => {
     const tmpDir = await mkdtemp(join(tmpdir(), 'ww-test'));
     const storage = new LocalStorage(tmpDir);
     const configKey = `mochaTestConfig${Date.now()}`;
-    const userConfig = new UserConfig(configKey, storage);
+    const userConfig = new UserConfig(configKey, (config) => {}, storage);
 
     assert.strictEqual(userConfig.at('controls').at('keyBindings').value('forward'),
         userConfig.config.controls.keyBindings.forward);
@@ -39,7 +46,7 @@ describe('UserConfig', () => {
     const tmpDir = await mkdtemp(join(tmpdir(), 'ww-test'));
     const storage = new LocalStorage(tmpDir);
     const configKey = `mochaTestConfig${Date.now()}`;
-    const userConfig = new UserConfig(configKey, storage);
+    const userConfig = new UserConfig(configKey, (config) => {}, storage);
 
     let firstValue = 0;
     let secondValue = 0;

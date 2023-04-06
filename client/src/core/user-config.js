@@ -141,10 +141,13 @@ class UserConfig {
   /**
    * @constructor
    * @param {string} configKey - Key to store the configuration at.
+   * @param {function} onLoad - Callback on configuration loading.
    * @param {Storage} storage - Storage to hold the config in.
    */
-  constructor(configKey = 'config', storage = localStorage) {
+  constructor(configKey = 'config', onLoad = (config) => {},
+      storage = localStorage) {
     this.configKey = configKey;
+    this.onLoad = onLoad;
     this.storage = storage;
     this.config = {};
     this.updateListeners = new Map();
@@ -166,6 +169,8 @@ class UserConfig {
     } else {
       this.reset();
     }
+
+    this.onLoad(JSON.parse(JSON.stringify(this.config)));
   }
 
   /** Reset current configuration to default */
