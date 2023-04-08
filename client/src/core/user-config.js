@@ -65,11 +65,6 @@ class UserConfigNode {
       );
     }
 
-    if (typeof this.entry[key] !== typeof this.defaultEntry[key]) {
-      // Mismatching type for this value: reinitialize it
-      this.entry[key] = this.defaultEntry[key];
-    }
-
     return this.entry[key];
   }
 
@@ -85,16 +80,6 @@ class UserConfigNode {
         typeof this.defaultEntry[key] === 'object' ) {
       throw new Error(
           `No configuration entry named '${key}' in ${this.path}`,
-      );
-    }
-
-    const entryType = typeof this.entry[key];
-    const defaultType = typeof this.defaultEntry[key];
-
-    if (entryType !== defaultType) {
-      throw new Error(
-          `Mismatchig type for '${key}' in ${this.path}: expected ` +
-          `'${defaultType}' but got ${entryType}`,
       );
     }
 

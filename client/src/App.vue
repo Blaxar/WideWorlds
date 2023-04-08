@@ -14,9 +14,10 @@ import WorldPathRegistry from './core/world-path-registry.js';
 import WorldManager from './core/world-manager.js';
 import HttpClient from './core/http-client.js';
 import EntityManager from './core/entity-manager.js';
+import UserConfig from './core/user-config.js';
 import WsClient from './core/ws-client.js';
 import Engine3D from './core/engine-3d.js';
-import {SubjectBehaviorFactory, UserInputListener, qwertyBindings}
+import {SubjectBehaviorFactory, UserInputListener}
   from './core/user-input.js';
 import UserBehavior from './core/user-behavior.js';
 import {entityType, updateType} from '../../common/ws-data-format.js';
@@ -30,7 +31,7 @@ let worldManager = null;
 let worldState = null;
 let wsClient = null;
 let entityManager = null;
-let storedKeyBindings = {};
+const storedKeyBindings = {};
 let defaultWorldId = null;
 let worldAvatars = [];
 const thirdPersonCameraDistance = 8;
@@ -45,18 +46,9 @@ const main = reactive({
 });
 
 // Ready local storage
-if (!localStorage.getItem('keyBindings')) {
-  localStorage.setItem('keyBindings', JSON.stringify(qwertyBindings));
-} else {
-  try {
-    storedKeyBindings = JSON.parse(localStorage.getItem('keyBindings'));
-  } catch (e) {
-    console.warn('Failed parsing key bindings from local storage: ' +
-                 'falling back to default QWERTY layout');
-    localStorage.setItem('keyBindings', JSON.stringify(qwertyBindings));
-    storedKeyBindings = Object.assign(storedKeyBindings, qwertyBindings);
-  }
-}
+const userConfig = new UserConfig('config', (config) => {
+  Object.assign(storedKeyBindings, config.controls.keyBindings);
+});
 
 const spawnWsClient = (token) => new WsClient(import.meta.env.VITE_SERVER_URL.replace(/http\:\/\//g, 'ws://') + '/api', token);
 
@@ -210,8 +202,8 @@ const handleAvatar = (avatarId) => {
 };
 
 const handleKeyBindingUpdated = (name, input) => {
+  userConfig.at('controls').at('keyBindings').set(name, input);
   storedKeyBindings[name] = input;
-  localStorage.setItem('keyBindings', JSON.stringify(storedKeyBindings));
 };
 
 const render = () => {
