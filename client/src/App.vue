@@ -26,7 +26,6 @@ import {LoadingManager} from 'three';
 // Three.js context-related settings
 let engine3d = null;
 let someInputFocused = false;
-const worldPathRegistry = new WorldPathRegistry(new LoadingManager());
 let worldManager = null;
 let worldState = null;
 let wsClient = null;
@@ -49,6 +48,9 @@ const main = reactive({
 const userConfig = new UserConfig('config', (config) => {
   Object.assign(storedKeyBindings, config.controls.keyBindings);
 });
+
+const worldPathRegistry = new WorldPathRegistry(new LoadingManager(),
+    userConfig.at('network').at('imageService'));
 
 const spawnWsClient = (token) => new WsClient(import.meta.env.VITE_SERVER_URL.replace(/http\:\/\//g, 'ws://') + '/api', token);
 
@@ -201,11 +203,6 @@ const handleAvatar = (avatarId) => {
   });
 };
 
-const handleKeyBindingUpdated = (name, input) => {
-  userConfig.at('controls').at('keyBindings').set(name, input);
-  storedKeyBindings[name] = input;
-};
-
 const render = () => {
   const delta = engine3d.getDeltaTime();
   inputListener.step(delta);
@@ -245,7 +242,6 @@ onMounted(() => {
       event.preventDefault();
     }
   });
-
 
   const canvas = document.querySelector('#main-3d-canvas');
   engine3d = new Engine3D(canvas);
@@ -349,7 +345,7 @@ function onPointerMove(engine3d, event) {
     <TopBar v-if="displayEdgebars" :avatars="worldAvatars" @leave="handleLeave"
     @camera="updateCamera(true)" @avatar="handleAvatar">
     <template v-slot:settings><UserSettings :listener="inputListener"
-    @keyBindingUpdated="handleKeyBindingUpdated" /></template>
+    :controlsNode="userConfig.at('controls')" /></template>
     </TopBar>
     <LoginForm v-if="displayLogin" @submit="handleLogin" />
     <WorldSelection v-if="displayWorldSelection"

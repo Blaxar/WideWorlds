@@ -120,10 +120,10 @@ class UserInputListener {
     this.subjectBehavior = null;
     this.bindingListeners = [];
 
-    // Each input key will be set to null by default, a 'bind' and
-    // 'reset' method will also ne ready of each one of them,
-    // eg: for 'forward' there will be 'bindForward(input)' and
-    // 'clearForward()' methods available
+    // Each input key will be set to null by default, 'bind', 'clear'
+    // and 'get' methods will also be ready for each one of them,
+    // eg: for 'forward' there will be 'bindForward(input)',
+    // 'clearForward()' and 'getForward()' methods available
     for (const name of UserInput) {
       const upperCased = name.charAt(0).toUpperCase() + name.slice(1);
       this[`${name}Key`] = keyBindings[name] ? keyBindings[name] : null;

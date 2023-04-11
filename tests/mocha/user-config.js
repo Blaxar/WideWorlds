@@ -35,8 +35,10 @@ describe('UserConfig', () => {
     const configKey = `mochaTestConfig${Date.now()}`;
     const userConfig = new UserConfig(configKey, (config) => {}, storage);
 
-    assert.strictEqual(userConfig.at('controls').at('keyBindings').value('forward'),
+    assert.strictEqual(userConfig.at('controls').at('keyBindings').at('forward').value(),
         userConfig.config.controls.keyBindings.forward);
+    assert.strictEqual(userConfig.at('controls').at('keyBindings').at('forward').path(),
+        '.controls.keyBindings.forward');
     assert.throws(() => userConfig.at('IdoNotExist'), Error);
     assert.throws(() => userConfig.at('controls').at('DontKnow'), Error);
     assert.throws(() => userConfig.at('controls').at('keyBindings').at('DontKnow'), Error);
@@ -51,22 +53,79 @@ describe('UserConfig', () => {
     let firstValue = 0;
     let secondValue = 0;
 
-    userConfig.at('controls').at('keyBindings').onUpdate('backward', (v) => { firstValue = v; });
-    userConfig.at('controls').at('keyBindings').onUpdate('backward', (v) => { secondValue = v; });
+    userConfig.at('controls').at('keyBindings').at('backward').onUpdate((v) => { firstValue = v; });
+    userConfig.at('controls').at('keyBindings').at('backward').onUpdate((v) => { secondValue = v; });
     assert.strictEqual(firstValue, 0);
     assert.strictEqual(secondValue, 0);
-    userConfig.at('controls').at('keyBindings').set('backward', 200);
+    userConfig.at('controls').at('keyBindings').at('backward').set(200);
     assert.strictEqual(firstValue, 200);
     assert.strictEqual(secondValue, 200);
 
-    assert.strictEqual(userConfig.at('controls').at('keyBindings').value('backward'), 200);
-    assert.throws(() => userConfig.at('controls').at('keyBindings').set('centerward', 200), Error);
-    assert.throws(() => userConfig.at('controls').at('keyBindings').at('backward').set('noseward', 200), Error);
-    assert.throws(() => userConfig.at('controls').set('keyBindings', 200), Error);
-    assert.throws(() => userConfig.at('controls').at('keyBindings').onUpdate('footward', () => {}), Error);
+    assert.strictEqual(userConfig.at('controls').at('keyBindings').at('backward').value(), 200);
+    assert.throws(() => userConfig.at('controls').at('keyBindings').at('centerward').set(200), Error);
+    assert.throws(() => userConfig.at('controls').at('keyBindings').at('backward').at('noseward').set(200), Error);
+    assert.throws(() => userConfig.at('controls').at('keyBindings').set(200), Error);
+    assert.throws(() => userConfig.at('controls').at('keyBindings').at('footward').onUpdate(() => {}), Error);
 
     // Value should have been saved to storage
     const stored = JSON.parse(storage.getItem(configKey));
     assert.strictEqual(stored.controls.keyBindings.backward, 200);
+
+    // Clearing listeners: callback functions should no longer be called
+    userConfig.at('controls').at('keyBindings').at('backward').clearListeners();
+    userConfig.at('controls').at('keyBindings').at('backward').set(400);
+    assert.strictEqual(firstValue, 200);
+    assert.strictEqual(secondValue, 200);
+  });
+
+  it('UserConfig getNodeFromPath', async () => {
+    const tmpDir = await mkdtemp(join(tmpdir(), 'ww-test'));
+    const storage = new LocalStorage(tmpDir);
+    const configKey = `mochaTestConfig${Date.now()}`;
+    const userConfig = new UserConfig(configKey, (config) => {}, storage);
+
+    let firstValue = 0;
+    let secondValue = 0;
+
+    assert.strictEqual(userConfig.getNodeFromPath('.controls.keyBindings.backward'), userConfig.at('controls').at('keyBindings').at('backward'));
+    assert.strictEqual(userConfig.getNodeFromPath('.controls.keyBindings.backward').value(), userConfig.config.controls.keyBindings.backward);
+    assert.strictEqual(userConfig.getNodeFromPath('.controls.keyBindings.backward').path(), 'controls.keyBindings.backward');
+
+    // Nodes must exist
+    assert.throws(() => userConfig.getNodeFromPath('.nothing'), Error);
+    assert.throws(() => userConfig.getNodeFromPath('.controls.nowhere'), Error);
+    assert.throws(() => userConfig.getNodeFromPath('.controls.keyBindings.never'), Error);
+
+    // Path must start with a dot
+    assert.throws(() => userConfig.getNodeFromPath('controls.keyBindings.backward'), Error);
+  });
+
+  it('UserConfig reset', async () => {
+    const tmpDir = await mkdtemp(join(tmpdir(), 'ww-test'));
+    const storage = new LocalStorage(tmpDir);
+    const configKey = `mochaTestConfig${Date.now()}`;
+    const userConfig = new UserConfig(configKey, (config) => {}, storage);
+
+    let firstValue = 0;
+    let secondValue = 0;
+
+    userConfig.at('controls').at('keyBindings').at('backward').onUpdate((v) => { firstValue = v; });
+    userConfig.at('controls').at('keyBindings').at('backward').onUpdate((v) => { secondValue = v; });
+
+    assert.strictEqual(firstValue, 0);
+    assert.strictEqual(secondValue, 0);
+
+    userConfig.reset();
+
+    assert.strictEqual(firstValue, userConfig.config.controls.keyBindings.backward);
+    assert.strictEqual(secondValue, userConfig.config.controls.keyBindings.backward);
+
+    // Nodes must exist
+    assert.throws(() => userConfig.getNodeFromPath('.nothing'), Error);
+    assert.throws(() => userConfig.getNodeFromPath('.controls.nowhere'), Error);
+    assert.throws(() => userConfig.getNodeFromPath('.controls.keyBindings.never'), Error);
+
+    // Path must start with a dot
+    assert.throws(() => userConfig.getNodeFromPath('controls.keyBindings.backward'), Error);
   });
 });

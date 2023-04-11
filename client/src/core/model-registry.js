@@ -11,7 +11,6 @@ import * as fflate from 'fflate';
 import {AWActionParser} from 'aw-action-parser';
 
 const unknownObjectName = '_unknown_';
-const imageService = 'https://images.weserv.nl/?url=';
 
 /* Assume .rwx file extension if none is provided */
 const normalizePropName = (name) =>
@@ -22,16 +21,24 @@ class ModelRegistry {
   /**
    * @constructor
    * @param {LoadingManager} loadingManager - three.js loading manager.
+   * @param {UserConfigNode} imageServiceNode - Configuration node for
+   *                                            the image service.
    * @param {string} path - Full path to the 3D assets folder.
    * @param {string} resourcePath - Full path to the textures folder.
    */
-  constructor(loadingManager, path, resourcePath) {
+  constructor(loadingManager, imageServiceNode, path, resourcePath) {
     this.textureEncoding = sRGBEncoding;
 
     this.materialManager = new RWXMaterialManager(resourcePath,
         '.jpg', '.zip', fflate, false, this.textureEncoding);
     this.basicMaterialManager = new RWXMaterialManager(resourcePath,
         '.jpg', '.zip', fflate, true, this.textureEncoding);
+
+    // Ready image service URL and its update callback
+    this.imageService = imageServiceNode.value();
+    imageServiceNode.onUpdate((value) => {
+      this.imageService = value;
+    });
 
     const placeholderGeometry = new BufferGeometry();
     const positions = [
@@ -244,7 +251,7 @@ class ModelRegistry {
       //  and if said picture can be applied here to begin with...
       if (picture && obj3d.userData.taggedMaterials[pictureTag]
           ?.includes(lastMatId)) {
-        const url = imageService + picture;
+        const url = this.imageService + picture;
 
         // Doing the above ensures us the new array of materials
         //  will be updated, so if a picture is applied:

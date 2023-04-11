@@ -15,12 +15,16 @@ class WorldPathRegistry {
   /**
    * @constructor
    * @param {LoadingManager} loadingManager - three.js loading manager.
+   * @param {UserConfigNode} imageServiceNode - Configuration node for
+   *                                            the image service.
    * @param {string} modelPath - Catalogue folder holding 3D assets.
    * @param {string} resourcePath - Catalogue folder holding textures.
    */
-  constructor(loadingManager, modelPath = 'rwx', resourcePath = 'textures') {
+  constructor(loadingManager, imageServiceNode, modelPath = 'rwx',
+      resourcePath = 'textures') {
     this.modelRegistries = new Map();
     this.loadingManager = loadingManager;
+    this.imageServiceNode = imageServiceNode;
     this.modelPath = modelPath;
     this.resourcePath = resourcePath;
   }
@@ -33,7 +37,8 @@ class WorldPathRegistry {
   async get(path) {
     if (!this.modelRegistries.has(path)) {
       this.modelRegistries.set(path, new ModelRegistry(this.loadingManager,
-          `${path}/${this.modelPath}`, `${path}/${this.resourcePath}`));
+          this.imageServiceNode, `${path}/${this.modelPath}`,
+          `${path}/${this.resourcePath}`));
     }
 
     return await this.modelRegistries.get(path);

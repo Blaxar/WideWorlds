@@ -57,6 +57,9 @@ const props = defineProps({
     type: Object,
     default: new UserInputListener,
   },
+  controlsNode: {
+    type: Object,
+  },
 });
 
 const formatLabel = (name) => {
@@ -85,8 +88,6 @@ const onKeyUp = (event) => {
 
 const inputField = ref(null);
 
-const emit = defineEmits(['keyBindingUpdated']);
-
 onMounted(() => {
   // Each time some binding changes: we look for the corresponding input field
   // and update the value
@@ -98,7 +99,8 @@ onMounted(() => {
       }
     }
 
-    emit('keyBindingUpdated', name, input);
+    props.controlsNode.at('keyBindings').at(event.target.name)
+        .set(event.keyCode);
   });
 });
 

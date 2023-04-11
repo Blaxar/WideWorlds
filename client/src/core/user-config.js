@@ -8,7 +8,9 @@ const defaultConfig = {
   controls: {
     keyBindings: qwertyBindings,
   },
-  network: {},
+  network: {
+    imageService: 'https://images.weserv.nl/?url=',
+  },
   graphics: {},
   interface: {},
 };
@@ -18,16 +20,40 @@ class UserConfigNode {
   /**
    * @constructor
    * @param {UserConfig} userConfig - Core user config holder.
+   * @param {UserConfigNode} parent - Parent config node.
    * @param {any} defaultEntry - Default entry held by the wrapper.
-   * @param {any} entry - Entry held by the wrapper.
-   * @param {string} path - Path the entry resides in.
+   * @param {string} key - Key name of this entry.
    */
-  constructor(userConfig, defaultEntry, entry, path) {
+  constructor(userConfig, parent, defaultEntry, key) {
     this.userConfig = userConfig;
+    this.parent = parent;
     this.defaultEntry = defaultEntry;
-    this.entry = entry;
-    this.path = path;
+    this.key = key;
   }
+
+  /**
+   * Get raw configuration entry for this node
+   * @return {any} Raw configuation entry of this node.
+   */
+  entry() {
+    return this.userConfig.getEntryFromPath(this.path());
+  };
+
+  /**
+   * Get absolute configuration path for this node
+   * @return {string} Absolute configuration path.
+   */
+  path() {
+    const nodes = [];
+    let currentNode = this;
+
+    while (currentNode) {
+      nodes.push(currentNode.key);
+      currentNode = currentNode.parent;
+    };
+
+    return `.${nodes.reverse().join('.')}`;
+  };
 
   /**
    * Get configuration node from current node
@@ -35,81 +61,86 @@ class UserConfigNode {
    * @return {UserConfigNode} Configuration node.
    */
   at(key) {
+    const entry = this.entry();
+
     // Use default config as reference for what is expected
     // in terms of keys
     if (this.defaultEntry[key] === undefined) {
       throw new Error(
-          `No configuration entry named '${key}' in ${this.path}`,
+          `No configuration entry named '${key}' in ${this.path()}`,
       );
     }
 
-    if (this.entry[key] === undefined) {
+    if (entry[key] === undefined) {
       // No key yet on this actual entry: initialize it
       // with default values
-      this.entry[key] = JSON.parse(JSON.stringify(this.defaultEntry[key]));
+      entry[key] = JSON.parse(JSON.stringify(this.defaultEntry[key]));
     }
 
-    return new UserConfigNode(this.userConfig, this.defaultEntry[key],
-        this.entry[key], `${this.path}.${key}`);
+    return new UserConfigNode(this.userConfig, this, this.defaultEntry[key],
+        key);
   }
 
   /**
    * Return the value of the entry at the given key
-   * @param {string} key - Name of the entry.
    * @return {any} Value of this entry.
    */
-  value(key) {
-    if (typeof this.defaultEntry[key] === 'object') {
+  value() {
+    const entry = this.entry();
+
+    if (typeof entry === 'object') {
       throw new Error(
-          `${this.path} is not a leaf node for this key`,
+          `${this.path()} is not a leaf node for this key`,
       );
     }
 
-    return this.entry[key];
+    return entry;
   }
 
   /**
    * Set configuration leaf node (value) on current node
-   * @param {string} key - Name of the node.
    * @param {any} value - Value to set.
    */
-  set(key, value) {
+  set(value) {
+    const path = this.path();
+    const entry = this.entry();
+    const parentEntry = this.parent.entry();
+
     // Use default config as reference for what is expected
     // in terms of keys
-    if (this.defaultEntry[key] === undefined ||
-        typeof this.defaultEntry[key] === 'object' ) {
+    if (this.parent.entry() === undefined ||
+        typeof this.defaultEntry === 'object') {
       throw new Error(
-          `No configuration entry named '${key}' in ${this.path}`,
+          `No configuration entry named '${this.key}' in ${path}`,
       );
     }
 
-    if (this.entry[key] === undefined ||
-        typeof this.entry[key] === 'object' ) {
+    if (entry === undefined || typeof entry === 'object') {
       // Mismatching type for this value: reinitialize it
-      this.entry[key] = JSON.parse(JSON.stringify(this.defaultEntry[key]));
+      parentEntry[this.key] =
+        JSON.parse(JSON.stringify(this.defaultEntry));
     }
 
-    this.entry[key] = value;
+    parentEntry[this.key] = value;
     this.userConfig.save();
-    this.userConfig.fireUpdateEvent(`${this.path}.${key}`, value);
+    this.userConfig.fireUpdateEvent(`${path}`, value);
   }
 
   /**
-   * Register a new update listeners for a leaf node key
-   * @param {string} key - Key of the configuration entry.
+   * Register a new update listeners for this node
    * @param {function} cb - Callback function to be called on each update.
    */
-  onUpdate(key, cb = (value) => {}) {
+  onUpdate(cb) {
+    const path = this.path();
+
     // Use default config as reference for what is expected
     // in terms of keys
-    if (this.defaultEntry[key] === undefined ||
-        typeof this.defaultEntry[key] === 'object' ) {
+    if (this.defaultEntry === undefined ||
+        typeof this.defaultEntry === 'object' ) {
       throw new Error(
-          `No configuration entry named '${key}' in ${this.path}`,
+          `No configuration value at '${path}`,
       );
     }
-
-    const path = `${this.path}.${key}`;
 
     if (!this.userConfig.updateListeners.has(path)) {
       // No listener registered for this path yet
@@ -118,6 +149,29 @@ class UserConfigNode {
 
     const listeners = this.userConfig.updateListeners.get(path);
     listeners.push(cb);
+  }
+
+  /**
+   * Unregister all update listeners from this node
+   */
+  clearListeners() {
+    const path = this.path();
+
+    // Use default config as reference for what is expected
+    // in terms of keys
+    if (this.defaultEntry === undefined ||
+        typeof this.defaultEntry === 'object' ) {
+      throw new Error(
+          `No configuration value at '${path}`,
+      );
+    }
+
+    if (!this.userConfig.updateListeners.has(path)) {
+      // No listener registered for this path yet
+      this.userConfig.updateListeners.set(path, []);
+    }
+
+    this.userConfig.updateListeners.set(path, []);
   }
 }
 
@@ -158,9 +212,16 @@ class UserConfig {
     this.onLoad(JSON.parse(JSON.stringify(this.config)));
   }
 
-  /** Reset current configuration to default */
+  /** Reset current configuration to the default one */
   reset() {
     this.config = JSON.parse(JSON.stringify(defaultConfig));
+
+    // Notify all listeners that the configuration has been updated
+    for (const [path, listeners] of this.updateListeners) {
+      for (const listener of listeners) {
+        listener(this.getNodeFromPath(path).value());
+      }
+    }
   }
 
   /**
@@ -180,7 +241,7 @@ class UserConfig {
       this.config[key] = JSON.parse(JSON.stringify(defaultConfig[key]));
     }
 
-    return new UserConfigNode(this, defaultConfig[key], this.config[key],
+    return new UserConfigNode(this, null, defaultConfig[key],
         key);
   }
 
@@ -198,6 +259,62 @@ class UserConfig {
     for (const listener of listeners) {
       listener(value);
     }
+  }
+
+  /**
+   * Get a configuration node from its absolute path
+   * @param {string} path - Configuration path of the node.
+   * @return {UserConfigNode} Configuration node.
+   */
+  getNodeFromPath(path) {
+    if (path[0] !== '.') {
+      throw new Error(
+          `Configuration path must start with a dot ('.')`,
+      );
+    }
+
+    const tokens = path.slice(1).split('.');
+
+    if (tokens.length < 1) {
+      throw new Error('Invalid configuration path provided');
+    }
+
+    let currentNode = this;
+    const nodes = tokens.slice(0, -1);
+    const key = tokens.slice(-1)[0];
+
+    for (const node of nodes) {
+      currentNode = currentNode.at(node);
+    }
+
+    return currentNode.at(key);
+  }
+
+  /**
+   * Get raw configuration entry from its absolute path
+   * @param {string} path - Configuration path of the entry.
+   * @return {any} Raw configuration entry value.
+   */
+  getEntryFromPath(path) {
+    if (path[0] !== '.') {
+      throw new Error(
+          `Configuration path must start with a dot ('.')`,
+      );
+    }
+
+    const tokens = path.slice(1).split('.');
+
+    if (tokens.length < 1) {
+      throw new Error('Invalid configuration path provided');
+    }
+
+    let currentNode = this.config;
+
+    for (const token of tokens) {
+      currentNode = currentNode[token];
+    }
+
+    return currentNode;
   }
 }
 
