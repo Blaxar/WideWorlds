@@ -32,6 +32,14 @@ class UserBehavior extends SubjectBehavior {
     this.direction = new Vector3();
     this.tmpVec3 = new Vector3();
     this.tmpEul = new Euler();
+    this.runByDefault = subject.runByDefaultNode ?
+      subject.runByDefaultNode.value() : false;
+
+    if (subject.runByDefaultNode) {
+      subject.runByDefaultNode.onUpdate((value) => {
+        this.runByDefault = value;
+      });
+    }
   }
 
   /**
@@ -39,10 +47,12 @@ class UserBehavior extends SubjectBehavior {
    * @param {number} delta - Elapsed number of seconds since last call.
    */
   step(delta) {
-    this.speed = groundSpeed[+this.run()];
-    // this.fSpeed = flySpeed[+this.run()];
-    this.lSpeed = lookSpeed[+this.run()];
-    this.tSpeed = turnSpeed[+this.run()];
+    const doRun = this.runByDefault && !this.run() ||
+        !this.runByDefault && this.run();
+    this.speed = groundSpeed[+doRun];
+    // this.fSpeed = flySpeed[+doRun];
+    this.lSpeed = lookSpeed[+doRun];
+    this.tSpeed = turnSpeed[+doRun];
     this.subject.tilt.getWorldDirection(this.direction);
     this.tmpVec3.copy(this.direction);
 

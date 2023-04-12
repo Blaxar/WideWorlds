@@ -120,19 +120,30 @@ class UserInputListener {
     this.subjectBehavior = null;
     this.bindingListeners = [];
 
+    this.bindAllKeys(keyBindings);
+
     // Each input key will be set to null by default, 'bind', 'clear'
     // and 'get' methods will also be ready for each one of them,
     // eg: for 'forward' there will be 'bindForward(input)',
     // 'clearForward()' and 'getForward()' methods available
     for (const name of UserInput) {
       const upperCased = name.charAt(0).toUpperCase() + name.slice(1);
-      this[`${name}Key`] = keyBindings[name] ? keyBindings[name] : null;
       this[`${name}Pressed`] = false;
       this[`bind${upperCased}Key`] = (input, uniqueOverride = false) => {
         this.bindKey(name, input, uniqueOverride);
       };
       this[`clear${upperCased}Key`] = () => this.clearKey(name);
       this[`get${upperCased}Key`] = () => this.getKey(name);
+    }
+  }
+
+  /**
+   * Bind all the keys at once
+   * @param {Object} keyBindings - Key binding map
+   */
+  bindAllKeys(keyBindings) {
+    for (const name of UserInput) {
+      this.bindKey(name, keyBindings[name] ? keyBindings[name] : null);
     }
   }
 
@@ -233,7 +244,7 @@ class UserInputListener {
 
   /**
    * Set a subject to be focused on by the input listener, it will be
-   * wrapped in an approrioate SubjectBehavior-subclass (if any
+   * wrapped in an approriate SubjectBehavior-subclass (if any
    * was registered for this type) and this wrapper will be notified
    * of each key events (press/release) that the listener is aware of
    * @param {string} subjectType - Type of the subject.

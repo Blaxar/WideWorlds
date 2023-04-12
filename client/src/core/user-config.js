@@ -7,6 +7,7 @@ import {qwertyBindings} from './user-input.js';
 const defaultConfig = {
   controls: {
     keyBindings: qwertyBindings,
+    runByDefault: false,
   },
   network: {
     imageService: 'https://images.weserv.nl/?url=',

@@ -57,6 +57,17 @@ body {
     height: min-content;
 }
 
+.controls-container {
+    display: flex;
+    flex-direction: row;
+    margin-top: 10px;
+}
+
+.controls-container table {
+    display: block;
+    margin-right: 10px;
+}
+
 th.controls-header {
     text-align: left;
 }

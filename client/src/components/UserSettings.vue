@@ -4,7 +4,8 @@
  */
 
 import {onMounted, onUnmounted, ref} from 'vue';
-import UserInput, {UserInputListener} from '../core/user-input.js';
+import UserInput, {UserInputListener, qwertyBindings}
+  from '../core/user-input.js';
 
 // TODO: find some better way to handle this... (if any)
 const nonPrintableKeys = {
@@ -49,6 +50,14 @@ const nonPrintableKeys = {
 const componentKey = 0;
 
 const props = defineProps({
+  resetKeysButtonText: {
+    type: String,
+    default: 'Reset Keys',
+  },
+  runByDefaultText: {
+    type: String,
+    default: 'Run by default',
+  },
   userInputs: {
     type: Array,
     default: UserInput,
@@ -88,6 +97,15 @@ const onKeyUp = (event) => {
 
 const inputField = ref(null);
 
+const resetKeys = () => {
+  props.listener.bindAllKeys(qwertyBindings);
+};
+
+const setRunByDefault = (event) => {
+  console.log(event.target.checked);
+  props.controlsNode.at('runByDefault').set(event.target.checked);
+};
+
 onMounted(() => {
   // Each time some binding changes: we look for the corresponding input field
   // and update the value
@@ -99,8 +117,8 @@ onMounted(() => {
       }
     }
 
-    props.controlsNode.at('keyBindings').at(event.target.name)
-        .set(event.keyCode);
+    props.controlsNode.at('keyBindings').at(name)
+        .set(input);
   });
 });
 
@@ -111,6 +129,7 @@ onUnmounted(() => {
 </script>
 
 <template>
+<div class="controls-container">
 <table :key="componentKey">
     <tr><th scope="col" class="controls-header">Controls</th>
     <th scope="col">Key Bindings</th></tr>
@@ -123,6 +142,19 @@ onUnmounted(() => {
     </td>
     </tr>
 </table>
+
+<table>
+    <tr><td>
+    <button @click="resetKeys" name="resetKeys">{{resetKeysButtonText}}</button>
+    </td></tr>
+  <tr><td>
+    <input type="checkbox" id="runByDefault"
+    :checked="props.controlsNode.at('runByDefault').value()"
+    @change="setRunByDefault"/>
+    <label for="runByDefault">{{runByDefaultText}}</label>
+  </td></tr>
+</table>
+</div>
 
 </template>
 
