@@ -66,7 +66,7 @@ const props = defineProps({
     type: Object,
     default: new UserInputListener,
   },
-  controlsNode: {
+  userConfig: {
     type: Object,
   },
 });
@@ -89,10 +89,14 @@ const keyToName = (key) => {
       nonPrintableKeyToName(key);
 };
 
-const onKeyUp = (event) => {
+const onBindingKeyUp = (event) => {
   if (keyToName(event.keyCode)) {
     props.listener.bindKey(event.target.name, event.keyCode, true);
   }
+};
+
+const onImageServiceChange = (event) => {
+  props.userConfig.at('network').at('imageService').set(event.target.value);
 };
 
 const inputField = ref(null);
@@ -102,8 +106,7 @@ const resetKeys = () => {
 };
 
 const setRunByDefault = (event) => {
-  console.log(event.target.checked);
-  props.controlsNode.at('runByDefault').set(event.target.checked);
+  props.userConfig.at('controls').at('runByDefault').set(event.target.checked);
 };
 
 onMounted(() => {
@@ -117,7 +120,7 @@ onMounted(() => {
       }
     }
 
-    props.controlsNode.at('keyBindings').at(name)
+    props.userConfig.at('controls').at('keyBindings').at(name)
         .set(input);
   });
 });
@@ -137,21 +140,27 @@ onUnmounted(() => {
     <td>{{ formatLabel(name) }}</td>
     <td>
         <input type="text" maxlength="0" placeholder="none" :name="name"
-        @keyup="onKeyUp" :value="keyToName(listener.getKey(name))"
+        @keyup="onBindingKeyUp" :value="keyToName(listener.getKey(name))"
         ref="inputField" />
     </td>
     </tr>
 </table>
 
 <table>
-    <tr><td>
-    <button @click="resetKeys" name="resetKeys">{{resetKeysButtonText}}</button>
-    </td></tr>
   <tr><td>
+    <button @click="resetKeys" name="resetKeys">{{resetKeysButtonText}}</button>
+    </td><td>
     <input type="checkbox" id="runByDefault"
-    :checked="props.controlsNode.at('runByDefault').value()"
+:checked="props.userConfig.at('controls').at('runByDefault').value()"
     @change="setRunByDefault"/>
     <label for="runByDefault">{{runByDefaultText}}</label>
+  </td></tr>
+  <tr><td colspan="2"></td></tr>
+  <tr><td>Image service URL prefix:</td>
+  <td><input id="imageService" type="text" placeholder="none"
+    @change="onImageServiceChange"
+    :value="props.userConfig.at('network').at('imageService').value()"
+    />
   </td></tr>
 </table>
 </div>

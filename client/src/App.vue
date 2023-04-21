@@ -346,7 +346,7 @@ function onPointerMove(engine3d, event) {
     <TopBar v-if="displayEdgebars" :avatars="worldAvatars" @leave="handleLeave"
     @camera="updateCamera(true)" @avatar="handleAvatar">
     <template v-slot:settings><UserSettings :listener="inputListener"
-    :controlsNode="userConfig.at('controls')" /></template>
+    :userConfig="userConfig" /></template>
     </TopBar>
     <LoginForm v-if="displayLogin" @submit="handleLogin" />
     <WorldSelection v-if="displayWorldSelection"
