@@ -112,7 +112,7 @@ class UserConfigNode {
     if (this.parent.entry() === undefined ||
         typeof this.defaultEntry === 'object') {
       throw new Error(
-          `No configuration entry named '${this.key}' in ${path}`,
+          `No configuration leaf named '${this.key}' in ${path}`,
       );
     }
 
@@ -125,6 +125,52 @@ class UserConfigNode {
     parentEntry[this.key] = value;
     this.userConfig.save();
     this.userConfig.fireUpdateEvent(`${path}`, value);
+  }
+
+  /**
+   * Reset the value(s) for this node
+   */
+  reset() {
+    const path = this.path();
+    const parentEntry = this.parent.entry();
+
+    // Use default config as reference for what is expected
+    // in terms of keys
+    if (parentEntry === undefined) {
+      throw new Error(
+          `No configuration entry named '${this.key}' in ${path}`,
+      );
+    }
+
+    parentEntry[this.key] =
+      JSON.parse(JSON.stringify(this.defaultEntry));
+
+    this.userConfig.save();
+
+    // Notify invoved listeners that the configuration has been updated
+    for (const [p, listeners] of this.userConfig.updateListeners) {
+      if (!p.startsWith(path)) continue;
+
+      for (const listener of listeners) {
+        listener(this.userConfig.getNodeFromPath(p).value());
+      }
+    }
+  }
+
+  /**
+   * Get the default value for this leaf node
+   * @return {any} Default value of this node.
+   */
+  defaultValue() {
+    const entry = this.entry();
+
+    if (typeof entry === 'object') {
+      throw new Error(
+          `${this.path()} is not a leaf node for this key`,
+      );
+    }
+
+    return this.defaultEntry;
   }
 
   /**

@@ -58,6 +58,10 @@ const props = defineProps({
     type: String,
     default: 'Run by default',
   },
+  resetImageServiceButtonText: {
+    type: String,
+    default: 'Reset',
+  },
   userInputs: {
     type: Array,
     default: UserInput,
@@ -101,8 +105,17 @@ const onImageServiceChange = (event) => {
 
 const inputField = ref(null);
 
+const imageService = ref(null);
+
 const resetKeys = () => {
   props.listener.bindAllKeys(qwertyBindings);
+};
+
+const resetImageService = () => {
+  console.log(imageService);
+  imageService.value.value = props.userConfig.at('network').at('imageService')
+      .defaultValue();
+  props.userConfig.at('network').at('imageService').reset();
 };
 
 const setRunByDefault = (event) => {
@@ -157,10 +170,13 @@ onUnmounted(() => {
   </td></tr>
   <tr><td colspan="2"></td></tr>
   <tr><td>Image service URL prefix:</td>
-  <td><input id="imageService" type="text" placeholder="none"
+  <td><input type="text" placeholder="none"
     @change="onImageServiceChange"
     :value="props.userConfig.at('network').at('imageService').value()"
-    />
+    ref="imageService" />
+    <button @click="resetImageService" name="resetImageService">
+      {{resetImageServiceButtonText}}
+    </button>
   </td></tr>
 </table>
 </div>

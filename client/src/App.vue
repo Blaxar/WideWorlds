@@ -49,10 +49,12 @@ const userConfig = new UserConfig('config', (config) => {
   Object.assign(storedKeyBindings, config.controls.keyBindings);
 });
 
-const worldPathRegistry = new WorldPathRegistry(new LoadingManager(),
-    userConfig.at('network').at('imageService'));
+const worldPathRegistry = new WorldPathRegistry(new LoadingManager(), 'rwx',
+    'textures', userConfig.at('network').at('imageService'));
 
-const spawnWsClient = (token) => new WsClient(import.meta.env.VITE_SERVER_URL.replace(/http\:\/\//g, 'ws://') + '/api', token);
+const spawnWsClient = (token) =>
+  new WsClient(import.meta.env.VITE_SERVER_URL.replace(/http\:\/\//g, 'ws://') +
+  '/api', token);
 
 if (localStorage.getItem('token') && localStorage.getItem('userId')) {
   // If there's an authentication token in local storage: we skip

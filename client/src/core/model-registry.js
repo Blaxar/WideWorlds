@@ -21,12 +21,12 @@ class ModelRegistry {
   /**
    * @constructor
    * @param {LoadingManager} loadingManager - three.js loading manager.
-   * @param {UserConfigNode} imageServiceNode - Configuration node for
-   *                                            the image service.
    * @param {string} path - Full path to the 3D assets folder.
    * @param {string} resourcePath - Full path to the textures folder.
+   * @param {UserConfigNode} imageServiceNode - Configuration node for
+   *                                            the image service.
    */
-  constructor(loadingManager, imageServiceNode, path, resourcePath) {
+  constructor(loadingManager, path, resourcePath, imageServiceNode = null) {
     this.textureEncoding = sRGBEncoding;
 
     this.materialManager = new RWXMaterialManager(resourcePath,
@@ -34,11 +34,13 @@ class ModelRegistry {
     this.basicMaterialManager = new RWXMaterialManager(resourcePath,
         '.jpg', '.zip', fflate, true, this.textureEncoding);
 
-    // Ready image service URL and its update callback
-    this.imageService = imageServiceNode.value();
-    imageServiceNode.onUpdate((value) => {
-      this.imageService = value;
-    });
+    if (this.imageService) {
+      // Ready image service URL and its update callback
+      this.imageService = imageServiceNode.value();
+      imageServiceNode.onUpdate((value) => {
+        this.imageService = value;
+      });
+    }
 
     const placeholderGeometry = new BufferGeometry();
     const positions = [
