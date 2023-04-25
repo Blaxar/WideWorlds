@@ -24,9 +24,9 @@ class WorldPathRegistry {
       resourcePath = 'textures', imageServiceNode = null) {
     this.modelRegistries = new Map();
     this.loadingManager = loadingManager;
-    this.imageServiceNode = imageServiceNode;
     this.modelPath = modelPath;
     this.resourcePath = resourcePath;
+    this.imageServiceNode = imageServiceNode;
   }
 
   /**

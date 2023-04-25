@@ -34,7 +34,9 @@ class ModelRegistry {
     this.basicMaterialManager = new RWXMaterialManager(resourcePath,
         '.jpg', '.zip', fflate, true, this.textureEncoding);
 
-    if (this.imageService) {
+    this.imageService = '';
+
+    if (imageServiceNode) {
       // Ready image service URL and its update callback
       this.imageService = imageServiceNode.value();
       imageServiceNode.onUpdate((value) => {

@@ -112,7 +112,6 @@ const resetKeys = () => {
 };
 
 const resetImageService = () => {
-  console.log(imageService);
   imageService.value.value = props.userConfig.at('network').at('imageService')
       .defaultValue();
   props.userConfig.at('network').at('imageService').reset();
