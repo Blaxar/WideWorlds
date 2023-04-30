@@ -6,7 +6,7 @@ import RWXLoader, {
   RWXMaterialManager, pictureTag, signTag,
 } from 'three-rwx-loader';
 import {Mesh, Group, BufferGeometry, BufferAttribute, MeshBasicMaterial,
-  sRGBEncoding, TextureLoader, Color, CanvasTexture} from 'three';
+  SRGBColorSpace, TextureLoader, Color, CanvasTexture} from 'three';
 import * as fflate from 'fflate';
 import {AWActionParser} from 'aw-action-parser';
 
@@ -27,12 +27,12 @@ class ModelRegistry {
    *                                            the image service.
    */
   constructor(loadingManager, path, resourcePath, imageServiceNode = null) {
-    this.textureEncoding = sRGBEncoding;
+    this.textureColorSpace = SRGBColorSpace;
 
     this.materialManager = new RWXMaterialManager(resourcePath,
-        '.jpg', '.zip', fflate, false, this.textureEncoding);
+        '.jpg', '.zip', fflate, false, this.textureColorSpace);
     this.basicMaterialManager = new RWXMaterialManager(resourcePath,
-        '.jpg', '.zip', fflate, true, this.textureEncoding);
+        '.jpg', '.zip', fflate, true, this.textureColorSpace);
 
     this.imageService = '';
 
@@ -74,7 +74,7 @@ class ModelRegistry {
         .setRWXMaterialManager(this.materialManager)
         .setPath(path).setFlatten(false);
     this.pictureLoader = new TextureLoader();
-    this.pictureLoader.textureEncoding = sRGBEncoding;
+    this.pictureLoader.textureColorSpace = SRGBColorSpace;
     this.actionParser = new AWActionParser();
   }
 
@@ -263,7 +263,7 @@ class ModelRegistry {
         materialChanged = true;
 
         this.pictureLoader.load(url, (image) => {
-          image.encoding = sRGBEncoding;
+          image.colorSpace = SRGBColorSpace;
 
           materials[lastMatId] = materials[lastMatId].clone();
           materials[lastMatId].color = new Color(1.0, 1.0, 1.0);
@@ -289,7 +289,7 @@ class ModelRegistry {
                 sign.bcolor,
             ),
         );
-        materials[lastMatId].map.encoding = sRGBEncoding;
+        materials[lastMatId].map.colorSpace = SRGBColorSpace;
       }
     }
 

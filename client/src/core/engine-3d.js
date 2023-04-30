@@ -19,7 +19,7 @@ class Engine3D {
   constructor(canvas) {
     this.stopRequested = false;
     this.renderer = new THREE.WebGLRenderer({canvas});
-    this.renderer.outputEncoding = THREE.sRGBEncoding;
+    this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.autoClear = false;
     this.clock = new THREE.Clock();
     this.scene = new THREE.Scene();

@@ -84,7 +84,7 @@ class WorldManager {
           await loadAvatarsZip(`${data.path}/avatars/avatars.zip`, true);
       return res.avatars;
     } catch (e) {
-      console.error(e, e.stack);
+      console.error(e);
     }
 
     return [];
@@ -222,7 +222,7 @@ class WorldManager {
       try {
         modelRegistry.applyActionString(obj3d, prop.action);
       } catch (e) {
-        console.error(e, e.stack());
+        console.error(e);
       }
 
       if (!this.engine3d.appendToNode(chunkNodeHandle, obj3d)) {
