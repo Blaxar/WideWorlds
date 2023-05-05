@@ -65,14 +65,9 @@ class Engine3D {
     this.reversedOctahedron.applyMatrix4(this.scaleSky);
     this.reversedOctahedron.renderOrder = -2;
     this.reversedOctahedron.depthTest = false;
-    this.ambientLight =
-      new THREE.AmbientLight(0xffffff, 0.6); // soft white light
-    this.directionalLight =
-      new THREE.DirectionalLight(0xffff70, 0.9); // orange-ish?
-    this.directionalLight.position.set(1, 1, 1);
+    this.ambientLight = null;
+    this.directionalLight = null;
     this.backgroundScene.add(this.reversedOctahedron);
-    this.scene.add(this.ambientLight);
-    this.scene.add(this.directionalLight);
     this.nodes = new Map();
     this.lastId = 0;
   }
@@ -135,13 +130,52 @@ class Engine3D {
   }
 
   /**
-   * Set ambient light color
+   * Set ambient light color, with a nice soft white light default
    * @param {Color} color - Color of the light
+   * @param {integer} intensity - intensity of the ambient light
    */
-  setAmbientLight(color) {
-    this.ambientlight.color = color;
+  setAmbientLight(color = 'FFFFFF', intensity = 1) {
+    this.resetAmbientLight();
+
+    this.ambientLight = new THREE.AmbientLight(
+        new THREE.Color(parseInt('0x' + color)),
+        intensity);
+    this.scene.add(this.ambientLight);
   }
 
+  /** Remove the current world ambient light if any */
+  resetAmbientLight() {
+    if (this.ambientLight) {
+      this.scene.remove(this.ambientLight);
+      this.ambientLight = null;
+    }
+  }
+
+  /**
+   * Set directional light color, with a nice soft orange default
+   * @param {Color} color - Color of the light
+   * @param {integer} intensity - intensity of the directional light
+   * @param {Array} position - target position for the directional Light
+   */
+  setDirectionalLight(color = 'FFFF70', intensity = 0.9,
+      position = {x: 0, y: 0, z: 0}) {
+    this.resetDirectionalLight();
+
+    this.directionalLight = new THREE.DirectionalLight(
+        new THREE.Color(parseInt('0x' + color)),
+        0.6);
+
+    this.directionalLight.position.set(position.x, position.y, position.z);
+    this.scene.add(this.directionalLight);
+  }
+
+  /** Remove the current world directional light if any */
+  resetDirectionalLight() {
+    if (this.directionalLight) {
+      this.scene.remove(this.directionalLight);
+      this.directionalLight = null;
+    }
+  }
   /**
    * Create new node in the scene
    * @param {number} x - X coordinate of the node.

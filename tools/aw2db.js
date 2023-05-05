@@ -11,6 +11,15 @@ const worldAttr = {
   0: 'name',
   3: 'path',
   25: 'welcome',
+  41: 'dirLightPosX',
+  42: 'dirLightPosY',
+  43: 'dirLightPosZ',
+  44: 'directionalColorR',
+  45: 'directionalColorG',
+  46: 'directionalColorB',
+  47: 'ambientColorR',
+  48: 'ambientColorG',
+  49: 'ambientColorB',
   61: 'skybox',
   64: 'keywords',
   65: 'enableTerrain',
@@ -34,6 +43,7 @@ const worldAttr = {
   86: 'skyColorBottomG',
   87: 'skyColorBottomB',
 };
+
 
 const argv = yargs(process.argv)
     .positional('sql', {
@@ -98,13 +108,17 @@ function parseAttrFile(path) {
 
   // Load world attr file content
   const content = fs.readFileSync(path);
-
-  const skyColor = {top: [0, 0, 0],
+  const skyColors = {top: [0, 0, 0],
     north: [0, 0, 0],
     east: [0, 0, 0],
     south: [0, 0, 0],
     west: [0, 0, 0],
     bottom: [0, 0, 0]};
+
+
+  const ambientColor = [];
+  const directionalColor = [];
+  const directionalLightPosition = [];
 
   // Decode the file and parse each line
   for (const entry of iconvlite.decode(content, argv.encoding).split(/\r?\n/)) {
@@ -118,22 +132,61 @@ function parseAttrFile(path) {
     }
 
     if (key.startsWith('skyColor')) {
-      const trimmedKey = key.replace('skyColor', '');
       const prefixes = ['Top', 'North', 'East', 'South', 'West', 'Bottom'];
+      const trimmedKey = key.replace('skyColor', '');
       for (const prefix of prefixes) {
         if (trimmedKey.startsWith(prefix)) {
           switch (trimmedKey.slice(-1)) {
             case 'R':
-              skyColor[prefix.toLowerCase()][0] = parseInt(value);
+              skyColors[prefix.toLowerCase()][0] = parseInt(value);
               break;
             case 'G':
-              skyColor[prefix.toLowerCase()][1] = parseInt(value);
+              skyColors[prefix.toLowerCase()][1] = parseInt(value);
               break;
             case 'B':
-              skyColor[prefix.toLowerCase()][2] = parseInt(value);
+              skyColors[prefix.toLowerCase()][2] = parseInt(value);
               break;
           }
         }
+      }
+    } else if (key.startsWith('ambientColor')) {
+      const trimmedKey = key.replace('ambientColor', '');
+      switch (trimmedKey.slice(-1)) {
+        case 'R':
+          ambientColor[0] = parseInt(value);
+          break;
+        case 'G':
+          ambientColor[1] = parseInt(value);
+          break;
+        case 'B':
+          ambientColor[2] = parseInt(value);
+          break;
+      }
+    } else if (key.startsWith('directionalColor')) {
+      const trimmedKey = key.replace('directionalColor', '');
+      switch (trimmedKey.slice(-1)) {
+        case 'R':
+          directionalColor[0] = parseInt(value);
+          break;
+        case 'G':
+          directionalColor[1] = parseInt(value);
+          break;
+        case 'B':
+          directionalColor[2] = parseInt(value);
+          break;
+      }
+    } else if (key.startsWith('dirLightPos')) {
+      const trimmedKey = key.replace('dirLightPos', '');
+      switch (trimmedKey.slice(-1)) {
+        case 'X':
+          directionalLightPosition[0] = parseFloat(value);
+          break;
+        case 'Y':
+          directionalLightPosition[1] = parseFloat(value);
+          break;
+        case 'Z':
+          directionalLightPosition[2] = parseFloat(value);
+          break;
       }
     } else if (key === 'enableTerrain') {
       worldData[key] = value === 'Y' ? true : false;
@@ -144,10 +197,31 @@ function parseAttrFile(path) {
     }
   }
 
-  worldData['skyColor'] = skyColor;
+  worldData['ambientColor'] =
+    rgbToHex(
+        ambientColor[0],
+        ambientColor[1],
+        ambientColor[2]);
+  worldData['ambientLightIntensity'] = 0.6;
+  worldData['skyColors'] = skyColors;
+  worldData['directionalColor'] = directionalColor;
+  worldData['dirLightPos'] = directionalLightPosition;
+  worldData['dirLightIntensity'] = 0.6;
 
   return worldData;
 };
+
+/**
+  * Converts RGB values into Hex
+  * @param {integer} r - red
+  * @param {integer} g - red
+  * @param {integer} b - red
+  * @return {string} returns a hex color string
+*/
+function rgbToHex(r, g, b) {
+  const hex = ((r << 16) | (g << 8) | b).toString(16);
+  return '0'.repeat(6 - hex.length) + hex;
+}
 
 /**
  * Parse world prop file

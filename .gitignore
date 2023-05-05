@@ -3,3 +3,6 @@ node_modules/
 package-lock.json
 *.sqlite3
 RWXLoader.js
+at*.txt
+prop*.txt
+elev*.txt

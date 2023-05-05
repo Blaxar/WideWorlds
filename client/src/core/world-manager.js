@@ -55,18 +55,28 @@ class WorldManager {
 
     this.currentWorld = world;
     const data = JSON.parse(world.data);
+    // console.log(data)
 
     // Fetch all the sky colors from the world data, normalize them
     // between 0.0 and 1.0
     this.engine3d.setSkyColors([
-      ...data.skyColor.north,
-      ...data.skyColor.east,
-      ...data.skyColor.south,
-      ...data.skyColor.west,
-      ...data.skyColor.top,
-      ...data.skyColor.bottom,
+      ...data.skyColors.north,
+      ...data.skyColors.east,
+      ...data.skyColors.south,
+      ...data.skyColors.west,
+      ...data.skyColors.top,
+      ...data.skyColors.bottom,
     ].map((c) => c / 255.0));
     this.engine3d.setSkyColorSpinning(false);
+
+    this.engine3d.setAmbientLight(
+        data.ambientColor, data.ambientLightIntensity);
+    this.engine3d.setDirectionalLight(
+        data.directionalColors, data.dirLightIntensity,
+        {x: data.dirLightPos[0],
+          y: data.dirLightPos[1],
+          z: data.dirLightPos[2],
+        });
 
     if (!data.path) throw new Error('Missing path field from world data json');
 
@@ -97,6 +107,8 @@ class WorldManager {
     this.engine3d.setCameraDistance(0);
     this.engine3d.clearEntities();
     this.engine3d.resetSkyColors();
+    this.engine3d.resetAmbientLight();
+    this.engine3d.resetDirectionalLight();
     this.engine3d.resetSkyBox();
     this.engine3d.resetUserAvatar();
     this.engine3d.setSkyColorSpinning(true);
