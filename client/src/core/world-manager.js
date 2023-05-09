@@ -225,6 +225,7 @@ class WorldManager {
           prop.roll * degToRadRatio / 10,
           'YZX');
 
+      obj3d.userData.action = prop?.action;
       obj3d.userData.description = prop?.description;
 
       if (obj3d.userData.rwx?.axisAlignment !== 'none') {
