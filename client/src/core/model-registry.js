@@ -178,7 +178,9 @@ class ModelRegistry {
       throw new Error('Invalid object type provided for action parsing');
     }
     // We only care for 'create' actions for the moment.
+
     const createActions = actions.create ? actions.create : [];
+    if (!actions.create) return;
     const materials = [];
 
     let materialChanged = false;
@@ -312,9 +314,9 @@ class ModelRegistry {
     canvas.width = ratio > 1 ? 256 : 256 * ratio;
     canvas.height = ratio > 1 ? 256 / ratio : 256;
     const ctx = canvas.getContext('2d');
-    ctx.fillStyle = `rgb(${bcolor.r}, ${bcolor.g}, ${bcolor.b})`;
+    ctx.fillStyle = `rgb(${bcolor.r},${bcolor.g},${bcolor.b})`;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.fillStyle = `rgb(${color.r}, ${color.g}, ${color.b})`;
+    ctx.fillStyle = `rgb(${color.r},${color.g},${color.b})`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
 
@@ -354,16 +356,16 @@ class ModelRegistry {
 
       if (
         words[curWordIndex] !== '\n' &&
-        ctx.measureText(tentativeLine).width <= maxWidth
+         ctx.measureText(tentativeLine).width <= maxWidth
       ) {
         // TODO: use actualBoundingBoxLeft and actualBoundingBoxRight
-        //  instead of .width
+        // instead of .width
         // Adding word to end of line
         lines[curLine] = tentativeLine;
         curWordIndex += 1;
       } else if (
         ctx.measureText(tentativeWord).width <= maxWidth &&
-        lineHeight * (curLine + 1) <= maxHeight
+         lineHeight * (curLine + 1) <= maxHeight
       ) {
         // Adding word as a new line
         lines.push(tentativeWord);
@@ -387,8 +389,8 @@ class ModelRegistry {
           line,
           canvas.width / 2,
           canvas.height / 2 +
-            i * lineHeight -
-            ((lines.length - 1) * lineHeight) / 2,
+           i * lineHeight -
+           ((lines.length - 1) * lineHeight) / 2,
       );
     });
 

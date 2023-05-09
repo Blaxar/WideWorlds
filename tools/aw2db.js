@@ -10,6 +10,9 @@ import fs from 'fs';
 const worldAttr = {
   0: 'name',
   3: 'path',
+  11: 'fogColorR',
+  12: 'fogColorG',
+  13: 'fogColorB',
   25: 'welcome',
   41: 'dirLightPosX',
   42: 'dirLightPosY',
@@ -20,6 +23,9 @@ const worldAttr = {
   47: 'ambientColorR',
   48: 'ambientColorG',
   49: 'ambientColorB',
+  51: 'enableFog',
+  52: 'fogMinimum',
+  53: 'fogMaximum',
   61: 'skybox',
   64: 'keywords',
   65: 'enableTerrain',
@@ -117,6 +123,7 @@ function parseAttrFile(path) {
 
 
   const ambientColor = [];
+  const fogColor = [];
   const directionalColor = [];
   const directionalLightPosition = [];
 
@@ -162,6 +169,19 @@ function parseAttrFile(path) {
           ambientColor[2] = parseInt(value);
           break;
       }
+    } else if (key.startsWith('fogColor')) {
+      const trimmedKey = key.replace('fogColor', '');
+      switch (trimmedKey.slice(-1)) {
+        case 'R':
+          fogColor[0] = parseInt(value);
+          break;
+        case 'G':
+          fogColor[1] = parseInt(value);
+          break;
+        case 'B':
+          fogColor[2] = parseInt(value);
+          break;
+      }
     } else if (key.startsWith('directionalColor')) {
       const trimmedKey = key.replace('directionalColor', '');
       switch (trimmedKey.slice(-1)) {
@@ -190,6 +210,8 @@ function parseAttrFile(path) {
       }
     } else if (key === 'enableTerrain') {
       worldData[key] = value === 'Y' ? true : false;
+    } else if (key === 'enableFog') {
+      worldData[key] = value === 'Y' ? true : false;
     } else if (key === 'path') {
       worldData[key] = argv.pathOverride ? argv.pathOverride : value;
     } else {
@@ -204,6 +226,12 @@ function parseAttrFile(path) {
         ambientColor[2]);
   worldData['ambientLightIntensity'] = 0.6;
   worldData['skyColors'] = skyColors;
+  worldData['fogColor'] =
+  rgbToHex(
+      fogColor[0],
+      fogColor[1],
+      fogColor[2]);
+
   worldData['directionalColor'] = directionalColor;
   worldData['dirLightPos'] = directionalLightPosition;
   worldData['dirLightIntensity'] = 0.6;

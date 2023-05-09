@@ -42,6 +42,8 @@ class UserBehavior extends SubjectBehavior {
     }
   }
 
+  // The movement code still has some bugs, such as turning right & moving right
+  // Making turning faster. The same is true the other way.
   /**
    * Update user position based input commands
    * @param {number} delta - Elapsed number of seconds since last call.
@@ -49,6 +51,9 @@ class UserBehavior extends SubjectBehavior {
   step(delta) {
     const doRun = this.runByDefault && !this.run() ||
         !this.runByDefault && this.run();
+    const isMovingLeftRight = this.left() && this.right();
+    const isTurningBoth = this.turnLeft() && this.turnRight();
+
     this.speed = groundSpeed[+doRun];
     // this.fSpeed = flySpeed[+doRun];
     this.lSpeed = lookSpeed[+doRun];
@@ -123,6 +128,22 @@ class UserBehavior extends SubjectBehavior {
     }
 
     this.tmpVec3.copy(this.direction);
+
+    // Prevent unwanted movement in the north-west direction
+    if (this.strafe()) {
+      if (isTurningBoth) {
+        return;
+      }
+      if (this.turnLeft() && this.right()) {
+        return;
+      }
+      if (this.turnRight() && this.left()) {
+        return;
+      }
+    }
+    if (isMovingLeftRight) {
+      return;
+    }
 
     if (this.left() || (this.turnLeft() && this.strafe())) {
       this.tmpEul.set(0, Math.PI / 2, 0, 'YXZ');
