@@ -44,16 +44,38 @@ describe('TerrainStorage', () => {
     assert.equal(tilePos.offsetZ, 127);
   });
 
-  it('smoke', async () => {
-    // TODO: replace this one with more meaningful tests
+  it('setPoint & getTile', async () => {
     const terrainStorage = new TerrainStorage('test');
     assert.strictEqual(terrainStorage.tileDiameter, 128);
+    const radius = terrainStorage.tileDiameter / 2;
 
-    terrainStorage.getTile(-2, 4);
-    terrainStorage.getTile(1000, -100);
-    terrainStorage.setPoint(25, -100, 230, 2, 3, false);
-    terrainStorage.setPoint(-2000, 100, -20, 5, 0, true);
+    const defaultTile = terrainStorage.makeDefaultTile();
 
+    // Those tiles are supposed to be pristine: they should be
+    // identical to the default one
+    let tile1 = terrainStorage.getTile(-2, 4);
+    let tile2 = terrainStorage.getTile(1000, -100);
+    assert.strictEqual(JSON.stringify(tile1), JSON.stringify(defaultTile));
+    assert.strictEqual(JSON.stringify(tile2), JSON.stringify(defaultTile));
+    assert.strictEqual(terrainStorage.tiles.size, 0);
+
+    // Modify those tiles by setting some points on them
+    const point1 = [-2 * terrainStorage.tileDiameter - radius,
+        4 * terrainStorage.tileDiameter - radius];
+    const point2 = [1000 * terrainStorage.tileDiameter - radius,
+        -100 * terrainStorage.tileDiameter - radius];
+    terrainStorage.setPoint(point1[0], point1[1], 230, 2, 3, false);
+    terrainStorage.setPoint(point2[0], point2[1], -20, 5, 0, true);
+
+    // Those same tiles should now be different from the default one
+    tile1 = terrainStorage.getTile(-2, 4);
+    tile2 = terrainStorage.getTile(1000, -100);
+    assert.notEqual(JSON.stringify(tile1), JSON.stringify(defaultTile));
+    assert.notEqual(JSON.stringify(tile2), JSON.stringify(defaultTile));
+    assert.strictEqual(JSON.stringify(terrainStorage.tiles.get('-2_4')),
+        JSON.stringify(tile1));
+    assert.strictEqual(JSON.stringify(terrainStorage.tiles.get('1000_-100')),
+        JSON.stringify(tile2));
     assert.strictEqual(terrainStorage.tiles.size, 2);
   });
 

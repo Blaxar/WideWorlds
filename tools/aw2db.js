@@ -242,8 +242,8 @@ function parseAttrFile(path) {
 /**
   * Converts RGB values into Hex
   * @param {integer} r - red
-  * @param {integer} g - red
-  * @param {integer} b - red
+  * @param {integer} g - green
+  * @param {integer} b - blue
   * @return {string} returns a hex color string
 */
 function rgbToHex(r, g, b) {

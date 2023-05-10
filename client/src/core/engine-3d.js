@@ -43,6 +43,7 @@ class Engine3D {
     this.tmpQuat = new THREE.Quaternion();
 
     this.camera = new THREE.PerspectiveCamera(fov, aspect, near, far);
+
     this.head.add(this.tilt);
     this.user.add(this.head);
     this.scene.add(this.user);
@@ -364,7 +365,12 @@ class Engine3D {
     }
 
     this.renderer.clear();
+    const far = this.camera.far;
+    this.camera.far = 1000; // Allow large skyboxes to be fully displayed
+    this.camera.updateProjectionMatrix();
     this.renderer.render(this.backgroundScene, this.camera);
+    this.camera.far = far;
+    this.camera.updateProjectionMatrix();
     this.renderer.clearDepth();
     this.renderer.render(this.scene, this.camera);
 
