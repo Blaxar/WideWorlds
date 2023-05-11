@@ -54,7 +54,7 @@ const worldAttr = {
 
 
 const argv = yargs(process.argv.slice(2))
-    .command('*', 'Import AW prop an attr dumps into a WideWorlds' +
+    .command('* [sql]', 'Import AW prop an attr dumps into a WideWorlds' +
              ' sqlite3 database',
     (yargs) => {
       yargs.positional('sql', {
