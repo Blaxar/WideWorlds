@@ -14,7 +14,7 @@ const defaultUserHeight = 1.80;
 class Engine3D {
   /**
    * @constructor
-   * @param {HTML} canvas - HTML DOM canavas element to draw in
+   * @param {HTML} canvas - HTML DOM canvas element to draw in
    */
   constructor(canvas) {
     this.stopRequested = false;

@@ -52,7 +52,7 @@
     "vue": "^3.2.37",
     "ws": "^8.11.0",
     "xp.css": "^0.2.6",
-    "yargs": "^17.3.1"
+    "yargs": "^17.7.2"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^2.3.3",

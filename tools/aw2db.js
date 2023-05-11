@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 import * as db from '../common/db/utils.js';
 import World from '../common/db/model/World.js';
 import Prop from '../common/db/model/Prop.js';
@@ -51,58 +53,63 @@ const worldAttr = {
 };
 
 
-const argv = yargs(process.argv)
-    .positional('sql', {
-      description: 'Path to the destination SQLite3 database file,' +
+const argv = yargs(process.argv.slice(2))
+    .command('*', 'Import AW prop an attr dumps into a WideWorlds' +
+             ' sqlite3 database',
+    (yargs) => {
+      yargs.positional('sql', {
+        description: 'Path to the destination SQLite3 database file,' +
         ' will be created if need be',
-      type: 'string',
-      default: 'wideworlds.sqlite3',
-    })
-    .option('attr', {
-      alias: 'a',
-      description: 'Input AW world attributes dump file (e.g. atworld.txt)',
-      type: 'string',
-    })
-    .option('prop', {
-      alias: 'p',
-      description: 'Input AW props dump file (e.g. propworld.txt)',
-      type: 'string',
-    })
-    .option('encoding', {
-      alias: 'e',
-      description: 'Expected encoding from dump files',
-      type: 'string',
-      default: 'windows-1252',
-    })
-    .option('worldId', {
-      alias: 'wid',
-      description: 'Fallback world ID if no World entry is created' +
+        type: 'string',
+        default: 'wideworlds.sqlite3',
+      })
+          .option('attr', {
+            alias: 'a',
+            description: 'Input AW world attributes dump file' +
+              ' (e.g. atworld.txt)',
+            type: 'string',
+          })
+          .option('prop', {
+            alias: 'p',
+            description: 'Input AW props dump file (e.g. propworld.txt)',
+            type: 'string',
+          })
+          .option('encoding', {
+            alias: 'e',
+            description: 'Expected encoding from dump files',
+            type: 'string',
+            default: 'windows-1252',
+          })
+          .option('worldId', {
+            alias: 'wid',
+            description: 'Fallback world ID if no World entry is created' +
         ' (no attr file provided)',
-      type: 'integer',
-      default: 0,
-    }).option('batchSize', {
-      alias: 'b',
-      description: 'Maximum amount of props and users to commit to' +
+            type: 'integer',
+            default: 0,
+          }).option('batchSize', {
+            alias: 'b',
+            description: 'Maximum amount of props and users to commit to' +
         ' database a the same time',
-      type: 'integer',
-      default: 2000,
-    })
-    .option('autoGenerateUsers', {
-      alias: 'u',
-      description: 'Generate place-holder users based on unique user' +
+            type: 'integer',
+            default: 2000,
+          })
+          .option('autoGenerateUsers', {
+            alias: 'u',
+            description: 'Generate place-holder users based on unique user' +
         ' IDs found in props',
-      type: 'boolean',
-      default: true,
-    })
-    .option('pathOverride', {
-      alias: 'po',
-      description: 'Set the object path value for the world to the provided' +
-        ' string, keep the original value otherwise',
-      type: 'string',
-      default: null,
-    })
-    .help()
-    .alias('help', 'h').argv;
+            type: 'boolean',
+            default: true,
+          })
+          .option('pathOverride', {
+            alias: 'po',
+            description: 'Set the object path value for the world to the' +
+        ' provided string, keep the original value otherwise',
+            type: 'string',
+            default: null,
+          })
+          .help()
+          .alias('help', 'h');
+    }).argv;
 
 /**
  * Parse world attribute file

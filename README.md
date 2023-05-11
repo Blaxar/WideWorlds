@@ -66,11 +66,14 @@ You can then browse the app going to `http://localhost:3000` on your favorite we
 
 #### Usage:
 ```
+Import AW prop an attr dumps into a WideWorlds sqlite3 database
+
 Positionals:
   sql  Path to the destination SQLite3 database file, will be created if need be
                                         [string] [default: "wideworlds.sqlite3"]
 
 Options:
+  -h, --help                Show help                                  [boolean]
       --version             Show version number                        [boolean]
   -a, --attr                Input AW world attributes dump file (e.g. atworld.tx
                             t)                                          [string]
@@ -87,13 +90,12 @@ Options:
       --pathOverride, --po  Set the object path value for the world to the provi
                             ded string, keep the original value otherwise
                                                         [string] [default: null]
-  -h, --help                Show help                                  [boolean]
 ```
 
 #### Example:
 
 ```bash
-node tools/aw2db.js myuniverse.sqlite3 --attr ./atworld.txt --prop ./propworld.txt
+tools/aw2db.js myuniverse.sqlite3 --attr ./atworld.txt --prop ./propworld.txt
 ```
 
 This will result in `myuniverse.sqlite3` created with the world described in `./atworld.txt` and all the imported props from `./propworld.txt`.
