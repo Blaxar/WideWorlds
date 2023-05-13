@@ -69,6 +69,11 @@ class WorldManager {
     ].map((c) => c / 255.0));
     this.engine3d.setSkyColorSpinning(false);
 
+    if (data.enableFog) {
+      this.engine3d.setFog(data.fogColor, data.fogMinimum, data.fogMaximum);
+    } else {
+      this.engine3d.resetFog();
+    }
     this.engine3d.setAmbientLight(
         data.ambientColor, data.ambientLightIntensity);
     this.engine3d.setDirectionalLight(
@@ -107,6 +112,7 @@ class WorldManager {
     this.engine3d.setCameraDistance(0);
     this.engine3d.clearEntities();
     this.engine3d.resetSkyColors();
+    this.engine3d.resetFog();
     this.engine3d.resetAmbientLight();
     this.engine3d.resetDirectionalLight();
     this.engine3d.resetSkyBox();

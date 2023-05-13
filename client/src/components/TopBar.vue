@@ -64,7 +64,8 @@ onMounted(() => {
 </script>
 
 <template>
-    <div class="top-bar surface">
+    <div class="top-bar">
+    <div class="surface">
     <div class="button-bar">
     <button @click="select" name="leave">{{leaveButtonText}}</button>
     <button @click="select" name="camera">{{cameraButtonText}}</button>
@@ -74,6 +75,7 @@ onMounted(() => {
         {{ a.name }}
       </option>
     </select>
+    </div>
     </div>
     <div class="settings-panel">
     <slot name="settings" v-if="state.displaySettings" />
