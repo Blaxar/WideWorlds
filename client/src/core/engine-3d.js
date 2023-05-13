@@ -129,7 +129,24 @@ class Engine3D {
     if (this.skyBox) this.backgroundScene.remove(this.skyBox);
     this.skyBox = null;
   }
-
+  /**
+   * Set the scene's fog
+   * @param {Color} color - Color of the fog
+   * @param {float} near - How close to the camera the fog starts.
+   * @param {float} far - How far the fog extends.
+   */
+  setFog(color = 'FF0000', near = 0.25, far = 40) {
+    this.resetFog();
+    this.scene.fog = new THREE.Fog(
+        new THREE.Color(parseInt('0x' + color)),
+        near, far);
+  }
+  /** Remove the current world fog if any */
+  resetFog() {
+    if (this.scene.fog) {
+      this.scene.fog = null;
+    }
+  }
   /**
    * Set ambient light color, with a nice soft white light default
    * @param {Color} color - Color of the light
@@ -167,6 +184,7 @@ class Engine3D {
         0.6);
 
     this.directionalLight.position.set(position.x, position.y, position.z);
+
     this.scene.add(this.directionalLight);
   }
 
