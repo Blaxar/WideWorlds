@@ -45,6 +45,7 @@
     "iconv-lite": "^0.6.3",
     "isomorphic-ws": "^5.0.0",
     "jsonwebtoken": "^9.0.0",
+    "pngjs": "^7.0.0",
     "sqlite3": "^5.0.8",
     "three": ">0.152.1",
     "three-rwx-loader": "^0.12.1",

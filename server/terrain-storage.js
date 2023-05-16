@@ -2,17 +2,23 @@
  * @author Julien 'Blaxar' Bardagi <blaxar.waldarax@gmail.com>
  */
 
-/**
-  * Get tile name for given coordinates
-  * @param {integer} tileX - X coordinate of the tile.
-  * @param {integer} tileZ - Z coordinate of the tile.
-  * @return {string} Name of the tile
-  */
-function getTileName(tileX, tileZ) {
-  const x = parseInt(tileX);
-  const z = parseInt(tileZ);
+import {PNG} from 'pngjs';
+import {join} from 'node:path';
+import * as fs from 'fs';
 
-  if (isNaN(x) || isNaN(z) || x !== tileX || z !== tileZ) {
+const zeroElevationValue = 0xffff / 2;
+
+/**
+  * Get page name for given coordinates
+  * @param {integer} pageX - X coordinate of the page.
+  * @param {integer} pageZ - Z coordinate of the page.
+  * @return {string} Name of the page
+  */
+function getPageName(pageX, pageZ) {
+  const x = parseInt(pageX);
+  const z = parseInt(pageZ);
+
+  if (isNaN(x) || isNaN(z) || x !== pageX || z !== pageZ) {
     throw new Error('Input coordinates must be valid integers');
   }
 
@@ -23,18 +29,21 @@ function getTileName(tileX, tileZ) {
 class TerrainStorage {
   /**
    * @constructor
-   * @param {string} world - Name of the world.
-   * @param {string} tileDiameter - Length of both tile sides (X and Z) in
+   * @param {string} folder - Directory to store world terrains in.
+   * @param {string} pageDiameter - Length of both page sides (X and Z) in
    *                                number of points.
    */
-  constructor(world, tileDiameter = 128) {
-    // Note: a 'tile' in this case is the equivalent of a 'page' following
+  constructor(folder, pageDiameter = 128) {
+    // Note: a 'page' in this case is the equivalent of a 'page' following
     // AW semantic, we get ride of the notion of node for simplicity
-    this.world = world;
-    this.tileDiameter = tileDiameter;
-    this.tiles = new Map();
+    this.folder = folder;
+    this.pageDiameter = pageDiameter;
+    this.pages = new Map();
 
-    // TODO: load all available tiles from storages
+    if (!fs.existsSync(this.folder)) {
+      fs.mkdirSync(this.folder, {recursive: true});
+    }
+    // TODO: load all available pages from storages
   }
 
   /**
@@ -46,95 +55,240 @@ class TerrainStorage {
    * @param {integer} rotation - Rotation of the texture for the point.
    * @param {integer} enabled - Is the point enabled or not, false
    *                            means it's a hole.
+   * @param {boolean} save - Whether or not to commit the changes to
+   *                         PNG files (false by default).
    */
-  setPoint(x, z, elevation, texture = 0, rotation = 0, enabled = true) {
-    const {tileX, tileZ, offsetX, offsetZ} = this.getTilePosFromPoint(x, z);
-    const tile = this.getTile(tileX, tileZ);
+  async setPoint(x, z, elevation, texture = 0, rotation = 0, enabled = true,
+      save = false) {
+    const {pageX, pageZ, offsetX, offsetZ} = this.getPagePosFromPoint(x, z);
+    const page = await this.getPage(pageX, pageZ);
 
-    tile.elevation[offsetZ * this.tileDiameter * offsetX] = elevation;
-    tile.texture[offsetZ * this.tileDiameter * offsetX] = texture;
-    tile.rotation[offsetZ * this.tileDiameter * offsetX] = rotation;
-    tile.enabled[offsetZ * this.tileDiameter * offsetX] = enabled;
+    // In the original AW elevation dump file format: a single point texture,
+    // its rotation and its enabling are all encoded in a single byte.
+    // The highest two order bits encode the rotation this makes it 4 possible
+    // values (going counter-clockwise, rotating left).
+    // The remaining amount of bits (6 of them) simply encode the ID of the
+    // texture.
+    // When a point is disabled (hole): the whole byte is set to 254
 
-    this.tiles.set(getTileName(tileX, tileZ), tile);
-    this.saveTile(tileX, tileZ);
-  }
-
-  /**
-   * Get tile at given coordinates
-   * @param {integer} tileX - X coordinate of the tile.
-   * @param {integer} tileZ - Z coordinate of the tile.
-   * @return {Object} Tile at those given coordinates
-   */
-  getTile(tileX, tileZ) {
-    let tile = this.tiles.get(getTileName(tileX, tileZ));
-
-    if (!tile) {
-      // No tile cached for those coordinates: return a default one
-      tile = this.makeDefaultTile();
+    if (texture > 0x3f || texture < 0) {
+      throw new Error(
+          'Invalid texture value provided, must be between 0 and 63',
+      );
     }
 
-    return tile;
+    if (rotation > 3 || rotation < 0) {
+      throw new Error(
+          'Invalid rotation value provided, must be between 0 and 3',
+      );
+    }
+
+    let textureEntry = 254;
+
+    if (enabled) {
+      textureEntry = (texture + (rotation << 6));
+    }
+
+    page.elevationData[offsetZ * this.pageDiameter * offsetX] =
+      elevation - zeroElevationValue;
+    page.textureData[offsetZ * this.pageDiameter * offsetX] = textureEntry;
+
+    this.pages.set(getPageName(pageX, pageZ), page);
+    if (save) this.savePage(pageX, pageZ);
   }
 
   /**
-   * Get the tile with relative point coordinates corresponding to
+   * Set point properties on a given node within a page
+   * @param {integer} pageX - X coordinate of the page.
+   * @param {integer} pageZ - Z coordinate of the xpage.
+   * @param {integer} offsetX - Starting X coordinate of the point.
+   * @param {integer} offsetZ - starting Z coordinate of the point.
+   * @param {integer} width - Width of the node to set.
+   * @param {Array} elevationData - Elevation data.
+   * @param {Array} textureData - Texture data.
+   * @param {boolean} save - Whether or not to commit the changes to
+   *                         PNG files (false by default).
+   */
+  async setNode(pageX, pageZ, offsetX, offsetZ, width, elevationData,
+      textureData, save = false) {
+    const page = await this.getPage(pageX, pageZ);
+
+    const copyData = (srcData, dstData) => {
+      for (let i = 0, z = 0; i < srcData.length; i += width) {
+        let toCopy = (srcData.length - i);
+        toCopy = toCopy > width ? width : toCopy;
+
+        dstData.set(srcData.slice(i, i + toCopy),
+            (offsetZ + z) * this.pageDiameter + offsetX);
+        z++;
+      }
+    };
+
+    copyData(elevationData, page.elevationData);
+    copyData(textureData, page.textureData);
+
+    this.pages.set(getPageName(pageX, pageZ), page);
+
+    if (save) await this.savePage(pageX, pageZ);
+  }
+
+  /**
+   * Get page at given coordinates
+   * @param {integer} pageX - X coordinate of the page.
+   * @param {integer} pageZ - Z coordinate of the page.
+   * @return {Object} Page at those given coordinates
+   */
+  async getPage(pageX, pageZ) {
+    const pageName = getPageName(pageX, pageZ);
+
+    if (this.pages.has(pageName)) {
+      return this.pages.get(pageName);
+    }
+
+    return await this.loadPage(pageX, pageZ);
+  }
+
+  /**
+   * Get the page with relative point coordinates corresponding to
    * absolute point coordinates
    * @param {integer} x - X coordinate of the point.
    * @param {integer} z - Z coordinate of the point.
-   * @return {Object} Tile with relative point coordinates
+   * @return {Object} Page with relative point coordinates
    */
-  getTilePosFromPoint(x, z) {
-    const radius = this.tileDiameter / 2;
+  getPagePosFromPoint(x, z) {
+    const radius = this.pageDiameter / 2;
 
-    const tileX = Math.floor((x + radius) / this.tileDiameter);
-    const tileZ = Math.floor((z + radius) / this.tileDiameter);
+    const pageX = Math.floor((x + radius) / this.pageDiameter);
+    const pageZ = Math.floor((z + radius) / this.pageDiameter);
     let tempX = x;
     let tempZ = z;
 
-    while (tempX < 0) tempX += this.tileDiameter;
-    while (tempZ < 0) tempZ += this.tileDiameter;
+    while (tempX < 0) tempX += this.pageDiameter;
+    while (tempZ < 0) tempZ += this.pageDiameter;
 
-    const offsetX = (tempX + radius) % this.tileDiameter;
-    const offsetZ = (tempZ + radius) % this.tileDiameter;
+    const offsetX = (tempX + radius) % this.pageDiameter;
+    const offsetZ = (tempZ + radius) % this.pageDiameter;
 
-    return {tileX, tileZ, offsetX, offsetZ};
+    return {pageX, pageZ, offsetX, offsetZ};
   }
 
   /**
-   * Load tile at given coordinates from storage to cache
-   * @param {integer} tileX - X coordinate of the tile.
-   * @param {integer} tileZ - Z coordinate of the tile.
+   * Load page at given coordinates from storage to cache, if
+   * available
+   * @param {integer} pageX - X coordinate of the page.
+   * @param {integer} pageZ - Z coordinate of the page.
+   * @return {Object} Page loaded from storage
    */
-  loadTile(tileX, tileZ) {
-    // TODO: load tile from file system (when available)
-    this.tiles.set(getTileName(tileX, tileZ), this.makeDefaultTile());
+  async loadPage(pageX, pageZ) {
+    const pageName = getPageName(pageX, pageZ);
+    let page = this.makeDefaultPage();
+
+    if (this.pages.has(pageName)) {
+      page = this.pages.get(pageName);
+    }
+
+    const elevationPath = join(this.folder, `${pageName}.elev.png`);
+    const texturePath = join(this.folder, `${pageName}.tex.png`);
+
+    await Promise.all([
+      new Promise((resolve, reject) => {
+        if (fs.existsSync(elevationPath)) {
+          fs.createReadStream(elevationPath).pipe(
+              new PNG(),
+          ).on('parsed', function() {
+            // eslint-disable-next-line no-invalid-this
+            page.elevationData = new Uint16Array(this.data.buffer);
+            resolve();
+          }).on('error', function() {
+            reject(new Error('Failed to load page from file'));
+          });
+        } else {
+          resolve();
+        }
+      }),
+      new Promise((resolve, reject) => {
+        if (fs.existsSync(texturePath)) {
+          fs.createReadStream(texturePath).pipe(
+              new PNG(),
+          ).on('parsed', function() {
+            // eslint-disable-next-line no-invalid-this
+            page.textureData = new Uint8Array(this.data.buffer);
+            resolve();
+          }).on('error', function() {
+            reject(new Error('Failed to load page from file'));
+          });
+        } else {
+          resolve();
+        }
+      }),
+    ]);
+
+    this.pages.set(pageName, page);
+
+    return page;
   }
 
   /**
-   * Save tile at given coordinates to storage
-   * @param {integer} tileX - X coordinate of the tile.
-   * @param {integer} tileZ - Z coordinate of the tile.
+   * Save page at given coordinates to storage
+   * @param {integer} pageX - X coordinate of the page.
+   * @param {integer} pageZ - Z coordinate of the page.
    */
-  saveTile(tileX, tileZ) {
-    // TODO: save tile on the file system
+  async savePage(pageX, pageZ) {
+    const pageName = getPageName(pageX, pageZ);
+    const page = await this.getPage(pageX, pageZ);
+
+    const elevPngOpts = {
+      width: this.pageDiameter,
+      height: this.pageDiameter,
+      colorType: 0,
+      inputColorType: 0,
+      bitDepth: 16,
+    };
+
+    const texPngOpts = {
+      width: this.pageDiameter,
+      height: this.pageDiameter,
+      colorType: 0,
+      inputColorType: 0,
+      bitDepth: 8,
+    };
+
+    const elevationPath = join(this.folder, `${pageName}.elev.png`);
+    const texturePath = join(this.folder, `${pageName}.tex.png`);
+
+    await Promise.all([
+      new Promise((resolve, reject) => {
+        const newFile = new PNG(elevPngOpts);
+        const buf = new Uint8Array(newFile.data.buffer);
+        buf.set(new Uint8Array(page.elevationData.buffer));
+        newFile.pack()
+            .pipe(fs.createWriteStream(elevationPath))
+            .on('finish', resolve).on('error', reject);
+      }),
+      new Promise((resolve, reject) => {
+        const newFile = new PNG(texPngOpts);
+        const buf = new Uint8Array(newFile.data.buffer);
+        buf.set(new Uint8Array(page.textureData.buffer));
+        newFile.pack()
+            .pipe(fs.createWriteStream(texturePath))
+            .on('finish', resolve).on('error', reject);
+      }),
+    ]);
   }
 
   /**
-   * Make a default flat tile
-   * @return {Object} Default flat tile.
+   * Make a default flat page
+   * @return {Object} Default flat page.
    */
-  makeDefaultTile() {
-    const length = this.tileDiameter * this.tileDiameter;
+  makeDefaultPage() {
+    const length = this.pageDiameter * this.pageDiameter;
 
     return {
-      elevation: new Int32Array(length).fill(0),
-      texture: new Uint8Array(length).fill(0),
-      rotation: new Uint8Array(length).fill(0),
-      enabled: new Uint8Array(length).fill(1),
+      elevationData: new Uint16Array(length).fill(zeroElevationValue),
+      textureData: new Uint8Array(length).fill(0),
     };
   }
 }
 
 export default TerrainStorage;
-export {getTileName};
+export {zeroElevationValue, getPageName};

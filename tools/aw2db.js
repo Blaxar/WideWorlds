@@ -1,11 +1,16 @@
 #!/usr/bin/env node
 
+/**
+ * @author Julien 'Blaxar' Bardagi <blaxar.waldarax@gmail.com>
+ */
+
 import * as db from '../common/db/utils.js';
 import World from '../common/db/model/World.js';
 import Prop from '../common/db/model/Prop.js';
 import User from '../common/db/model/User.js';
 import * as crypto from 'crypto';
 import yargs from 'yargs';
+import {hideBin} from 'yargs/helpers';
 import iconvlite from 'iconv-lite';
 import fs from 'fs';
 
@@ -53,7 +58,7 @@ const worldAttr = {
 };
 
 
-const argv = yargs(process.argv.slice(2))
+const argv = yargs(hideBin(process.argv))
     .command('* [sql]', 'Import AW prop an attr dumps into a WideWorlds' +
              ' sqlite3 database',
     (yargs) => {

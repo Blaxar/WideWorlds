@@ -5,9 +5,9 @@
 import {LocalStorage} from "node-localstorage";
 import UserConfig, {defaultConfig} from '../../client/src/core/user-config.js';
 import * as assert from 'assert';
-import { mkdtemp } from 'node:fs/promises';
-import { join } from 'node:path';
-import { tmpdir } from 'node:os';
+import {mkdtemp} from 'node:fs/promises';
+import {join} from 'node:path';
+import {tmpdir} from 'node:os';
 
 // Testing Core application state machine
 describe('UserConfig', () => {
