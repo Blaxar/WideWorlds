@@ -2,9 +2,12 @@
  * @author Julien 'Blaxar' Bardagi <blaxar.waldarax@gmail.com>
  */
 
+import TerrainStorage from '../../server/terrain-storage.js';
 import makeHttpTestBase from '../utils.js';
 import request from 'superwstest';
 import * as assert from 'assert';
+import {join} from 'node:path';
+import * as fs from 'fs';
 
 // Testing http server
 
@@ -246,6 +249,132 @@ describe('http server', () => {
         .set('Accept', 'application/json')
         .expect('Content-Type', /json/)
         .expect(404, done);
+  });
+
+  // Testing terrain API
+
+  it('GET /api/worlds/id/terrain/x/z/elevation.png - OK', (done) => {
+    const terrainPath = join(base.worldFolder, `${base.worldId}`, 'terrain');
+    new TerrainStorage(terrainPath).savePage(-3, 1);
+
+    request(base.server)
+        .get('/api/worlds/' + base.worldId + '/terrain/-3/1/elevation.png')
+        .set('Authorization', 'Bearer ' + base.adminBearerToken)
+        .expect('Content-Type', 'image/png')
+        .expect(200).then((response) => {
+          assert.ok(fs.existsSync(join(base.worldFolder, `${base.worldId}`, 'terrain',
+              '-3_1.elev.png')));
+          assert.ok(fs.existsSync(join(base.worldFolder, `${base.worldId}`, 'terrain',
+              '-3_1.tex.png')));
+          done();
+        })
+        .catch((err) => done(err));
+  });
+
+  it('GET /api/worlds/id/terrain/x/z/elevation.png - No content', (done) => {
+    request(base.server)
+        .get('/api/worlds/' + base.worldId + '/terrain/-2/5/elevation.png')
+        .set('Authorization', 'Bearer ' + base.adminBearerToken)
+        .expect(204).then((response) => {
+          assert.ok(!fs.existsSync(join(base.worldFolder, `${base.worldId}`, 'terrain',
+              '-2_5.elev.png')));
+          assert.ok(!fs.existsSync(join(base.worldFolder, `${base.worldId}`, 'terrain',
+              '-2_5.tex.png')));
+          done();
+        })
+        .catch((err) => done(err));
+  });
+
+  it('GET /api/worlds/id/terrain/x/z/elevation.png - Not found', (done) => {
+    request(base.server)
+        .get('/api/worlds/' + base.worldId + '/terrain/a/b/elevation.png')
+        .set('Authorization', 'Bearer ' + base.adminBearerToken)
+        .expect(404).then((response) => {
+          assert.ok(!fs.existsSync(join(base.worldFolder, `${base.worldId}`, 'terrain',
+              'a_b.elev.png')));
+          assert.ok(!fs.existsSync(join(base.worldFolder, `${base.worldId}`, 'terrain',
+              'a_b.tex.png')));
+          done();
+        })
+        .catch((err) => done(err));
+  });
+
+  it('GET /api/worlds/id/terrain/x/z/elevation.png - Unauthorized', (done) => {
+    request(base.server)
+        .get('/api/worlds/' + base.worldId + '/terrain/-2/5/elevation.png')
+        .set('Authorization', 'gibberish')
+        .set('Accept', 'application/json')
+        .expect(401, done);
+  });
+
+  it('GET /api/worlds/id/terrain/x/z/elevation.png - Forbidden', (done) => {
+    request(base.server)
+        .get('/api/worlds/' + base.worldId + '/terrain/-2/5/elevation.png')
+        .set('Authorization', 'Bearer iNvAlId')
+        .set('Accept', 'application/json')
+        .expect(403, done);
+  });
+
+  it('GET /api/worlds/id/terrain/x/z/texture.png - OK', (done) => {
+    const terrainPath = join(base.worldFolder, `${base.worldId}`, 'terrain');
+    new TerrainStorage(terrainPath).savePage(-3, 1);
+
+    request(base.server)
+        .get('/api/worlds/' + base.worldId + '/terrain/-3/1/texture.png')
+        .set('Authorization', 'Bearer ' + base.adminBearerToken)
+        .expect('Content-Type', 'image/png')
+        .expect(200).then((response) => {
+          assert.ok(fs.existsSync(join(base.worldFolder, `${base.worldId}`, 'terrain',
+              '-3_1.elev.png')));
+          assert.ok(fs.existsSync(join(base.worldFolder, `${base.worldId}`, 'terrain',
+              '-3_1.tex.png')));
+          done();
+        })
+        .catch((err) => done(err));
+  });
+
+  it('GET /api/worlds/id/terrain/x/z/texture.png - No content', (done) => {
+    request(base.server)
+        .get('/api/worlds/' + base.worldId + '/terrain/-2/5/texture.png')
+        .set('Authorization', 'Bearer ' + base.adminBearerToken)
+        .expect(204).then((response) => {
+          assert.ok(!fs.existsSync(join(base.worldFolder, `${base.worldId}`, 'terrain',
+              '-2_5.elev.png')));
+          assert.ok(!fs.existsSync(join(base.worldFolder, `${base.worldId}`, 'terrain',
+              '-2_5.tex.png')));
+          done();
+        })
+        .catch((err) => done(err));
+  });
+
+  it('GET /api/worlds/id/terrain/x/z/texture.png - Not found', (done) => {
+    request(base.server)
+        .get('/api/worlds/' + base.worldId + '/terrain/a/b/texture.png')
+        .set('Authorization', 'Bearer ' + base.adminBearerToken)
+        .expect(404).then((response) => {
+          assert.ok(!fs.existsSync(join(base.worldFolder, `${base.worldId}`, 'terrain',
+              'a_b.elev.png')));
+          assert.ok(!fs.existsSync(join(base.worldFolder, `${base.worldId}`, 'terrain',
+              'a_b.tex.png')));
+          done();
+        })
+        .catch((err) => done(err));
+  });
+
+  it('GET /api/worlds/id/terrain/x/z/texture - Unauthorized', (done) => {
+    request(base.server)
+        .get('/api/worlds/' + base.worldId + '/terrain/-2/5/texture.png')
+        .set('Authorization', 'gibberish')
+        .set('Accept', 'image/png')
+        .expect(401, done);
+  });
+
+  it('GET /api/worlds/id/terrain/x/z/texture - Forbidden', (done) => {
+    request(base.server)
+        .get('/api/worlds/' + base.worldId + '/terrain/-2/5/texture.png')
+        .set('Authorization', 'Bearer iNvAlId')
+        .set('Accept', 'image/png')
+        .expect(403, done);
   });
 
   // Testing User API (as admin)

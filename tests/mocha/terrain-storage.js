@@ -7,6 +7,7 @@ import TerrainStorage, {getPageName, zeroElevationValue}
 import * as assert from 'assert';
 import {join} from 'node:path';
 import {tmpdir} from 'node:os';
+import * as fs from 'fs';
 
 // Testing Core application state machine
 describe('TerrainStorage', () => {
@@ -21,7 +22,7 @@ describe('TerrainStorage', () => {
 
   it('getPagePosFromPoint', async () => {
     const tmpDir = join(tmpdir(), `getPagePosFromPoint${Date.now()}`);
-    console.log(tmpDir);
+
     const terrainStorage = new TerrainStorage(tmpDir);
     assert.strictEqual(terrainStorage.pageDiameter, 128);
 
@@ -103,6 +104,26 @@ describe('TerrainStorage', () => {
         + 16], 3);
     assert.strictEqual(page.textureData[(24 + 7) * terrainStorage.pageDiameter
         + 16 + 7], 3);
+  });
+
+  it('getPageFilePaths', async () => {
+    const tmpDir = join(tmpdir(), `setNode${Date.now()}`);
+    const terrainStorage = new TerrainStorage(tmpDir);
+
+    let paths = terrainStorage.getPageFilePaths(5, -10);
+
+    assert.strictEqual(paths.elevationPath, null);
+    assert.strictEqual(paths.texturePath, null);
+    assert.ok(!fs.existsSync(paths.elevationPath));
+    assert.ok(!fs.existsSync(paths.texturePath));
+
+    await terrainStorage.savePage(5, -10);
+    paths = terrainStorage.getPageFilePaths(5, -10);
+
+    assert.strictEqual(paths.elevationPath, join(tmpDir, '5_-10.elev.png'));
+    assert.strictEqual(paths.texturePath, join(tmpDir, '5_-10.tex.png'));
+    assert.ok(fs.existsSync(paths.elevationPath));
+    assert.ok(fs.existsSync(paths.texturePath));
   });
 
   it('getPageName', async () => {

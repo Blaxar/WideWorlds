@@ -13,6 +13,8 @@ import * as assert from 'assert';
 import * as fs from 'fs';
 import * as crypto from 'crypto';
 import TypeORM from 'typeorm';
+import {join} from 'node:path';
+import {tmpdir} from 'node:os';
 
 const makeTestWorld = async (connection, name, data) => {
   return (await connection.manager.save([new World(undefined, name, data)]))[0].id;
@@ -46,7 +48,9 @@ const makeHttpTestBase = (port = 62931, dbFile = 'mocha-http-test-db.sqlite3', s
     now: 0,
     adminBearerToken: '',
     citizenBearerToken: '',
-    userCache: new Map()
+    worldFolder: join(tmpdir(), `base${Date.now()}`),
+    userCache: new Map(),
+    terrainCache: new Map()
   };
 
   const before = async () => {
@@ -54,7 +58,8 @@ const makeHttpTestBase = (port = 62931, dbFile = 'mocha-http-test-db.sqlite3', s
       throw("Test database file already exists, move it or delete it first.");
     }
 
-    base.server = await spawnHttpServer(base.dbFile, base.port, base.secret, base.userCache);
+    base.server = await spawnHttpServer(base.dbFile, base.port, base.secret, base.worldFolder,
+        base.userCache, base.terrainCache);
     const wsServer = await spawnWsServer(base.server, base.secret, base.userCache);
     base.wss = wsServer.ws;
     base.wsChannelManager = wsServer.wsChannelManager;

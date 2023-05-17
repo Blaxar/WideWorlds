@@ -6,12 +6,14 @@ import * as db from '../common/db/utils.js';
 import World from '../common/db/model/World.js';
 import Prop from '../common/db/model/Prop.js';
 import User from '../common/db/model/User.js';
+import TerrainStorage from './terrain-storage.js';
 import {hasUserRole, hasUserIdInParams, middleOr, forbiddenOnFalse}
   from './utils.js';
 import {createServer} from 'http';
 import cors from 'cors';
 import express from 'express';
 import jwt from 'jsonwebtoken';
+import {join} from 'node:path';
 
 const bearerRegex = /^Bearer (.*)$/i;
 
@@ -19,7 +21,8 @@ const minNbUsersPerPage = 1;
 const defaultNbUsersPerPage = 200;
 const maxNbUsersPerPage = defaultNbUsersPerPage*10;
 
-const spawnHttpServer = async (path, port, secret, userCache) => {
+const spawnHttpServer = async (path, port, secret, worldFolder, userCache,
+    terrainCache) => {
   const authenticate = (req, res, next) => {
     // Get Bearer token, we strip the 'Bearer' part
     const authMatch = req.headers['authorization']?.match(bearerRegex);
@@ -42,6 +45,15 @@ const spawnHttpServer = async (path, port, secret, userCache) => {
 
       next();
     });
+  };
+
+  const getTerrainStorage = (worldId) => {
+    if (!terrainCache.has(worldId)) {
+      const terrainPath = join(worldFolder, `${worldId}`, 'terrain');
+      terrainCache.set(worldId, new TerrainStorage(terrainPath));
+    }
+
+    return terrainCache.get(worldId);
   };
 
   return db.init(path).then(async (connection) => {
@@ -203,6 +215,66 @@ const spawnHttpServer = async (path, port, secret, userCache) => {
           })
           .catch((err) => res.status(500).json({}));
     });
+
+    app.get('/api/worlds/:id/terrain/:x/:z/elevation.png', authenticate,
+        (req, res) => {
+          res.setHeader('Content-Type', 'image/png');
+          const wid = req.params.id;
+          const pageX = parseInt(req.params.x);
+          const pageZ = parseInt(req.params.z);
+
+          if (isNaN(pageX) || isNaN(pageZ)) {
+            res.status(404).send();
+            return;
+          }
+
+          connection.manager.createQueryBuilder(World, 'world')
+              .where('world.id = :wid', {wid}).getOne().then((world) => {
+                if (!world) {
+                  res.status(404).send();
+                } else {
+                  const path = getTerrainStorage(wid)
+                      .getPageFilePaths(pageX, pageZ).elevationPath;
+
+                  if (path) {
+                    res.sendFile(path);
+                  } else {
+                    // No file, respond with no content
+                    res.status(204).send();
+                  }
+                }
+              });
+        });
+
+    app.get('/api/worlds/:id/terrain/:x/:z/texture.png', authenticate,
+        (req, res) => {
+          res.setHeader('Content-Type', 'image/png');
+          const wid = req.params.id;
+          const pageX = parseInt(req.params.x);
+          const pageZ = parseInt(req.params.z);
+
+          if (isNaN(pageX) || isNaN(pageZ)) {
+            res.status(404).send();
+            return;
+          }
+
+          connection.manager.createQueryBuilder(World, 'world')
+              .where('world.id = :wid', {wid}).getOne().then((world) => {
+                if (!world) {
+                  res.status(404).send();
+                } else {
+                  const path = getTerrainStorage(wid)
+                      .getPageFilePaths(pageX, pageZ).texturePath;
+
+                  if (path) {
+                    res.sendFile(path);
+                  } else {
+                    // No file, respond with no content
+                    res.status(204).send();
+                  }
+                }
+              });
+        });
 
     app.get('/api/users', authenticate, forbiddenOnFalse(hasUserRole('admin')),
         (req, res) => {

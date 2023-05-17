@@ -20,6 +20,13 @@ const argv = yargs(process.argv)
       type: 'string',
       default: '8080',
     })
+    .option('worldFolder', {
+      alias: 'w',
+      description: 'Folder holding world-related files, will be' +
+        ' created if need be',
+      type: 'string',
+      default: './worlds',
+    })
     .help()
     .alias('help', 'h').argv;
 
@@ -27,7 +34,9 @@ const argv = yargs(process.argv)
 const secret = randomBytes(64).toString('hex');
 
 const userCache = new Map();
+const terrainCache = new Map();
 
-spawnHttpServer(argv.db, argv.port, secret, userCache)
+spawnHttpServer(argv.db, argv.port, secret, argv.worldFolder, userCache,
+    terrainCache)
     .then((server) => spawnWsServer(server, secret, userCache))
     .then((wss) => wss.wsChannelManager.startBroadcasting());

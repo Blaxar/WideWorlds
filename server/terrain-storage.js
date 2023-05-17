@@ -277,6 +277,29 @@ class TerrainStorage {
   }
 
   /**
+   * Get PNG file paths for a page at given coordinates, when
+   * available (null otherwise)
+   * @param {integer} pageX - X coordinate of the page.
+   * @param {integer} pageZ - Z coordinate of the page.
+   * @return {Object} Elevation and terrain file paths
+   */
+  getPageFilePaths(pageX, pageZ) {
+    const pageName = getPageName(pageX, pageZ);
+    let elevationPath = join(this.folder, `${pageName}.elev.png`);
+    let texturePath = join(this.folder, `${pageName}.tex.png`);
+
+    if (!fs.existsSync(elevationPath)) {
+      elevationPath = null;
+    }
+
+    if (!fs.existsSync(texturePath)) {
+      texturePath = null;
+    }
+
+    return {elevationPath, texturePath};
+  }
+
+  /**
    * Make a default flat page
    * @return {Object} Default flat page.
    */
