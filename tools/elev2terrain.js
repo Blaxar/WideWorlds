@@ -4,8 +4,11 @@
  * @author Julien 'Blaxar' Bardagi <blaxar.waldarax@gmail.com>
  */
 
-import TerrainStorage, {zeroElevationValue}
-  from '../server/terrain-storage.js';
+// About AW Elevdump format:
+// https://wiki.activeworlds.com//index.php?title=Elevdump
+
+import {zeroElevationValue} from '../common/terrain-utils.js';
+import TerrainStorage from '../server/terrain-storage.js';
 import yargs from 'yargs';
 import {hideBin} from 'yargs/helpers';
 import * as fs from 'fs';
@@ -25,10 +28,10 @@ const argv = yargs(hideBin(process.argv))
             description: 'Output folder for the terrain, will be' +
             ' created if needed',
             type: 'string',
-            default: 'terrain',
+            default: './terrain',
           });
     }).demandCommand()
-    .help().help()
+    .help()
     .alias('help', 'h').argv;
 
 const lines = fs.readFileSync(argv.elev, 'utf8').split('\r\n');

@@ -2,28 +2,10 @@
  * @author Julien 'Blaxar' Bardagi <blaxar.waldarax@gmail.com>
  */
 
+import {getPageName, zeroElevationValue} from '../common/terrain-utils.js';
 import {PNG} from 'pngjs';
 import {join} from 'node:path';
 import * as fs from 'fs';
-
-const zeroElevationValue = 0xffff / 2;
-
-/**
-  * Get page name for given coordinates
-  * @param {integer} pageX - X coordinate of the page.
-  * @param {integer} pageZ - Z coordinate of the page.
-  * @return {string} Name of the page
-  */
-function getPageName(pageX, pageZ) {
-  const x = parseInt(pageX);
-  const z = parseInt(pageZ);
-
-  if (isNaN(x) || isNaN(z) || x !== pageX || z !== pageZ) {
-    throw new Error('Input coordinates must be valid integers');
-  }
-
-  return `${x}_${z}`;
-}
 
 /** Takes care of server-side terrain storage for each world */
 class TerrainStorage {
@@ -314,4 +296,3 @@ class TerrainStorage {
 }
 
 export default TerrainStorage;
-export {zeroElevationValue, getPageName};

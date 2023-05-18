@@ -35,12 +35,14 @@ For additional info, you can still invoke some help:
 npm run server -- -h
 
 Options:
-      --version  Show version number                                   [boolean]
-      --db       Path to the SQLite3 database file, will be created if need be
-                                        [string] [default: "wideworlds.sqlite3"]
-  -p, --port     Port to listen on for http and ws requests
+      --version      Show version number                               [boolean]
+      --db           Path to the SQLite3 database file, will be created if need
+                     be                 [string] [default: "wideworlds.sqlite3"]
+  -p, --port         Port to listen on for http and ws requests
                                                       [string] [default: "8080"]
-  -h, --help     Show help
+  -w, --worldFolder  Folder holding world-related files, will be created if need
+                      be                          [string] [default: "./worlds"]
+  -h, --help         Show help                                         [boolean]
 ```
 
 Note that, for the server to be useful, you'll need some database with existing worlds, props and users...
@@ -66,6 +68,8 @@ You can then browse the app going to `http://localhost:3000` on your favorite we
 
 #### Usage:
 ```
+aw2db.js [sql]
+
 Import AW prop an attr dumps into a WideWorlds sqlite3 database
 
 Positionals:
@@ -98,4 +102,36 @@ Options:
 tools/aw2db.js myuniverse.sqlite3 --attr ./atworld.txt --prop ./propworld.txt
 ```
 
-This will result in `myuniverse.sqlite3` created with the world described in `./atworld.txt` and all the imported props from `./propworld.txt`.
+### elev2terrain
+
+`elev2terrain` is the terrain handling tool, most notably used for importing AW Elevdump
+files into the native WideWorlds representation format (backed up by PNG files).
+
+#### Usage:
+```
+elev2terrain.js import <elev>
+
+Import AW elevation dump into a WideWorlds terrain folder (PNG files)
+
+Positionals:
+  elev  Path to the source AW elevation dump file            [string] [required]
+
+Options:
+      --version  Show version number                                   [boolean]
+  -h, --help     Show help                                             [boolean]
+  -o, --output   Output folder for the terrain, will be created if needed
+                                                 [string] [default: "./terrain"]
+```
+
+#### Example:
+
+Let's assume there is already an existing world saved in database with the ID `1` and that it's still missing any terrain data.
+By running the server (via `npm run server`) without any `--worldFolder` argument, the following directory will be expected to hold terrain data: `./worlds/1/terrain/`
+
+To import terrain data from an existing AW elevation dump file (let it be `./elevworld.txt`), just run the following command:
+
+```bash
+tools/elev2terrain.js import ./elevworld.txt -o ./worlds/1/terrain
+```
+
+This will result in PNG files generated in `./worlds/1/terrain/` to store both elevation data (`*_*.elev.png`) and texture data (`*_*.tex.png`).

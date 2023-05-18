@@ -2,8 +2,10 @@
  * @author Julien 'Blaxar' Bardagi <blaxar.waldarax@gmail.com>
  */
 
-import TerrainStorage, {getPageName, zeroElevationValue}
-  from '../../server/terrain-storage.js';
+import {getPageName, zeroElevationValue, isPointEnabled, getPointTexture,
+  getPointRotation, pointDisabledValue}
+  from '../../common/terrain-utils.js';
+import TerrainStorage from '../../server/terrain-storage.js';
 import * as assert from 'assert';
 import {join} from 'node:path';
 import {tmpdir} from 'node:os';
@@ -126,7 +128,8 @@ describe('TerrainStorage', () => {
     assert.ok(fs.existsSync(paths.texturePath));
   });
 
-  it('getPageName', async () => {
+  it('utils', async () => {
+    // Testing getPageName
     assert.strictEqual(getPageName(0, 0), '0_0');
     assert.strictEqual(getPageName(1, 2), '1_2');
     assert.strictEqual(getPageName(-10, 50000), '-10_50000');
@@ -135,5 +138,21 @@ describe('TerrainStorage', () => {
     assert.throws(() => getPageName(0, 'test'), Error);
     assert.throws(() => getPageName(0, 3.14), Error);
     assert.throws(() => getPageName(420.69, 0), Error);
+
+    // Testing isPointEnabled
+    assert.ok(isPointEnabled(123));
+    assert.ok(!isPointEnabled(pointDisabledValue));
+
+    // Testing getPointTexture
+    assert.strictEqual(getPointTexture(128 + 64 + 10), 10);
+    assert.strictEqual(getPointTexture(128 + 64), 0);
+    assert.strictEqual(getPointTexture(128 + 7), 7);
+    assert.strictEqual(getPointTexture(62), 62);
+
+    // Testing getPointRotation
+    assert.strictEqual(getPointRotation(128 + 64 + 10), 3);
+    assert.strictEqual(getPointRotation(128 + 64), 3);
+    assert.strictEqual(getPointRotation(128 + 7), 2);
+    assert.strictEqual(getPointRotation(62), 0);
   });
 });
