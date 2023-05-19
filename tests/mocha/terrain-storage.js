@@ -3,7 +3,8 @@
  */
 
 import {getPageName, zeroElevationValue, isPointEnabled, getPointTexture,
-  getPointRotation, pointDisabledValue}
+  getPointRotation, pointDisabledValue, defaultPageDiameter,
+  unpackElevationData, packElevationData}
   from '../../common/terrain-utils.js';
 import TerrainStorage from '../../server/terrain-storage.js';
 import * as assert from 'assert';
@@ -26,7 +27,7 @@ describe('TerrainStorage', () => {
     const tmpDir = join(tmpdir(), `getPagePosFromPoint${Date.now()}`);
 
     const terrainStorage = new TerrainStorage(tmpDir);
-    assert.strictEqual(terrainStorage.pageDiameter, 128);
+    assert.strictEqual(terrainStorage.pageDiameter, defaultPageDiameter);
 
     let pagePos = terrainStorage.getPagePosFromPoint(0, 0);
     assert.equal(pagePos.pageX, 0);
@@ -58,6 +59,7 @@ describe('TerrainStorage', () => {
     const terrainStorage = new TerrainStorage(tmpDir);
     assert.strictEqual(terrainStorage.pageDiameter, 128);
     const radius = terrainStorage.pageDiameter / 2;
+    const pageSize = terrainStorage.pageDiameter * terrainStorage.pageDiameter;
 
     const defaultPage = terrainStorage.makeDefaultPage();
 
@@ -68,6 +70,14 @@ describe('TerrainStorage', () => {
     assert.strictEqual(JSON.stringify(page1), JSON.stringify(defaultPage));
     assert.strictEqual(JSON.stringify(page2), JSON.stringify(defaultPage));
     assert.strictEqual(terrainStorage.pages.size, 2);
+    assert.strictEqual(page1.elevationData.length, pageSize);
+    assert.ok(page1.elevationData instanceof Uint16Array);
+    assert.strictEqual(page1.textureData.length, pageSize);
+    assert.ok(page1.textureData instanceof Uint8Array);
+    assert.strictEqual(page2.elevationData.length, pageSize);
+    assert.ok(page2.elevationData instanceof Uint16Array);
+    assert.strictEqual(page2.textureData.length, pageSize);
+    assert.ok(page2.textureData instanceof Uint8Array);
 
     // Modify those pages by setting some points on them
     const point1 = [-2 * terrainStorage.pageDiameter - radius,
@@ -87,6 +97,14 @@ describe('TerrainStorage', () => {
     assert.strictEqual(JSON.stringify(terrainStorage.pages.get('1000_-100')),
         JSON.stringify(page2));
     assert.strictEqual(terrainStorage.pages.size, 2);
+        assert.strictEqual(page1.elevationData.length, pageSize);
+    assert.ok(page1.elevationData instanceof Uint16Array);
+    assert.strictEqual(page1.textureData.length, pageSize);
+    assert.ok(page1.textureData instanceof Uint8Array);
+    assert.strictEqual(page2.elevationData.length, pageSize);
+    assert.ok(page2.elevationData instanceof Uint16Array);
+    assert.strictEqual(page2.textureData.length, pageSize);
+    assert.ok(page2.textureData instanceof Uint8Array);
   });
 
   it('setNode', async () => {
@@ -154,5 +172,21 @@ describe('TerrainStorage', () => {
     assert.strictEqual(getPointRotation(128 + 64), 3);
     assert.strictEqual(getPointRotation(128 + 7), 2);
     assert.strictEqual(getPointRotation(62), 0);
+  });
+
+  it('(un)packElevationdata', async () => {
+    const tmpDir = join(tmpdir(), `packElevationdata${Date.now()}`);
+    const terrainStorage = new TerrainStorage(tmpDir);
+    const pageSize = defaultPageDiameter * defaultPageDiameter;
+
+    const page = await terrainStorage.getPage(1, 2);
+    const packedElevationData = packElevationData(page.elevationData);
+
+    // Expecting Uint8Array with endian cue at the begining
+    assert.strictEqual(packedElevationData.length, pageSize * 2 + 2);
+    assert.strictEqual(new Uint16Array(packedElevationData.buffer)[0], 0x1144);
+
+    const unpackedElevationData = unpackElevationData(packedElevationData);
+    assert.strictEqual(unpackedElevationData.length, pageSize);
   });
 });

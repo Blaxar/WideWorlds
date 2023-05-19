@@ -2,6 +2,8 @@
  * @author Julien 'Blaxar' Bardagi <blaxar.waldarax@gmail.com>
  */
 
+import {unpackElevationData} from '../../../common/terrain-utils.js';
+
 /** HTTP client utility to interact with the server API */
 class HttpClient {
   /**
@@ -118,6 +120,54 @@ class HttpClient {
       if (response.ok) return response.json();
       else throw new Error(response.status);
     });
+  }
+
+  /**
+   * Get terrain terrain page
+   * @param {integer} wid - ID of the world to get the URLs from.
+   * @param {integer} pageX - Index of the page on the X axis.
+   * @param {integer} pageZ - Index of the page on the Z axis.
+   * @return {Object} Object storing elevation and texture data.
+   */
+  async getPage(wid, pageX, pageZ) {
+    const pageURI = `${this.url}/worlds/${wid}/terrain/${pageX}/${pageZ}/`;
+    const data = {
+      elevationData: null,
+      textureData: null,
+    };
+
+    const elevationURL = pageURI + 'elevation';
+    const textureURL = pageURI + 'texture';
+
+    const elevationRequest = new Request(elevationURL, {
+      method: 'GET',
+      headers: this.headers,
+      mode: this.cors ? 'cors' : undefined,
+    });
+
+    const textureRequest = new Request(textureURL, {
+      method: 'GET',
+      headers: this.headers,
+      mode: this.cors ? 'cors' : undefined,
+    });
+
+    data.elevationData = await fetch(elevationRequest).then((response) => {
+      if (response.ok) {
+        return response.arrayBuffer();
+      } else throw new Error(response.status);
+    }).then((buffer) => {
+      return unpackElevationData(new Uint8Array(buffer));
+    });
+
+    data.textureData = await fetch(textureRequest).then((response) => {
+      if (response.ok) {
+        return response.arrayBuffer();
+      } else throw new Error(response.status);
+    }).then((buffer) => {
+      return new Uint8Array(buffer);
+    });
+
+    return data;
   }
 }
 

@@ -36,7 +36,7 @@ const worldAttr = {
   61: 'skybox',
   64: 'keywords',
   65: 'enableTerrain',
-  69: 'entry',
+  69: 'entryPoint',
   70: 'skyColorTopR',
   71: 'skyColorTopG',
   72: 'skyColorTopB',
@@ -59,7 +59,7 @@ const worldAttr = {
 
 
 const argv = yargs(hideBin(process.argv))
-    .command('* [sql]', 'Import AW prop an attr dumps into a WideWorlds' +
+    .command('* [sql]', 'Import AW prop and attr dumps into a WideWorlds' +
              ' sqlite3 database',
     (yargs) => {
       yargs.positional('sql', {
@@ -112,6 +112,13 @@ const argv = yargs(hideBin(process.argv))
             type: 'string',
             default: null,
           })
+          .option('enableTerrain', {
+            alias: 'et',
+            description: 'Override the enableTerrain flag with the provided ' +
+            ' value, keep the original one if none is provided',
+            type: 'boolean',
+            default: null,
+          })
           .help()
           .alias('help', 'h');
     }).argv;
@@ -132,7 +139,6 @@ function parseAttrFile(path) {
     south: [0, 0, 0],
     west: [0, 0, 0],
     bottom: [0, 0, 0]};
-
 
   const ambientColor = [];
   const fogColor = [];
@@ -221,7 +227,11 @@ function parseAttrFile(path) {
           break;
       }
     } else if (key === 'enableTerrain') {
-      worldData[key] = value === 'Y' ? true : false;
+      if (argv.enableTerrain !== null) {
+        worldData[key] = argv.enableTerrain;
+      } else {
+        worldData[key] = value === 'Y' ? true : false;
+      }
     } else if (key === 'enableFog') {
       worldData[key] = value === 'Y' ? true : false;
     } else if (key === 'path') {

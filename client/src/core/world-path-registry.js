@@ -3,6 +3,7 @@
  */
 
 import ModelRegistry from './model-registry.js';
+import {generateTerrainMaterials} from './utils-3d.js';
 
 /**
  * Manager of model registries associated to different worlds,
@@ -23,6 +24,7 @@ class WorldPathRegistry {
   constructor(loadingManager, modelPath = 'rwx',
       resourcePath = 'textures', imageServiceNode = null) {
     this.modelRegistries = new Map();
+    this.terrainMaterials = new Map();
     this.loadingManager = loadingManager;
     this.modelPath = modelPath;
     this.resourcePath = resourcePath;
@@ -42,6 +44,24 @@ class WorldPathRegistry {
     }
 
     return await this.modelRegistries.get(path);
+  }
+
+  /**
+   * Get all possible terrain tile textures
+   * @param {string} path - Path to the folder holding terrain textures
+   * @return {Array<Array<Material>>} Array of arrays: 4 rotation
+   *                                  variations for each texture
+   */
+  getTerrainMaterials(path) {
+    if (!this.terrainMaterials.has(path)) {
+      this.terrainMaterials.set(path,
+          generateTerrainMaterials(
+              `${path}/${this.resourcePath}`,
+          ),
+      );
+    }
+
+    return this.terrainMaterials.get(path);
   }
 
   /** Clear all model registries */

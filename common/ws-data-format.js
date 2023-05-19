@@ -141,7 +141,7 @@ function flipEntityStateEndian(state) {
  * conversion if needed, throws if invalid
  * @param {Uint8Array} state - Entity state binary payload.
  * @param {integer} expectedEndiannessCue - Expected endianness cue.
- * @param {integer} oppositeEndiannessCue - opposite endianness cue.
+ * @param {integer} oppositeEndiannessCue - Opposite endianness cue.
  * @return {Uint8Array} Valid binary payload for entity state
  */
 function validateEntityState(state,

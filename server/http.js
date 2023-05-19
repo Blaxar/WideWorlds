@@ -7,6 +7,7 @@ import World from '../common/db/model/World.js';
 import Prop from '../common/db/model/Prop.js';
 import User from '../common/db/model/User.js';
 import TerrainStorage from './terrain-storage.js';
+import {packElevationData} from '../common/terrain-utils.js';
 import {hasUserRole, hasUserIdInParams, middleOr, forbiddenOnFalse}
   from './utils.js';
 import {createServer} from 'http';
@@ -216,9 +217,9 @@ const spawnHttpServer = async (path, port, secret, worldFolder, userCache,
           .catch((err) => res.status(500).json({}));
     });
 
-    app.get('/api/worlds/:id/terrain/:x/:z/elevation.png', authenticate,
+    app.get('/api/worlds/:id/terrain/:x/:z/elevation', authenticate,
         (req, res) => {
-          res.setHeader('Content-Type', 'image/png');
+          res.setHeader('Content-Type', 'application/octet-stream');
           const wid = req.params.id;
           const pageX = parseInt(req.params.x);
           const pageZ = parseInt(req.params.z);
@@ -233,22 +234,19 @@ const spawnHttpServer = async (path, port, secret, worldFolder, userCache,
                 if (!world) {
                   res.status(404).send();
                 } else {
-                  const path = getTerrainStorage(wid)
-                      .getPageFilePaths(pageX, pageZ).elevationPath;
-
-                  if (path) {
-                    res.sendFile(path);
-                  } else {
-                    // No file, respond with no content
-                    res.status(204).send();
-                  }
+                  getTerrainStorage(wid).getPage(pageX, pageZ).then(
+                      (page) => {
+                        const packed = packElevationData(page.elevationData);
+                        res.send(Buffer.from(packed, 'binary'));
+                      },
+                  );
                 }
               });
         });
 
-    app.get('/api/worlds/:id/terrain/:x/:z/texture.png', authenticate,
+    app.get('/api/worlds/:id/terrain/:x/:z/texture', authenticate,
         (req, res) => {
-          res.setHeader('Content-Type', 'image/png');
+          res.setHeader('Content-Type', 'application/octet-stream');
           const wid = req.params.id;
           const pageX = parseInt(req.params.x);
           const pageZ = parseInt(req.params.z);
@@ -263,15 +261,11 @@ const spawnHttpServer = async (path, port, secret, worldFolder, userCache,
                 if (!world) {
                   res.status(404).send();
                 } else {
-                  const path = getTerrainStorage(wid)
-                      .getPageFilePaths(pageX, pageZ).texturePath;
-
-                  if (path) {
-                    res.sendFile(path);
-                  } else {
-                    // No file, respond with no content
-                    res.status(204).send();
-                  }
+                  getTerrainStorage(wid).getPage(pageX, pageZ).then(
+                      (page) => {
+                        res.end(Buffer.from(page.textureData, 'binary'));
+                      },
+                  );
                 }
               });
         });

@@ -219,8 +219,11 @@ class Engine3D {
   removeNode(id) {
     if (!this.nodes.has(id)) return false;
 
-    this.scene.remove(this.nodes.get(id));
+    const node = this.nodes.get(id);
+
+    this.scene.remove(node);
     this.nodes.delete(id);
+
     return true;
   }
 

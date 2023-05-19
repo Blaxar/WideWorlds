@@ -2,8 +2,9 @@
  * @author Julien 'Blaxar' Bardagi <blaxar.waldarax@gmail.com>
  */
 
-import {getPageName, zeroElevationValue} from '../common/terrain-utils.js';
-import {PNG} from 'pngjs';
+import {getPageName, zeroElevationValue, defaultPageDiameter}
+  from '../common/terrain-utils.js';
+import {Image} from 'image-js';
 import {join} from 'node:path';
 import * as fs from 'fs';
 
@@ -15,7 +16,7 @@ class TerrainStorage {
    * @param {string} pageDiameter - Length of both page sides (X and Z) in
    *                                number of points.
    */
-  constructor(folder, pageDiameter = 128) {
+  constructor(folder, pageDiameter = defaultPageDiameter) {
     // Note: a 'page' in this case is the equivalent of a 'page' following
     // AW semantic, we get ride of the notion of node for simplicity
     this.folder = folder;
@@ -175,33 +176,35 @@ class TerrainStorage {
     await Promise.all([
       new Promise((resolve, reject) => {
         if (fs.existsSync(elevationPath)) {
-          fs.createReadStream(elevationPath).pipe(
-              new PNG(),
-          ).on('parsed', function() {
-            // eslint-disable-next-line no-invalid-this
-            page.elevationData = new Uint16Array(this.data.buffer);
-            resolve();
-          }).on('error', function() {
-            reject(new Error('Failed to load page from file'));
+          Image.load(elevationPath).then(
+              (image) => image.data,
+          ).then(
+              (data) => {
+                page.elevationData = new Uint16Array(data.buffer);
+                resolve();
+              },
+          ).catch((err) => {
+            reject(err);
           });
         } else {
           resolve();
-        }
+        };
       }),
       new Promise((resolve, reject) => {
         if (fs.existsSync(texturePath)) {
-          fs.createReadStream(texturePath).pipe(
-              new PNG(),
-          ).on('parsed', function() {
-            // eslint-disable-next-line no-invalid-this
-            page.textureData = new Uint8Array(this.data.buffer);
-            resolve();
-          }).on('error', function() {
-            reject(new Error('Failed to load page from file'));
+          Image.load(texturePath).then(
+              (image) => image.data,
+          ).then(
+              (data) => {
+                page.textureData = new Uint8Array(data.buffer);
+                resolve();
+              },
+          ).catch((err) => {
+            reject(err);
           });
         } else {
           resolve();
-        }
+        };
       }),
     ]);
 
@@ -219,41 +222,57 @@ class TerrainStorage {
     const pageName = getPageName(pageX, pageZ);
     const page = await this.getPage(pageX, pageZ);
 
-    const elevPngOpts = {
-      width: this.pageDiameter,
-      height: this.pageDiameter,
-      colorType: 0,
-      inputColorType: 0,
-      bitDepth: 16,
-    };
-
-    const texPngOpts = {
-      width: this.pageDiameter,
-      height: this.pageDiameter,
-      colorType: 0,
-      inputColorType: 0,
-      bitDepth: 8,
-    };
-
     const elevationPath = join(this.folder, `${pageName}.elev.png`);
     const texturePath = join(this.folder, `${pageName}.tex.png`);
 
     await Promise.all([
-      new Promise((resolve, reject) => {
-        const newFile = new PNG(elevPngOpts);
-        const buf = new Uint8Array(newFile.data.buffer);
-        buf.set(new Uint8Array(page.elevationData.buffer));
-        newFile.pack()
-            .pipe(fs.createWriteStream(elevationPath))
-            .on('finish', resolve).on('error', reject);
+      new Promise(async (resolve, reject) => {
+        const image = new Image(
+            this.pageDiameter,
+            this.pageDiameter,
+            {
+              width: this.pageDiameter,
+              height: this.pageDiameter,
+              components: 1,
+              alpha: 0,
+              colorModel: 'RGB',
+              bitDepth: 16,
+            },
+        );
+
+        image.data = page.elevationData;
+
+        image.save(elevationPath)
+            .then(() => {
+              resolve();
+            })
+            .catch((err) => {
+              reject(err);
+            });
       }),
       new Promise((resolve, reject) => {
-        const newFile = new PNG(texPngOpts);
-        const buf = new Uint8Array(newFile.data.buffer);
-        buf.set(new Uint8Array(page.textureData.buffer));
-        newFile.pack()
-            .pipe(fs.createWriteStream(texturePath))
-            .on('finish', resolve).on('error', reject);
+        const image = new Image(
+            this.pageDiameter,
+            this.pageDiameter,
+            {
+              width: this.pageDiameter,
+              height: this.pageDiameter,
+              components: 1,
+              alpha: 0,
+              colorModel: 'RGB',
+              bitDepth: 8,
+            },
+        );
+
+        image.data = page.textureData;
+
+        image.save(texturePath)
+            .then(() => {
+              resolve();
+            })
+            .catch((err) => {
+              reject(err);
+            });
       }),
     ]);
   }
