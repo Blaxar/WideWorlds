@@ -109,16 +109,17 @@ function generateTerrainMaterials(path) {
 }
 
 /**
- * Generate all possible terrain tile textures
- * @param {Uint16array} elevationData - Raw elevation data for the whole page0
- * @param {Uint16array} textureData - Raw texture data for the whole page.
+ * Make 3D asset for a single page from provided elevation and texture data
+ * @param {Uint16array} elevationData - Raw elevation data for the whole page.
+ * @param {Uint8array} textureData - Raw texture data for the whole page.
  * @param {integer} sideSize - Length of the page side in real space.
  * @param {integer} nbSegments - Number of segments on both X and Z axis.
  * @param {Array<Array<Material>>} terrainMaterials - Terrain materials.
+ * @param {string} name - Name to assign to the resulting 3D asset.
  * @return {Object3D} 3D asset for the terrain page
  */
 function makePagePlane(elevationData, textureData, sideSize, nbSegments,
-    terrainMaterials) {
+    terrainMaterials, name = 'page') {
   const planeGeometry = new THREE.PlaneGeometry(sideSize, sideSize,
       nbSegments, nbSegments);
   const positions = planeGeometry.getAttribute('position').array;
@@ -144,9 +145,82 @@ function makePagePlane(elevationData, textureData, sideSize, nbSegments,
       terrainMaterials[0][0], // TODO: use different materials and groups
   );
   plane.rotateX(-Math.PI / 2);
+  plane.name = name;
 
   return plane;
 }
 
+/**
+ * Adjust edges for the page and its surroudings
+ * @param {Object3D} pagePlane - 3D plane for the page.
+ * @param {Uint16array} elevationData - Elevation data for the target page.
+ * @param {Object3D} left - 3D plane for the left page (if any).
+ * @param {Object3D} topLeft - 3D plane for the top-left page (if any).
+ * @param {Object3D} top - 3D plane for the top page (if any).
+ * @param {Uint16array} right - Elevation data for the right page (if any).
+ * @param {Uint16array} bottomRight - Elevation data for the bottom-right page
+ *                                    (if any).
+ * @param {Uint16array} bottom - Elevation data for the bottom page (if any).
+ * @param {integer} nbSegments - Number of segments on both X and Z axis.
+ */
+function adjustPageEdges(pagePlane, elevationData, left, topLeft, top, right,
+    bottomRight, bottom, nbSegments) {
+  const centerPositions = pagePlane.geometry.getAttribute('position').array;
+  const topLeftPositions = topLeft ?
+      topLeft.geometry.getAttribute('position').array : null;
+  const topPositions = top ?
+      top.geometry.getAttribute('position').array : null;
+  const leftPositions = left ?
+      left.geometry.getAttribute('position').array : null;
+
+  const posStride = (nbSegments + 1) * 3;
+
+  // Adjust other planes first, starting
+  // with the top-left one (-1,-1)
+  if (topLeftPositions) {
+    topLeftPositions[nbSegments * posStride + nbSegments * 3 + 2] =
+        (elevationData[0] - zeroElevationValue) / 100.0;
+  }
+
+  // Then the left (-1, 0) and top (0, -1) ones
+  for (let i = 0; i < nbSegments; i++) {
+    if (leftPositions) {
+      leftPositions[i * posStride + nbSegments * 3 + 2] =
+          (elevationData[i * nbSegments] - zeroElevationValue) / 100.0;
+    }
+
+    if (topPositions) {
+      topPositions[nbSegments * posStride + i * 3 + 2] =
+          (elevationData[i] - zeroElevationValue) / 100.0;
+    }
+  }
+
+  // Second: adjust the target plane itself, staring with
+  // the bottom-right data (1, 1)
+  if (bottomRight) {
+    centerPositions[nbSegments * posStride + nbSegments * 3 + 2] =
+        bottomRight[0];
+  }
+
+  // Then the right (1, 0) and bottom (0, 1) ones
+  for (let i = 0; i < nbSegments; i++) {
+    if (right) {
+      centerPositions[i * posStride + nbSegments * 3 + 2] =
+          (right[i * nbSegments] - zeroElevationValue) / 100.0;
+    }
+
+    if (bottom) {
+      centerPositions[nbSegments * posStride + i * 3 + 2] =
+          (bottom[i] - zeroElevationValue) / 100.0;
+    }
+  }
+
+  if (topLeft) topLeft.needsUpdate = true;
+  if (top) top.needsUpdate = true;
+  if (left) left.needsUpdate = true;
+
+  pagePlane.needsUpdate = true;
+}
+
 export {makeReversedOctahedron, defaultSkyColors, generateTerrainMaterials,
-  makePagePlane};
+  makePagePlane, adjustPageEdges};

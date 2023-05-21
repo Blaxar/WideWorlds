@@ -241,6 +241,17 @@ class Engine3D {
   }
 
   /**
+   * Get object by name from existing node in the scene
+   * @param {integer} id - ID of the node to get the object from.
+   * @param {string} name - Object to append to the node.
+   * @return {Object3D} If found: a 3D asset bearing this name,
+   *                    falsy otherwise.
+   */
+  getFromNodeByName(id, name) {
+    return this.nodes.get(id)?.getObjectByName(name);
+  }
+
+  /**
    * Get elapsed number of seconds since last update
    * @return {number} Number of seconds.
    */

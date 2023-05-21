@@ -6,4 +6,4 @@ RWXLoader.js
 at*.txt
 prop*.txt
 elev*.txt
-./worlds
+worlds/

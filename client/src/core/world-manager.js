@@ -5,7 +5,7 @@
 import {loadAvatarsZip} from '../../../common/avatars-dat-parser.js';
 import {getPageName, defaultPageDiameter}
   from '../../../common/terrain-utils.js';
-import {makePagePlane} from './utils-3d.js';
+import {makePagePlane, adjustPageEdges} from './utils-3d.js';
 import {Vector3, Vector2} from 'three';
 
 const cmToMRatio = 0.01;
@@ -15,11 +15,9 @@ const chunkLoadingPattern = [[-1, 1], [0, 1], [1, 1],
   [-1, 0], [0, 0], [1, 0],
   [-1, -1], [0, -1], [1, -1]];
 
-// const pageLoadingPattern = [[-1, 1], [0, 1], [1, 1],
-//   [-1, 0], [0, 0], [1, 0],
-//   [-1, -1], [0, -1], [1, -1]];
-
-const pageLoadingPattern = [[0, 0]];
+const pageLoadingPattern = [[-1, 1], [0, 1], [1, 1],
+  [-1, 0], [0, 0], [1, 0],
+  [-1, -1], [0, -1], [1, -1]];
 
 /** Central world-management class, handles chunk loading */
 class WorldManager {
@@ -204,9 +202,14 @@ class WorldManager {
 
     if (!this.terrainEnabled) return;
 
-    for (const [x, z] of pageLoadingPattern) {
-      this.loadPage(pX + x, pZ + z);
-    }
+    // Unlike chunks, pages cannot be loaded independently so trivially,
+    // for the simple reason there are borders to sync up, so it's easier to do
+    // them one at a time to adjust the heights of points at the edges
+    (async () => {
+      for (const [x, z] of pageLoadingPattern) {
+        await this.loadPage(pX + x, pZ + z);
+      }
+    })();
   }
 
   /**
@@ -337,14 +340,38 @@ class WorldManager {
     this.pages.set(pageName, pageNodeHandle);
 
     this.pageData.set(pageName,
-        this.httpClient.getPage(this.currentWorld.id,
+        await this.httpClient.getPage(this.currentWorld.id,
             pageX, pageZ));
 
-    const {elevationData, textureData} = await this.pageData.get(pageName);
+    const {elevationData, textureData} = this.pageData.get(pageName);
 
     const pagePlane = makePagePlane(elevationData, textureData,
         defaultPageDiameter * 10, defaultPageDiameter,
-        this.currentTerrainMaterials);
+        this.currentTerrainMaterials, 'page');
+
+    // Get surrounding planes, falsy if not ready yet
+    const left = this.engine3d.getFromNodeByName(
+        this.pages.get(getPageName(pageX - 1, pageZ)),
+        'page',
+    );
+    const topLeft = this.engine3d.getFromNodeByName(
+        this.pages.get(getPageName(pageX - 1, pageZ - 1)),
+        'page',
+    );
+    const top = this.engine3d.getFromNodeByName(
+        this.pages.get(getPageName(pageX, pageZ - 1)),
+        'page',
+    );
+    const right = this.pageData
+        .get(getPageName(pageX + 1, pageZ))?.elevationData;
+    const bottomRight = this.pageData
+        .get(getPageName(pageX + 1, pageZ + 1))?.elevationData;
+    const bottom = this.pageData
+        .get(getPageName(pageX, pageZ + 1))?.elevationData;
+
+    // Adjust borders to match surrounding planes
+    adjustPageEdges(pagePlane, elevationData, left, topLeft, top, right,
+        bottomRight, bottom);
 
     if (!this.engine3d.appendToNode(pageNodeHandle, pagePlane)) {
       // Could not append object to node, meaning node (page) no
