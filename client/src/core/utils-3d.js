@@ -2,7 +2,8 @@
  * @author Julien 'Blaxar' Bardagi <blaxar.waldarax@gmail.com>
  */
 
-import {zeroElevationValue} from '../../../common/terrain-utils.js';
+import {zeroElevationValue, isPointEnabled, getPointTexture,
+  getPointRotation} from '../../../common/terrain-utils.js';
 import * as THREE from 'three';
 
 const maxNbTerrainTextures = 62;
@@ -73,7 +74,7 @@ function generateTerrainMaterials(path) {
 
     // Generate the 3 remaining levels of rotation
     const rot90Texture = baseTexture.clone();
-    rot90Texture.rotation = Math.PI / 2;
+    rot90Texture.rotation = Math.PI * 0.5;
     rot90Texture.updateMatrix();
 
     const rot180Texture = baseTexture.clone();
@@ -120,39 +121,120 @@ function generateTerrainMaterials(path) {
  */
 function makePagePlane(elevationData, textureData, sideSize, nbSegments,
     terrainMaterials, name = 'page') {
-  const planeGeometry = new THREE.PlaneGeometry(sideSize, sideSize,
-      nbSegments, nbSegments);
-  const positions = planeGeometry.getAttribute('position').array;
-  const uvs = planeGeometry.getAttribute('uv').array;
+  const pageGeometry = new THREE.BufferGeometry();
+  const nbBufferEntries = (nbSegments + 1) * (nbSegments + 1);
+  const positions = new Float32Array(nbBufferEntries * 3);
+  const uvs = new Float32Array(nbBufferEntries * 2);
+  const faces = [];
 
   const posStride = (nbSegments + 1) * 3;
   const uvStride = (nbSegments + 1) * 2;
 
-  // Update geometry from provided elevation and texture data
-  for (let x = 0; x < nbSegments; x++) {
-    for (let z = 0; z < nbSegments; z++) {
-      positions[z * posStride + x * 3 + 2] =
-          (elevationData[z * nbSegments + x] - zeroElevationValue) / 100.0;
-      uvs[z * uvStride + x * 2] = nbSegments - x;
-      uvs[z * uvStride + x * 2 + 1] = z;
+  const geometryMaterials = []; // This will store IDs first
 
-      // TODO: apply different materials for each face
+  const getMaterialPos = (textureValue) => {
+    for (const [id, value] of geometryMaterials.entries()) {
+      if (value == textureValue) return id;
+    }
+
+    geometryMaterials.push(textureValue);
+    return geometryMaterials.length - 1;
+  };
+
+  // We'll need to track of the current material group
+  let groupStart = 0;
+  let groupLength = 0;
+  let groupMaterialId = 0;
+  const groupDataPerPoint = 2 * 3;
+
+  // Ready base grid geometry
+  for (let x = 0; x < nbSegments + 1; x++) {
+    const posX = (x - (nbSegments / 2)) * (sideSize / nbSegments);
+
+    for (let z = 0; z < nbSegments + 1; z++) {
+      const posZ = (z - (nbSegments / 2)) * (sideSize / nbSegments);
+
+      positions[z * posStride + x * 3] = posX;
+      positions[z * posStride + x * 3 + 1] =
+          - zeroElevationValue / 100.0;
+      positions[z * posStride + x * 3 + 2] = posZ;
+
+      uvs[z * uvStride + x * 2] = x;
+      uvs[z * uvStride + x * 2 + 1] = (nbSegments + 1) - z;
     }
   }
 
-  const plane = new THREE.Mesh(
-      planeGeometry,
-      terrainMaterials[0][0], // TODO: use different materials and groups
-  );
-  plane.rotateX(-Math.PI / 2);
-  plane.name = name;
+  // Update geometry from provided elevation and texture data
+  for (let x = 0; x < nbSegments; x++) {
+    for (let z = 0; z < nbSegments; z++) {
+      const dataId = z * nbSegments + x;
 
-  return plane;
+      // Set height from position data
+      positions[z * posStride + x * 3 + 1] =
+          (elevationData[dataId] - zeroElevationValue) / 100.0;
+
+      const textureValue = textureData[dataId];
+
+      // If it's a hole: nothing else to do
+      if (!isPointEnabled(textureValue)) continue;
+
+      // Otherwise: go ahead and create the face
+      faces.push(
+          z * (nbSegments + 1) + x,
+          (z + 1) * (nbSegments + 1) + x,
+          z * (nbSegments + 1) + x + 1,
+          z * (nbSegments + 1) + x + 1,
+          (z + 1) * (nbSegments + 1) + x,
+          (z + 1) * (nbSegments + 1) + x + 1,
+      );
+
+      // Handle material group down there
+      const materialId = getMaterialPos(textureValue);
+
+      if (groupMaterialId == materialId) {
+        groupLength += groupDataPerPoint;
+      } else {
+        pageGeometry.addGroup(groupStart, groupLength,
+            groupMaterialId);
+        groupStart += groupLength;
+        groupLength = groupDataPerPoint;
+        groupMaterialId = materialId;
+      }
+    }
+  }
+
+  pageGeometry.addGroup(groupStart, groupLength,
+      groupMaterialId);
+
+  const finalMaterials = geometryMaterials.map((textureValue) => {
+    // Now: replace each texture value with its corresponding material
+    const textureId = getPointTexture(textureValue);
+    const rotId = getPointRotation(textureValue);
+
+    return terrainMaterials[textureId][rotId];
+  });
+
+  pageGeometry.setAttribute('position',
+      new THREE.BufferAttribute(positions, 3));
+  pageGeometry.setAttribute('uv',
+      new THREE.BufferAttribute(uvs, 2));
+  pageGeometry.setIndex(faces);
+  pageGeometry.computeVertexNormals();
+
+  const page = new THREE.Mesh(
+      pageGeometry,
+      finalMaterials,
+  );
+
+  page.name = name;
+
+  return page;
 }
 
 /**
  * Adjust edges for the page and its surroudings
- * @param {Object3D} pagePlane - 3D plane for the page.
+ * @param {Object3D} pagePlane - 3D plane for the page, as built by
+ *                               makePagePlane.
  * @param {Uint16array} elevationData - Elevation data for the target page.
  * @param {Object3D} left - 3D plane for the left page (if any).
  * @param {Object3D} topLeft - 3D plane for the top-left page (if any).

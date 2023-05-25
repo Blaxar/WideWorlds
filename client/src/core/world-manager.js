@@ -328,9 +328,6 @@ class WorldManager {
 
     if (this.pageData.has(pageName)) {
       // Same here
-      const pageData = this.pageData.get(pageName);
-      pageData.elevationData.dispose();
-      pageData.textureData.dispose();
       this.pageData.remove(pageName);
     }
 
@@ -369,7 +366,7 @@ class WorldManager {
     const bottom = this.pageData
         .get(getPageName(pageX, pageZ + 1))?.elevationData;
 
-    // Adjust borders to match surrounding planes
+    // WIP: Adjust borders to match surrounding planes
     adjustPageEdges(pagePlane, elevationData, left, topLeft, top, right,
         bottomRight, bottom);
 
