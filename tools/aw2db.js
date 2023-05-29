@@ -55,6 +55,7 @@ const worldAttr = {
   85: 'skyColorBottomR',
   86: 'skyColorBottomG',
   87: 'skyColorBottomB',
+  141: 'terrainElevationOffset',
 };
 
 
@@ -236,6 +237,8 @@ function parseAttrFile(path) {
       worldData[key] = value === 'Y' ? true : false;
     } else if (key === 'path') {
       worldData[key] = argv.pathOverride ? argv.pathOverride : value;
+    } else if (key === 'terrainElevationOffset') {
+      worldData[key] = parseFloat(value);
     } else {
       worldData[key] = value;
     }

@@ -17,6 +17,9 @@ const defaultSkyColors = [
   1.0, 1.0, 0.0, // bottom
 ];
 
+// TODO: tweak terrain light properties based on world settings
+const defaultEmissive = 0x111111;
+
 /**
  * Make a reversed (inward-facing faces) 3D octahedron
  * @param {array} colors - Array of colors, 18 elements
@@ -87,18 +90,22 @@ function generateTerrainMaterials(path) {
 
     // Make the materials
     const baseMaterial = new THREE.MeshPhongMaterial({
+      emissive: defaultEmissive,
       map: baseTexture,
     });
 
     const rot90Material = new THREE.MeshPhongMaterial({
+      emissive: defaultEmissive,
       map: rot90Texture,
     });
 
     const rot180Material = new THREE.MeshPhongMaterial({
+      emissive: defaultEmissive,
       map: rot180Texture,
     });
 
     const rot270Material = new THREE.MeshPhongMaterial({
+      emissive: defaultEmissive,
       map: rot270Texture,
     });
 
@@ -254,25 +261,24 @@ function adjustPageEdges(pagePlane, elevationData, left, topLeft, top, right,
       top.geometry.getAttribute('position').array : null;
   const leftPositions = left ?
       left.geometry.getAttribute('position').array : null;
-
   const posStride = (nbSegments + 1) * 3;
 
   // Adjust other planes first, starting
   // with the top-left one (-1,-1)
   if (topLeftPositions) {
-    topLeftPositions[nbSegments * posStride + nbSegments * 3 + 2] =
+    topLeftPositions[nbSegments * posStride + nbSegments * 3 + 1] =
         (elevationData[0] - zeroElevationValue) / 100.0;
   }
 
   // Then the left (-1, 0) and top (0, -1) ones
   for (let i = 0; i < nbSegments; i++) {
     if (leftPositions) {
-      leftPositions[i * posStride + nbSegments * 3 + 2] =
+      leftPositions[i * posStride + nbSegments * 3 + 1] =
           (elevationData[i * nbSegments] - zeroElevationValue) / 100.0;
     }
 
     if (topPositions) {
-      topPositions[nbSegments * posStride + i * 3 + 2] =
+      topPositions[nbSegments * posStride + i * 3 + 1] =
           (elevationData[i] - zeroElevationValue) / 100.0;
     }
   }
@@ -280,28 +286,36 @@ function adjustPageEdges(pagePlane, elevationData, left, topLeft, top, right,
   // Second: adjust the target plane itself, staring with
   // the bottom-right data (1, 1)
   if (bottomRight) {
-    centerPositions[nbSegments * posStride + nbSegments * 3 + 2] =
-        bottomRight[0];
+    centerPositions[nbSegments * posStride + nbSegments * 3 + 1] =
+        (bottomRight[0]- zeroElevationValue) / 100.0;
   }
 
   // Then the right (1, 0) and bottom (0, 1) ones
-  for (let i = 0; i < nbSegments; i++) {
+  for (let i = 0; i < nbSegments + 1; i++) {
     if (right) {
-      centerPositions[i * posStride + nbSegments * 3 + 2] =
+      centerPositions[i * posStride + nbSegments * 3 + 1] =
           (right[i * nbSegments] - zeroElevationValue) / 100.0;
     }
 
     if (bottom) {
-      centerPositions[nbSegments * posStride + i * 3 + 2] =
+      centerPositions[nbSegments * posStride + i * 3 + 1] =
           (bottom[i] - zeroElevationValue) / 100.0;
     }
   }
 
-  if (topLeft) topLeft.needsUpdate = true;
-  if (top) top.needsUpdate = true;
-  if (left) left.needsUpdate = true;
+  if (topLeft) {
+    topLeft.geometry.computeVertexNormals();
+  }
 
-  pagePlane.needsUpdate = true;
+  if (top) {
+    top.geometry.computeVertexNormals();
+  }
+
+  if (left) {
+    left.geometry.computeVertexNormals();
+  }
+
+  pagePlane.geometry.computeVertexNormals();
 }
 
 export {makeReversedOctahedron, defaultSkyColors, generateTerrainMaterials,

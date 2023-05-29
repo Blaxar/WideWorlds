@@ -58,6 +58,7 @@ class WorldManager {
     this.cameraDirection = new Vector3();
     this.xzDirection = new Vector2();
     this.terrainEnabled = false;
+    this.terrainElevationOffset = 0.0; // In meters
   }
 
   /**
@@ -100,6 +101,8 @@ class WorldManager {
         });
 
     this.terrainEnabled = data.enableTerrain;
+    this.terrainElevationOffset = data.terrainElevationOffset ?
+        data.terrainElevationOffset : 0.0;
 
     if (!data.path) throw new Error('Missing path field from world data json');
 
@@ -145,6 +148,7 @@ class WorldManager {
     this.cameraDirection.set(0, 0, 0);
     this.xzDirection.set(0, 0);
     this.terrainEnabled = false;
+    this.terrainElevationOffset = 0.0;
   }
 
   /** Clear all chunks */
@@ -164,6 +168,7 @@ class WorldManager {
     }
 
     this.pages.clear();
+    this.pageData.clear();
   }
 
   /**
@@ -345,6 +350,7 @@ class WorldManager {
     const pagePlane = makePagePlane(elevationData, textureData,
         defaultPageDiameter * 10, defaultPageDiameter,
         this.currentTerrainMaterials, 'page');
+    pagePlane.position.setY(this.terrainElevationOffset);
 
     // Get surrounding planes, falsy if not ready yet
     const left = this.engine3d.getFromNodeByName(
@@ -366,15 +372,10 @@ class WorldManager {
     const bottom = this.pageData
         .get(getPageName(pageX, pageZ + 1))?.elevationData;
 
-    // WIP: Adjust borders to match surrounding planes
     adjustPageEdges(pagePlane, elevationData, left, topLeft, top, right,
-        bottomRight, bottom);
+        bottomRight, bottom, defaultPageDiameter);
 
-    if (!this.engine3d.appendToNode(pageNodeHandle, pagePlane)) {
-      // Could not append object to node, meaning node (page) no
-      // longer exists, we just silently cancel the whole loading.
-      return;
-    }
+    this.engine3d.appendToNode(pageNodeHandle, pagePlane);
   }
 }
 
