@@ -11,7 +11,7 @@ import {Vector3, Vector2} from 'three';
 const cmToMRatio = 0.01;
 const degToRadRatio = Math.PI / 180.0;
 
-const chunkLoadingPattern = [[-1, 1], [0, 1], [1, 1],
+const defaultChunkLoadingPattern = [[-1, 1], [0, 1], [1, 1],
   [-1, 0], [0, 0], [1, 0],
   [-1, -1], [0, -1], [1, -1]];
 
@@ -28,13 +28,16 @@ class WorldManager {
    *                                                3D assets loading.
    * @param {HttpClient} httpClient - HTTP client managing API requests to
    *                                  the server.
+   * @param {UserConfigNode} propsLoadingNode - Configuration node for the
+   *                                            props loading distance.
    * @param {integer} chunkSide - Chunk side length (in centimeters).
    * @param {number} textureUpdatePeriod - Amount of time (in seconds) to wait
    *                                       before moving animated textures to
    *                                       their next frame.
    */
-  constructor(engine3d, worldPathRegistry, httpClient, chunkSide = 20 * 100,
-      textureUpdatePeriod = 0.20) {
+  constructor(engine3d, worldPathRegistry, httpClient, propsLoadingNode = null,
+      chunkSide = 20 * 100, textureUpdatePeriod = 0.20) {
+    this.chunkLoadingPattern = defaultChunkLoadingPattern;
     this.engine3d = engine3d;
     this.worldPathRegistry = worldPathRegistry;
     this.httpClient = httpClient;
@@ -59,6 +62,37 @@ class WorldManager {
     this.xzDirection = new Vector2();
     this.terrainEnabled = false;
     this.terrainElevationOffset = 0.0; // In meters
+
+    if (propsLoadingNode) {
+      // Ready props loading distance and its update callback
+      const propsLoadingDistance = parseInt(propsLoadingNode.value());
+      this.updateChunkLoadingPattern(propsLoadingDistance);
+      propsLoadingNode.onUpdate((value) => {
+        this.updateChunkLoadingPattern(parseInt(value));
+      });
+    }
+  }
+
+  /**
+   * Update the chunk loading pattern
+   * @param {integer} radius - Radius of chunks to load (in meters).
+   */
+  updateChunkLoadingPattern(radius) {
+    const chunkLoadingPattern = [];
+    const chunkRadius =
+        Math.floor(radius / (this.chunkSide * cmToMRatio) + 0.5);
+
+    for (let x = - chunkRadius; x < chunkRadius + 1; x++) {
+      for (let z = - chunkRadius; z < chunkRadius + 1; z++) {
+        // Do not add chunk coordinates to the pattern if they fall
+        // out of the radius/distance
+        if (x * x + z * z > chunkRadius * chunkRadius) continue;
+
+        chunkLoadingPattern.push([x, z]);
+      }
+    }
+
+    this.chunkLoadingPattern = chunkLoadingPattern;
   }
 
   /**
@@ -201,7 +235,7 @@ class WorldManager {
     const pX = Math.floor(pos.x / (defaultPageDiameter * 10) + 0.5);
     const pZ = Math.floor(pos.z / (defaultPageDiameter * 10) + 0.5);
 
-    for (const [x, z] of chunkLoadingPattern) {
+    for (const [x, z] of this.chunkLoadingPattern) {
       this.loadChunk(cX + x, cZ + z);
     }
 

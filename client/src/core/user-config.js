@@ -4,6 +4,22 @@
 
 import {qwertyBindings} from './user-input.js';
 
+// In meters
+const renderingDistance = {
+  min: 20,
+  max: 2000,
+  default: 40,
+  step: 20,
+};
+
+// In meters
+const propsLoadingDistance = {
+  min: 40,
+  max: 2000,
+  default: 60,
+  step: 20,
+};
+
 const defaultConfig = {
   controls: {
     keyBindings: qwertyBindings,
@@ -11,8 +27,11 @@ const defaultConfig = {
   },
   network: {
     imageService: 'https://images.weserv.nl/?url=',
+    propsLoadingDistance: propsLoadingDistance.default,
   },
-  graphics: {},
+  graphics: {
+    renderingDistance: renderingDistance.default,
+  },
   interface: {},
 };
 
@@ -366,4 +385,4 @@ class UserConfig {
 }
 
 export default UserConfig;
-export {defaultConfig};
+export {defaultConfig, renderingDistance, propsLoadingDistance};

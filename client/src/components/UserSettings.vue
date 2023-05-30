@@ -6,6 +6,8 @@
 import {onMounted, onUnmounted, ref} from 'vue';
 import UserInput, {UserInputListener, qwertyBindings}
   from '../core/user-input.js';
+import {renderingDistance, propsLoadingDistance}
+  from '../core/user-config.js';
 
 // TODO: find some better way to handle this... (if any)
 const nonPrintableKeys = {
@@ -121,6 +123,29 @@ const setRunByDefault = (event) => {
   props.userConfig.at('controls').at('runByDefault').set(event.target.checked);
 };
 
+const getRenderingDistance = () => {
+  return props.userConfig.at('graphics').at('renderingDistance').value();
+};
+
+const setRenderingDistance = (event) => {
+  const value = parseInt(event.target.value);
+  localRenderingDistance.value = value;
+  props.userConfig.at('graphics').at('renderingDistance').set(value);
+};
+
+const getPropsLoadingDistance = () => {
+  return props.userConfig.at('network').at('propsLoadingDistance').value();
+};
+
+const setPropsLoadingDistance = (event) => {
+  const value = parseInt(event.target.value);
+  localPropsLoadingDistance.value = value;
+  props.userConfig.at('network').at('propsLoadingDistance').set(value);
+};
+
+const localRenderingDistance = ref(getRenderingDistance());
+const localPropsLoadingDistance = ref(getPropsLoadingDistance());
+
 onMounted(() => {
   // Each time some binding changes: we look for the corresponding input field
   // and update the value
@@ -176,6 +201,22 @@ onUnmounted(() => {
     <button @click="resetImageService" name="resetImageService">
       {{resetImageServiceButtonText}}
     </button>
+  </td></tr>
+  <tr><td colspan="2">
+  <label for="renderingDistance">
+    Rendering distance: {{localRenderingDistance}}m
+  </label>
+  <input id="renderingDistance" type="range" :min="renderingDistance.min"
+    :max="renderingDistance.max" :value="getRenderingDistance()"
+    :step="renderingDistance.step" @input="setRenderingDistance" />
+  </td></tr>
+  <tr><td colspan="2">
+  <label for="propsLoadingDistance">
+    Props loading distance: {{localPropsLoadingDistance}}m
+  </label>
+  <input id="propsLoadingDistance" type="range" :min="propsLoadingDistance.min"
+    :max="propsLoadingDistance.max" :value="getPropsLoadingDistance()"
+    :step="propsLoadingDistance.step" @input="setPropsLoadingDistance" />
   </td></tr>
 </table>
 </div>

@@ -15,8 +15,10 @@ class Engine3D {
   /**
    * @constructor
    * @param {HTML} canvas - HTML DOM canvas element to draw in
+   * @param {UserConfigNode} graphicsNode - Configuration node for the
+   *                                        graphics.
    */
-  constructor(canvas) {
+  constructor(canvas, graphicsNode = null) {
     this.stopRequested = false;
     this.renderer = new THREE.WebGLRenderer({canvas});
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -30,6 +32,18 @@ class Engine3D {
     this.head = new THREE.Group();
     this.tilt = new THREE.Group();
 
+    this.renderingDistance = 100;
+
+    if (graphicsNode) {
+      // Ready graphics node and its update callback(s)
+      this.renderingDistance = graphicsNode
+          .at('renderingDistance').value();
+
+      graphicsNode.at('renderingDistance').onUpdate((value) => {
+        this.renderingDistance = parseInt(value);
+      });
+    }
+
     this.resetUserAvatar();
     this.userAvatar.position.set(0, this.userHeight / 2, 0);
 
@@ -37,12 +51,12 @@ class Engine3D {
     const fov = 50;
     const aspect = 2;
     const near = 0.1;
-    const far = 100;
 
     this.tmpVec3 = new THREE.Vector3();
     this.tmpQuat = new THREE.Quaternion();
 
-    this.camera = new THREE.PerspectiveCamera(fov, aspect, near, far);
+    this.camera = new THREE.PerspectiveCamera(fov, aspect, near,
+        this.renderingDistance);
 
     this.head.add(this.tilt);
     this.user.add(this.head);
@@ -397,11 +411,10 @@ class Engine3D {
     }
 
     this.renderer.clear();
-    const far = this.camera.far;
     this.camera.far = 1000; // Allow large skyboxes to be fully displayed
     this.camera.updateProjectionMatrix();
     this.renderer.render(this.backgroundScene, this.camera);
-    this.camera.far = far;
+    this.camera.far = this.renderingDistance;
     this.camera.updateProjectionMatrix();
     this.renderer.clearDepth();
     this.renderer.render(this.scene, this.camera);

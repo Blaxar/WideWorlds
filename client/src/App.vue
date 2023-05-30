@@ -246,7 +246,7 @@ onMounted(() => {
   });
 
   const canvas = document.querySelector('#main-3d-canvas');
-  engine3d = new Engine3D(canvas);
+  engine3d = new Engine3D(canvas, userConfig.at('graphics'));
 
   // Update user position based on controls
   // Note: we could be passing the whole engine3d object, this would work
@@ -255,7 +255,8 @@ onMounted(() => {
   inputListener.setSubject('user', {user: engine3d.user, tilt: engine3d.tilt,
     runByDefaultNode: userConfig.at('controls').at('runByDefault')});
   // Ready world path registry for object caching
-  worldManager = new WorldManager(engine3d, worldPathRegistry, httpClient);
+  worldManager = new WorldManager(engine3d, worldPathRegistry, httpClient,
+      userConfig.at('network').at('propsLoadingDistance'));
   entityManager = new EntityManager(engine3d.entities, null,
       0.05,
       (node, avatarId) => { // Set callback for entity avatar update
