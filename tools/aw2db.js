@@ -249,7 +249,6 @@ function parseAttrFile(path) {
         ambientColor[0],
         ambientColor[1],
         ambientColor[2]);
-  worldData['ambientLightIntensity'] = 0.6;
   worldData['skyColors'] = skyColors;
   worldData['fogColor'] =
   rgbToHex(
@@ -257,9 +256,12 @@ function parseAttrFile(path) {
       fogColor[1],
       fogColor[2]);
 
-  worldData['directionalColor'] = directionalColor;
+  worldData['directionalColor'] =
+      rgbToHex(
+          directionalColor[0],
+          directionalColor[1],
+          directionalColor[2]);
   worldData['dirLightPos'] = directionalLightPosition;
-  worldData['dirLightIntensity'] = 0.6;
 
   return worldData;
 };

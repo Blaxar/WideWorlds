@@ -6,7 +6,7 @@ import {loadAvatarsZip} from '../../../common/avatars-dat-parser.js';
 import {getPageName, defaultPageDiameter}
   from '../../../common/terrain-utils.js';
 import {makePagePlane, adjustPageEdges} from './utils-3d.js';
-import {Vector3, Vector2} from 'three';
+import {Vector3, Vector2, Color} from 'three';
 
 const cmToMRatio = 0.01;
 const degToRadRatio = Math.PI / 180.0;
@@ -121,18 +121,31 @@ class WorldManager {
     this.engine3d.setSkyColorSpinning(false);
 
     if (data.enableFog) {
-      this.engine3d.setFog(data.fogColor, data.fogMinimum, data.fogMaximum);
+      const fogColor = new Color('#' + data.fogColor);
+      this.engine3d.setFog(fogColor, data.fogMinimum, data.fogMaximum);
     } else {
       this.engine3d.resetFog();
     }
+
+    const ambientColor = new Color('#' + data.ambientColor);
     this.engine3d.setAmbientLight(
-        data.ambientColor, data.ambientLightIntensity);
+        ambientColor);
+
+    const directionalColor = new Color('#' + data.directionalColor);
     this.engine3d.setDirectionalLight(
-        data.directionalColors, data.dirLightIntensity,
-        {x: data.dirLightPos[0],
-          y: data.dirLightPos[1],
-          z: data.dirLightPos[2],
-        });
+        directionalColor,
+        // Note: AW stores the world directional light position
+        //       based on flipped axis instead of the expected
+        //       ones:
+        //       - North to South instead of South to North
+        //       - West to East instead of East to West
+        //       - Up to Down instead of Down to Up
+        new Vector3(
+            -data.dirLightPos[0],
+            -data.dirLightPos[1],
+            -data.dirLightPos[2],
+        ),
+    );
 
     this.terrainEnabled = data.enableTerrain;
     this.terrainElevationOffset = data.terrainElevationOffset ?

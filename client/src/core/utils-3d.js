@@ -18,7 +18,8 @@ const defaultSkyColors = [
 ];
 
 // TODO: tweak terrain light properties based on world settings
-const defaultEmissive = 0x111111;
+const defaultAmbient = new THREE.Color(0.69, 0.69, 0.69);
+const defaultSpecular = 0x000000;
 
 /**
  * Make a reversed (inward-facing faces) 3D octahedron
@@ -68,12 +69,19 @@ function makeReversedOctahedron(
 function generateTerrainMaterials(path) {
   const materials = [];
 
+  const materialProperties = {
+    color: defaultAmbient,
+    specular: defaultSpecular,
+    shininess: 0,
+  };
+
   for (let i = 0; i < maxNbTerrainTextures; i++) {
     const texturePath = `${path}/terrain${i}.jpg`;
     const baseTexture = new THREE.TextureLoader().load(texturePath);
     baseTexture.matrixAutoUpdate = false;
     baseTexture.wrapS = THREE.RepeatWrapping;
     baseTexture.wrapT = THREE.RepeatWrapping;
+    baseTexture.colorSpace = THREE.SRGBColorSpace;
 
     // Generate the 3 remaining levels of rotation
     const rot90Texture = baseTexture.clone();
@@ -89,25 +97,21 @@ function generateTerrainMaterials(path) {
     rot270Texture.updateMatrix();
 
     // Make the materials
-    const baseMaterial = new THREE.MeshPhongMaterial({
-      emissive: defaultEmissive,
+    const baseMaterial = new THREE.MeshPhongMaterial(Object.assign({
       map: baseTexture,
-    });
+    }, materialProperties));
 
-    const rot90Material = new THREE.MeshPhongMaterial({
-      emissive: defaultEmissive,
+    const rot90Material = new THREE.MeshPhongMaterial(Object.assign({
       map: rot90Texture,
-    });
+    }, materialProperties));
 
-    const rot180Material = new THREE.MeshPhongMaterial({
-      emissive: defaultEmissive,
+    const rot180Material = new THREE.MeshPhongMaterial(Object.assign({
       map: rot180Texture,
-    });
+    }, materialProperties));
 
-    const rot270Material = new THREE.MeshPhongMaterial({
-      emissive: defaultEmissive,
+    const rot270Material = new THREE.MeshPhongMaterial(Object.assign({
       map: rot270Texture,
-    });
+    }, materialProperties));
 
     materials.push([baseMaterial, rot90Material, rot180Material,
       rot270Material]);
@@ -186,14 +190,25 @@ function makePagePlane(elevationData, textureData, sideSize, nbSegments,
       if (!isPointEnabled(textureValue)) continue;
 
       // Otherwise: go ahead and create the face
-      faces.push(
-          z * (nbSegments + 1) + x,
-          (z + 1) * (nbSegments + 1) + x,
-          z * (nbSegments + 1) + x + 1,
-          z * (nbSegments + 1) + x + 1,
-          (z + 1) * (nbSegments + 1) + x,
-          (z + 1) * (nbSegments + 1) + x + 1,
-      );
+      if ((x + (z % 2) ) % 2) {
+        faces.push(
+            z * (nbSegments + 1) + x,
+            (z + 1) * (nbSegments + 1) + x,
+            z * (nbSegments + 1) + x + 1,
+            z * (nbSegments + 1) + x + 1,
+            (z + 1) * (nbSegments + 1) + x,
+            (z + 1) * (nbSegments + 1) + x + 1,
+        );
+      } else {
+        faces.push(
+            z * (nbSegments + 1) + x,
+            (z + 1) * (nbSegments + 1) + x,
+            (z + 1) * (nbSegments + 1) + x + 1,
+            z * (nbSegments + 1) + x,
+            (z + 1) * (nbSegments + 1) + x + 1,
+            z * (nbSegments + 1) + x + 1,
+        );
+      }
 
       // Handle material group down there
       const materialId = getMaterialPos(textureValue);
@@ -305,17 +320,21 @@ function adjustPageEdges(pagePlane, elevationData, left, topLeft, top, right,
 
   if (topLeft) {
     topLeft.geometry.computeVertexNormals();
+    topLeft.geometry.getAttribute('position').needsUpdate = true;
   }
 
   if (top) {
     top.geometry.computeVertexNormals();
+    top.geometry.getAttribute('position').needsUpdate = true;
   }
 
   if (left) {
     left.geometry.computeVertexNormals();
+    left.geometry.getAttribute('position').needsUpdate = true;
   }
 
   pagePlane.geometry.computeVertexNormals();
+  pagePlane.geometry.getAttribute('position').needsUpdate = true;
 }
 
 export {makeReversedOctahedron, defaultSkyColors, generateTerrainMaterials,

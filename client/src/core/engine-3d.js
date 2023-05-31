@@ -6,6 +6,7 @@ import * as THREE from 'three';
 import * as utils3D from './utils-3d.js';
 
 const defaultUserHeight = 1.80;
+const defaultLightIntensity = 0.6;
 
 /**
  * Core 3D management class, meant to abstract several three.js
@@ -149,10 +150,10 @@ class Engine3D {
    * @param {float} near - How close to the camera the fog starts.
    * @param {float} far - How far the fog extends.
    */
-  setFog(color = 'FF0000', near = 0.25, far = 40) {
+  setFog(color = new THREE.Color('FF0000'), near = 0.25, far = 40) {
     this.resetFog();
-    this.scene.fog = new THREE.Fog(
-        new THREE.Color(parseInt('0x' + color)),
+
+    this.scene.fog = new THREE.Fog(color,
         near, far);
   }
   /** Remove the current world fog if any */
@@ -166,12 +167,13 @@ class Engine3D {
    * @param {Color} color - Color of the light
    * @param {integer} intensity - intensity of the ambient light
    */
-  setAmbientLight(color = 'FFFFFF', intensity = 1) {
+  setAmbientLight(color = new THREE.Color('#FFFFFF'),
+      intensity = defaultLightIntensity) {
     this.resetAmbientLight();
 
     this.ambientLight = new THREE.AmbientLight(
-        new THREE.Color(parseInt('0x' + color)),
-        intensity);
+        color, intensity);
+
     this.scene.add(this.ambientLight);
   }
 
@@ -186,18 +188,18 @@ class Engine3D {
   /**
    * Set directional light color, with a nice soft orange default
    * @param {Color} color - Color of the light
-   * @param {integer} intensity - intensity of the directional light
-   * @param {Array} position - target position for the directional Light
+   * @param {Vector3} position - Source position for the directional light
+   * @param {number} intensity - Intensity of the directional light
    */
-  setDirectionalLight(color = 'FFFF70', intensity = 0.9,
-      position = {x: 0, y: 0, z: 0}) {
+  setDirectionalLight(color = new THREE.Color('FFFF70'),
+      position = THREE.Object3D.DEFAULT_UP,
+      intensity = defaultLightIntensity) {
     this.resetDirectionalLight();
 
     this.directionalLight = new THREE.DirectionalLight(
-        new THREE.Color(parseInt('0x' + color)),
-        0.6);
+        color, intensity);
 
-    this.directionalLight.position.set(position.x, position.y, position.z);
+    this.directionalLight.position.copy(position);
 
     this.scene.add(this.directionalLight);
   }
