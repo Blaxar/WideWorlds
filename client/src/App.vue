@@ -237,7 +237,7 @@ const render = () => {
 };
 
 // As soon as the component is mounted: initialize Three.js 3D context and
-// spool up rendering cycle
+// spool up the rendering cycle
 onMounted(() => {
   document.addEventListener('keydown', (event) => {
     if (event.ctrlKey && !someInputFocused) {
@@ -256,7 +256,7 @@ onMounted(() => {
     runByDefaultNode: userConfig.at('controls').at('runByDefault')});
   // Ready world path registry for object caching
   worldManager = new WorldManager(engine3d, worldPathRegistry, httpClient,
-      userConfig.at('network').at('propsLoadingDistance'));
+      userConfig.at('graphics').at('propsLoadingDistance'));
   entityManager = new EntityManager(engine3d.entities, null,
       0.05,
       (node, avatarId) => { // Set callback for entity avatar update

@@ -27,10 +27,10 @@ const defaultConfig = {
   },
   network: {
     imageService: 'https://images.weserv.nl/?url=',
-    propsLoadingDistance: propsLoadingDistance.default,
   },
   graphics: {
     renderingDistance: renderingDistance.default,
+    propsLoadingDistance: propsLoadingDistance.default,
   },
   interface: {},
 };

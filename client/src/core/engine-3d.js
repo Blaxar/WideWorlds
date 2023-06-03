@@ -5,8 +5,10 @@
 import * as THREE from 'three';
 import * as utils3D from './utils-3d.js';
 
-const defaultUserHeight = 1.80;
+const defaultUserHeight = 1.80; // In meters
 const defaultLightIntensity = 0.6;
+const defaultRenderingDistance = 100.0; // In meters
+const defaultHidingDistance = 60.0; // In meters
 
 /**
  * Core 3D management class, meant to abstract several three.js
@@ -33,17 +35,27 @@ class Engine3D {
     this.head = new THREE.Group();
     this.tilt = new THREE.Group();
 
-    this.renderingDistance = 100;
+    this.renderingDistance = defaultRenderingDistance;
+    this.hidingDistance = defaultHidingDistance;
 
     if (graphicsNode) {
       // Ready graphics node and its update callback(s)
       this.renderingDistance = graphicsNode
           .at('renderingDistance').value();
+      this.hidingDistance = graphicsNode
+          .at('propsLoadingDistance').value();
 
       graphicsNode.at('renderingDistance').onUpdate((value) => {
-        this.renderingDistance = parseInt(value);
+        this.renderingDistance = parseFloat(value);
+      });
+
+      graphicsNode.at('propsLoadingDistance').onUpdate((value) => {
+        this.hidingDistance = parseFloat(value);
+        this.lods = [0.0, this.hidingDistance];
       });
     }
+
+    this.lods = [0.0, defaultHidingDistance];
 
     this.resetUserAvatar();
     this.userAvatar.position.set(0, this.userHeight / 2, 0);
@@ -85,6 +97,7 @@ class Engine3D {
     this.directionalLight = null;
     this.backgroundScene.add(this.reversedOctahedron);
     this.nodes = new Map();
+    this.lodNodeIDs = new Set();
     this.lastId = 0;
   }
 
@@ -144,6 +157,7 @@ class Engine3D {
     if (this.skyBox) this.backgroundScene.remove(this.skyBox);
     this.skyBox = null;
   }
+
   /**
    * Set the scene's fog
    * @param {Color} color - Color of the fog
@@ -156,12 +170,14 @@ class Engine3D {
     this.scene.fog = new THREE.Fog(color,
         near, far);
   }
+
   /** Remove the current world fog if any */
   resetFog() {
     if (this.scene.fog) {
       this.scene.fog = null;
     }
   }
+
   /**
    * Set ambient light color, with a nice soft white light default
    * @param {Color} color - Color of the light
@@ -211,17 +227,32 @@ class Engine3D {
       this.directionalLight = null;
     }
   }
+
   /**
    * Create new node in the scene
    * @param {number} x - X coordinate of the node.
    * @param {number} y - Y coordinate of the node.
    * @param {number} z - Z coordinate of the node.
+   * @param {boolean} lod - Whether or not the node will allow for different
+   *                        levels of detail, false by default.
    * @return {integer} ID of the newly-spawned node.
    */
-  spawnNode(x = 0, y = 0, z = 0) {
+  spawnNode(x = 0, y = 0, z = 0, lod = false) {
     const id = this.lastId++;
-    this.nodes.set(id, new THREE.Group());
+    this.nodes.set(id, lod ? new THREE.LOD() :
+        new THREE.Group());
     const node = this.nodes.get(id);
+
+    if (lod) {
+      // Ready the LOD with different levels, ready to welcome
+      // 3D objects
+      node.autoUpdate = false;
+      for (const distance of this.lods) {
+        node.addLevel(new THREE.Group(), distance);
+      }
+      this.lodNodeIDs.add(id);
+    }
+
     node.position.set(x, y, z);
     this.scene.add(node);
     return id;
@@ -237,6 +268,8 @@ class Engine3D {
 
     const node = this.nodes.get(id);
 
+    if (node.isLOD) this.lodNodeIDs.delete(id);
+
     this.scene.remove(node);
     this.nodes.delete(id);
 
@@ -247,12 +280,28 @@ class Engine3D {
    * Append object to existing node in the scene
    * @param {integer} id - ID of the node to append the object to.
    * @param {Object3D} obj3d - Object to append to the node.
+   * @param {integer} level - If node is LOD: level to set the object in.
    * @return {boolean} True if node exists, false otherwise.
    */
-  appendToNode(id, obj3d) {
+  appendToNode(id, obj3d, level = 0) {
     if (!this.nodes.has(id)) return false;
 
-    this.nodes.get(id).add(obj3d);
+    const node = this.nodes.get(id);
+
+    if (node.isLOD) {
+      // The target level needs to exist
+      if (level < 0 || level >= node.levels.length) {
+        return false;
+      }
+
+      node.levels[level].object.add(obj3d);
+    } else if (level !== 0) {
+      // Not a LOD, can't be any other level
+      return false;
+    } else {
+      node.add(obj3d);
+    }
+
     return true;
   }
 
@@ -260,11 +309,47 @@ class Engine3D {
    * Get object by name from existing node in the scene
    * @param {integer} id - ID of the node to get the object from.
    * @param {string} name - Object to append to the node.
+   * @param {integer} level - If node is LOD: level to set the object in.
    * @return {Object3D} If found: a 3D asset bearing this name,
    *                    falsy otherwise.
    */
-  getFromNodeByName(id, name) {
-    return this.nodes.get(id)?.getObjectByName(name);
+  getFromNodeByName(id, name, level = 0) {
+    if (!this.nodes.has(id)) return null;
+
+    const node = this.nodes.get(id);
+
+    if (node.isLOD) {
+      // The target level needs to exist
+      if (level < 0 || level >= node.levels.length) {
+        return null;
+      }
+
+      return node.levels[level].getObjectByName(name);
+    } else if (level !== 0) {
+      // Not a LOD, can't be any other level
+      return null;
+    } else {
+      return node.getObjectByName(name);
+    }
+  }
+
+  /**
+   * Update all LOD levels based on current hiding distance and
+   * camera position
+   * @param {Set<integer>} lodNodeIDs - ID of the LOD nodes to update, none
+   +                                    LOD nodes or none existing nodes
+   *                                    will be ignored.
+   * @param {Camera} camera - Camera to use as a reference to update the
+   *                          displayed level of each LOD node.
+   */
+  updateLODs(lodNodeIDs, camera = this.camera) {
+    lodNodeIDs.forEach((id) => {
+      const node = this.nodes.get(id);
+      if (!node || !node.isLOD) return;
+
+      node.levels[1].distance = this.hidingDistance;
+      node.update(camera);
+    });
   }
 
   /**
@@ -382,8 +467,7 @@ class Engine3D {
 
     this.clickRaycaster.setFromCamera(this.pointer, this.camera);
 
-
-    // Adjust the direction we're looking at base on the position of
+    // Adjust the direction we're looking at based on the position of
     // the camera on the axis of view: if it's in front of the head:
     // we mean to look back;
     // Else, if it's behind or right on the head position: we mean to

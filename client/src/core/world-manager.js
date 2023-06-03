@@ -62,6 +62,7 @@ class WorldManager {
     this.xzDirection = new Vector2();
     this.terrainEnabled = false;
     this.terrainElevationOffset = 0.0; // In meters
+    this.previousCX = this.previousCZ = null;
 
     if (propsLoadingNode) {
       // Ready props loading distance and its update callback
@@ -69,6 +70,7 @@ class WorldManager {
       this.updateChunkLoadingPattern(propsLoadingDistance);
       propsLoadingNode.onUpdate((value) => {
         this.updateChunkLoadingPattern(parseInt(value));
+        this.previousCX = this.previousCZ = null;
       });
     }
   }
@@ -196,6 +198,7 @@ class WorldManager {
     this.xzDirection.set(0, 0);
     this.terrainEnabled = false;
     this.terrainElevationOffset = 0.0;
+    this.previousCX = this.previousCZ = null;
   }
 
   /** Clear all chunks */
@@ -247,6 +250,15 @@ class WorldManager {
     const cZ = Math.floor(pos.z / (this.chunkSide * cmToMRatio) + 0.5);
     const pX = Math.floor(pos.x / (defaultPageDiameter * 10) + 0.5);
     const pZ = Math.floor(pos.z / (defaultPageDiameter * 10) + 0.5);
+
+    if (this.previousCX !== cX || this.previousCZ !== cZ) {
+      const lodCamera = this.engine3d.camera.clone();
+      lodCamera.position.setY(0.0);
+      this.engine3d.updateLODs(this.chunks, lodCamera);
+    }
+
+    this.previousCX = cX;
+    this.previousCZ = cZ;
 
     for (const [x, z] of this.chunkLoadingPattern) {
       this.loadChunk(cX + x, cZ + z);
@@ -315,7 +327,7 @@ class WorldManager {
 
     const chunkPos = [x * this.chunkSide * cmToMRatio, 0,
       z * this.chunkSide * cmToMRatio];
-    const chunkNodeHandle = this.engine3d.spawnNode(...chunkPos);
+    const chunkNodeHandle = this.engine3d.spawnNode(...chunkPos, true);
     this.chunks.set(`${x}_${z}`, chunkNodeHandle);
 
     const halfChunkSide = this.chunkSide / 2;

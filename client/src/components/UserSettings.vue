@@ -134,13 +134,13 @@ const setRenderingDistance = (event) => {
 };
 
 const getPropsLoadingDistance = () => {
-  return props.userConfig.at('network').at('propsLoadingDistance').value();
+  return props.userConfig.at('graphics').at('propsLoadingDistance').value();
 };
 
 const setPropsLoadingDistance = (event) => {
   const value = parseInt(event.target.value);
   localPropsLoadingDistance.value = value;
-  props.userConfig.at('network').at('propsLoadingDistance').set(value);
+  props.userConfig.at('graphics').at('propsLoadingDistance').set(value);
 };
 
 const localRenderingDistance = ref(getRenderingDistance());
