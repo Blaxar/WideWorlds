@@ -11,6 +11,9 @@ import * as fflate from 'fflate';
 import {AWActionParser} from 'aw-action-parser';
 
 const unknownObjectName = '_unknown_';
+const defaultFontSize = 128;
+const maxCanvasWidth = 256;
+const maxCanvasHeight = 256;
 
 /* Assume .rwx file extension if none is provided */
 const normalizePropName = (name) =>
@@ -311,90 +314,104 @@ class ModelRegistry {
       color = {r: 255, g: 255, b: 255},
       bcolor = {r: 0, g: 0, b: 255}) {
     const canvas = document.createElement('canvas');
-    canvas.width = ratio > 1 ? 256 : 256 * ratio;
-    canvas.height = ratio > 1 ? 256 / ratio : 256;
+    const canvasWidth = ratio > 1 ? maxCanvasWidth : maxCanvasWidth * ratio;
+    const canvasHeight = ratio > 1 ? maxCanvasHeight / ratio : maxCanvasHeight;
+
+    canvas.width = canvasWidth;
+    canvas.height = canvasHeight;
     const ctx = canvas.getContext('2d');
     ctx.fillStyle = `rgb(${bcolor.r},${bcolor.g},${bcolor.b})`;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.fillStyle = `rgb(${color.r},${color.g},${color.b})`;
-    ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
 
-    const fontSizes = [120, 50, 40, 30, 20, 10, 5];
-    let fontIndex = 0;
+    let fontSize = defaultFontSize;
+    let fontFit = false;
 
-    const words = text.split(/([ \n])/);
-    let lines = [''];
-    const maxWidth = canvas.width * 0.95;
-    const maxHeight = (canvas.height * 0.95) / ratio;
+    // Find the maximum font size that fits the text without cropping
+    while (!fontFit && fontSize > 0) {
+      ctx.font = fontSize + 'px Arial';
+      const lines = this.breakTextIntoLines(text, ctx, canvasWidth);
 
-    ctx.font = `${fontSizes[fontIndex]}px Arial`;
+      const totalHeight = lines.length * fontSize * 1.2;
+      const totalWidth = Math.max(
+          ...lines.map((line) => ctx.measureText(line).width),
+      );
 
-    // TODO: use a proper way to get line height from font size
-    const fontSizeToHeightRatio = 1;
-    let lineHeight = fontSizes[fontIndex] * fontSizeToHeightRatio;
-
-    let curWordIndex = 0;
-
-    let tentativeWord;
-    let tentativeLine;
-
-    while (curWordIndex < words.length) {
-      const curLine = lines.length - 1;
-
-      if (words[curWordIndex] === '\n') {
-        tentativeWord = '';
+      if (totalHeight <= canvasHeight && totalWidth <= canvasWidth) {
+        fontFit = true;
       } else {
-        tentativeWord = words[curWordIndex];
-      }
-
-      if (lines[curLine].length > 0) {
-        tentativeLine = lines[curLine] + tentativeWord;
-      } else {
-        tentativeLine = tentativeWord;
-      }
-
-      if (
-        words[curWordIndex] !== '\n' &&
-         ctx.measureText(tentativeLine).width <= maxWidth
-      ) {
-        // TODO: use actualBoundingBoxLeft and actualBoundingBoxRight
-        // instead of .width
-        // Adding word to end of line
-        lines[curLine] = tentativeLine;
-        curWordIndex += 1;
-      } else if (
-        ctx.measureText(tentativeWord).width <= maxWidth &&
-         lineHeight * (curLine + 1) <= maxHeight
-      ) {
-        // Adding word as a new line
-        lines.push(tentativeWord);
-        curWordIndex += 1;
-      } else if (fontIndex < fontSizes.length - 1) {
-        // Retry all with smaller font size
-        fontIndex += 1;
-        ctx.font = `${fontSizes[fontIndex]}px Arial`;
-        lineHeight = fontSizes[fontIndex] * fontSizeToHeightRatio;
-        lines = [''];
-        curWordIndex = 0;
-      } else {
-        // Min font size reached, add word as new line anyway
-        lines.push(tentativeWord);
-        curWordIndex += 1;
+        fontSize--;
       }
     }
 
-    lines.forEach((line, i) => {
-      ctx.fillText(
-          line,
-          canvas.width / 2,
-          canvas.height / 2 +
-           i * lineHeight -
-           ((lines.length - 1) * lineHeight) / 2,
-      );
+    const lines = this.breakTextIntoLines(text, ctx, canvasWidth);
+
+    ctx.font = fontSize + 'px Arial';
+    ctx.textBaseline = 'top';
+
+    const lineHeight = fontSize * 1.2;
+    const startY = (canvasHeight - lines.length * lineHeight) / 2;
+
+    lines.forEach((line, index) => {
+      const textWidth = ctx.measureText(line).width;
+      const startX = (canvasWidth - textWidth) / 2;
+      const y = startY + index * lineHeight;
+      ctx.fillText(line, startX, y);
     });
 
     return canvas;
+  }
+
+  /**
+   * Breaks the text into lines to fit within the given maximum width
+   * @param {string} text - The text to break into lines
+   * @param {CanvasRenderingContext2D} ctx - The canvas rendering context
+   * @param {integer} maxWidth - The maximum width of a line
+   * @return {Array.<string>} The array of lines
+  */
+  breakTextIntoLines( text = '', ctx, maxWidth) {
+    const lines = [];
+    const paragraphs = text.split('\n');
+
+    paragraphs.forEach((paragraph) => {
+      const words = paragraph.split(' ');
+      let currentLine = '';
+
+      words.forEach((word) => {
+        if (word.length === 0) {
+          // Skip empty words
+          return;
+        }
+
+        const metrics = ctx.measureText(`${currentLine} ${word}`);
+        const lineWidth = metrics.width;
+
+        if (lineWidth < maxWidth || currentLine.length === 0) {
+          currentLine += ` ${word}`;
+        } else {
+          lines.push(currentLine.trim());
+          currentLine = word;
+        }
+      });
+
+      if (currentLine.length > 0) {
+        lines.push(currentLine.trim());
+      }
+    });
+
+    // Handle empty lines at the end of the text
+    const emptyLineCount = [...text].reduceRight((count, char, index) => {
+      if (char === '\n' && index === text.length - count - 1) {
+        return count + 1;
+      }
+      return count;
+    }, 0);
+
+    // Add empty lines at the end
+    lines.push(...Array(emptyLineCount).fill(''));
+
+    return lines;
   }
 }
 
