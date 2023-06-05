@@ -14,6 +14,9 @@ import {hideBin} from 'yargs/helpers';
 import iconvlite from 'iconv-lite';
 import fs from 'fs';
 
+const cmToMRatio = 0.01;
+const tenthDegToRadRatio = Math.PI / 180.0 * 0.1;
+
 const worldAttr = {
   0: 'name',
   3: 'path',
@@ -306,12 +309,12 @@ function* parsePropFile(path) {
     const date = parseInt(propSplit[1]);
 
     // Parse position and orientation
-    const x = parseInt(propSplit[2]);
-    const y = parseInt(propSplit[3]);
-    const z = parseInt(propSplit[4]);
-    const yaw = parseInt(propSplit[5]);
-    const pitch = parseInt(propSplit[6]);
-    const roll = parseInt(propSplit[7]);
+    const x = parseInt(propSplit[2]) * cmToMRatio;
+    const y = parseInt(propSplit[3]) * cmToMRatio;
+    const z = parseInt(propSplit[4]) * cmToMRatio;
+    const yaw = parseInt(propSplit[5]) * tenthDegToRadRatio;
+    const pitch = parseInt(propSplit[6]) * tenthDegToRadRatio;
+    const roll = parseInt(propSplit[7]) * tenthDegToRadRatio;
 
     // Parse name, action and description
     const nameLength = parseInt(propSplit[8]);

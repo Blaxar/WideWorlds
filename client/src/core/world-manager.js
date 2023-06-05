@@ -8,9 +8,6 @@ import {getPageName, defaultPageDiameter}
 import {makePagePlane, adjustPageEdges} from './utils-3d.js';
 import {Vector3, Vector2, Color} from 'three';
 
-const cmToMRatio = 0.01;
-const degToRadRatio = Math.PI / 180.0;
-
 const defaultChunkLoadingPattern = [[-1, 1], [0, 1], [1, 1],
   [-1, 0], [0, 0], [1, 0],
   [-1, -1], [0, -1], [1, -1]];
@@ -30,13 +27,13 @@ class WorldManager {
    *                                  the server.
    * @param {UserConfigNode} propsLoadingNode - Configuration node for the
    *                                            props loading distance.
-   * @param {integer} chunkSide - Chunk side length (in centimeters).
+   * @param {integer} chunkSide - Chunk side length (in meters).
    * @param {number} textureUpdatePeriod - Amount of time (in seconds) to wait
    *                                       before moving animated textures to
    *                                       their next frame.
    */
   constructor(engine3d, worldPathRegistry, httpClient, propsLoadingNode = null,
-      chunkSide = 20 * 100, textureUpdatePeriod = 0.20) {
+      chunkSide = 20, textureUpdatePeriod = 0.20) {
     this.chunkLoadingPattern = defaultChunkLoadingPattern;
     this.engine3d = engine3d;
     this.worldPathRegistry = worldPathRegistry;
@@ -47,7 +44,7 @@ class WorldManager {
     this.currentTerrainMaterials = [];
 
     // Props handling
-    this.chunkSide = chunkSide; // In centimeters
+    this.chunkSide = chunkSide; // In meters
     this.chunks = new Map();
     this.props = new Map();
 
@@ -82,7 +79,7 @@ class WorldManager {
   updateChunkLoadingPattern(radius) {
     const chunkLoadingPattern = [];
     const chunkRadius =
-        Math.floor(radius / (this.chunkSide * cmToMRatio) + 0.5);
+        Math.floor(radius / (this.chunkSide) + 0.5);
 
     for (let x = - chunkRadius; x < chunkRadius + 1; x++) {
       for (let z = - chunkRadius; z < chunkRadius + 1; z++) {
@@ -246,8 +243,8 @@ class WorldManager {
       sprite.updateMatrix();
     }
 
-    const cX = Math.floor(pos.x / (this.chunkSide * cmToMRatio) + 0.5);
-    const cZ = Math.floor(pos.z / (this.chunkSide * cmToMRatio) + 0.5);
+    const cX = Math.floor(pos.x / (this.chunkSide) + 0.5);
+    const cZ = Math.floor(pos.z / (this.chunkSide) + 0.5);
     const pX = Math.floor(pos.x / (defaultPageDiameter * 10) + 0.5);
     const pZ = Math.floor(pos.z / (defaultPageDiameter * 10) + 0.5);
 
@@ -325,8 +322,8 @@ class WorldManager {
       this.chunks.remove(chunkId);
     }
 
-    const chunkPos = [x * this.chunkSide * cmToMRatio, 0,
-      z * this.chunkSide * cmToMRatio];
+    const chunkPos = [x * this.chunkSide, 0,
+      z * this.chunkSide];
     const chunkNodeHandle = this.engine3d.spawnNode(...chunkPos, true);
     this.chunks.set(`${x}_${z}`, chunkNodeHandle);
 
@@ -342,13 +339,10 @@ class WorldManager {
 
     for (const prop of chunk) {
       const obj3d = await modelRegistry.get(prop.name);
-      obj3d.position.set(prop.x * cmToMRatio - chunkPos[0],
-          prop.y * cmToMRatio,
-          prop.z * cmToMRatio - chunkPos[2]);
+      obj3d.position.set(prop.x - chunkPos[0], prop.y,
+          prop.z - chunkPos[2]);
 
-      obj3d.rotation.set(prop.pitch * degToRadRatio / 10,
-          prop.yaw * degToRadRatio / 10,
-          prop.roll * degToRadRatio / 10,
+      obj3d.rotation.set(prop.pitch, prop.yaw, prop.roll,
           'YZX');
 
       obj3d.userData.action = prop?.action;

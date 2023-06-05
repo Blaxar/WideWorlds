@@ -24,22 +24,22 @@ const PropSchema = new EntitySchema({
       type: 'int',
     },
     x: {
-      type: 'int',
+      type: 'double precision', // meters
     },
     y: {
-      type: 'int',
+      type: 'double precision', // meters
     },
     z: {
-      type: 'int',
+      type: 'double precision', // meters
     },
     yaw: {
-      type: 'int',
+      type: 'float', // radians
     },
     pitch: {
-      type: 'int',
+      type: 'float', // radians
     },
     roll: {
-      type: 'int',
+      type: 'float', // radians
     },
     name: {
       type: 'text',

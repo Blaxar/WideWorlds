@@ -86,12 +86,12 @@ class HttpClient {
   /**
    * Get a list of props from a given worlds within a defined area
    * @param {integer} wid - ID of the world to get props from.
-   * @param {integer} minX - Minimum X coordinate value (in centimeters).
-   * @param {integer} maxX - Maximum X coordinate value (in centimeters).
-   * @param {integer} minY - Minimum Y coordinate value (in centimeters).
-   * @param {integer} maxY - Maximum Y coordinate value (in centimeters).
-   * @param {integer} minZ - Minimum Z coordinate value (in centimeters).
-   * @param {integer} maxZ - Maximum Z coordinate value (in centimeters).
+   * @param {integer} minX - Minimum X coordinate value (in meters).
+   * @param {integer} maxX - Maximum X coordinate value (in meters).
+   * @param {integer} minY - Minimum Y coordinate value (in meters).
+   * @param {integer} maxY - Maximum Y coordinate value (in meters).
+   * @param {integer} minZ - Minimum Z coordinate value (in meters).
+   * @param {integer} maxZ - Maximum Z coordinate value (in meters).
    * @return {Promise} Promise of a list of props.
    */
   async getProps(wid, minX, maxX, minY, maxY, minZ, maxZ) {
