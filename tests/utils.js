@@ -46,6 +46,8 @@ const makeHttpTestBase = (port = 62931, dbFile = 'mocha-http-test-db.sqlite3', s
     adminId: 0,
     citizenId: 0,
     now: 0,
+    firstPropId: null,
+    secondPropId: null,
     adminBearerToken: '',
     citizenBearerToken: '',
     worldFolder: join(tmpdir(), `base${Date.now()}`),
@@ -70,8 +72,10 @@ const makeHttpTestBase = (port = 62931, dbFile = 'mocha-http-test-db.sqlite3', s
     base.worldId = await makeTestWorld(TypeORM.getConnection(), 'Test World', '{}');
 
     // Create users in database, get their IDs back
-    base.adminId = await makeTestUser(TypeORM.getConnection(), 'xXx_B0b_xXx', '3p1cP4sSw0Rd', 'test@somemail.com', 'admin');
-    base.citizenId = await makeTestUser(TypeORM.getConnection(), 'oOo_Al1ce_oOo', '3p1cP4sSw0Rd', 'test2@somemail.com', 'citizen');
+    base.adminId = await makeTestUser(TypeORM.getConnection(), 'xXx_B0b_xXx',
+        '3p1cP4sSw0Rd', 'test@somemail.com', 'admin');
+    base.citizenId = await makeTestUser(TypeORM.getConnection(), 'oOo_Al1ce_oOo',
+        '3p1cP4sSw0Rd', 'test2@somemail.com', 'citizen');
 
     base.userCache.set(base.adminId, {name: 'xXx_B0b_xXx', role: 'admin'});
     base.userCache.set(base.citizenId, {name: 'oOo_Al1ce_oOo', role: 'citizen'});
@@ -105,10 +109,12 @@ const makeHttpTestBase = (port = 62931, dbFile = 'mocha-http-test-db.sqlite3', s
     base.now = Date.now();
 
     // Fill-in database with a few props belonging to the world right above
-    await makeTestProp(TypeORM.getConnection(), base.worldId, base.adminId, base.now, 0, 0, 0, 0, 0, 0,
-        'wall01.rwx', 'Some description.', 'create color red;');
-    await makeTestProp(TypeORM.getConnection(), base.worldId, base.adminId, base.now, 100, -200, 300, 450, 900, 1350,
-        'wall02.rwx', 'Some other description.', 'create color blue;');
+    base.firstPropId = await makeTestProp(TypeORM.getConnection(), base.worldId,
+        base.adminId, base.now, 0, 0, 0, 0, 0, 0, 'wall01.rwx',
+        'Some description.', 'create color red;');
+    base.secondPropId = await makeTestProp(TypeORM.getConnection(), base.worldId,
+        base.adminId, base.now, 100, -200, 300, 450, 900, 1350, 'wall02.rwx',
+        'Some other description.', 'create color blue;');
   };
 
   const afterEach = async () => {

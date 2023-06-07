@@ -4,19 +4,17 @@
 
 import * as db from '../common/db/utils.js';
 import World from '../common/db/model/World.js';
-import Prop from '../common/db/model/Prop.js';
 import User from '../common/db/model/User.js';
 import TerrainStorage from './terrain-storage.js';
 import {packElevationData} from '../common/terrain-utils.js';
-import {hasUserRole, hasUserIdInParams, middleOr, forbiddenOnFalse}
-  from './utils.js';
+import {hasUserRole, hasUserIdInParams, middleOr, forbiddenOnFalse,
+  getAuthenticationCallback} from './utils.js';
+import registerPropsEndpoints from './http-props.js';
 import {createServer} from 'http';
+import jwt from 'jsonwebtoken';
 import cors from 'cors';
 import express from 'express';
-import jwt from 'jsonwebtoken';
 import {join} from 'node:path';
-
-const bearerRegex = /^Bearer (.*)$/i;
 
 const minNbUsersPerPage = 1;
 const defaultNbUsersPerPage = 200;
@@ -24,29 +22,9 @@ const maxNbUsersPerPage = defaultNbUsersPerPage*10;
 
 const spawnHttpServer = async (path, port, secret, worldFolder, userCache,
     terrainCache) => {
-  const authenticate = (req, res, next) => {
-    // Get Bearer token, we strip the 'Bearer' part
-    const authMatch = req.headers['authorization']?.match(bearerRegex);
-    const token = authMatch && authMatch[1];
-
-    // Test if token is falsy
-    if (!token) {
-      // We do not understand the credentials being provided at all (malformed)
-      return res.status(401).json({});
-    }
-
-    jwt.verify(token, secret, (err, payload) => {
-      if (err) {
-        // We aknowledge a Bearer token was provided to us, but it is not valid
-        return res.status(403).json({});
-      }
-
-      req.userId = payload.userId;
-      req.userRole = payload.userRole;
-
-      next();
-    });
-  };
+  // Get a version of the authentication method working with the
+  // secret we need
+  const authenticate = getAuthenticationCallback(secret);
 
   const getTerrainStorage = (worldId) => {
     if (!terrainCache.has(worldId)) {
@@ -120,102 +98,7 @@ const spawnHttpServer = async (path, port, secret, worldFolder, userCache,
           .catch((err) => res.status(500).json({}));
     });
 
-    app.get('/api/worlds/:id/props', authenticate, (req, res) => {
-      res.setHeader('Content-Type', 'application/json');
-      const wid = req.params.id;
-
-      let minX = req.query.minX;
-      let maxX = req.query.maxX;
-      let minY = req.query.minY;
-      let maxY = req.query.maxY;
-      let minZ = req.query.minZ;
-      let maxZ = req.query.maxZ;
-
-      // Get prop of single world using its id (return 404 if not found)
-      connection.manager.createQueryBuilder(World, 'world')
-          .where('world.id = :wid', {wid}).getOne().then((world) => {
-            if (!world) {
-              res.status(404).json({});
-            } else {
-              // World has been found, filter props using world ID
-              const queryBuilder =
-                  connection.manager.createQueryBuilder(Prop, 'prop')
-                      .where('prop.worldId = :wid', {wid});
-
-              // Get chunked list of props by filtering with provided XYZ
-              // boundaries (if any)
-              if (minX) {
-                minX = parseInt(minX);
-
-                if (!isFinite(minX)) {
-                  res.status(400).json({});
-                  return;
-                }
-
-                queryBuilder.andWhere('prop.x >= :minX', {minX});
-              }
-
-              if (maxX) {
-                maxX = parseInt(maxX);
-
-                if (!isFinite(maxX)) {
-                  res.status(400).json({});
-                  return;
-                }
-
-                queryBuilder.andWhere('prop.x < :maxX', {maxX});
-              }
-
-              if (minY) {
-                minY = parseInt(minY);
-
-                if (!isFinite(minY)) {
-                  res.status(400).json({});
-                  return;
-                }
-
-                queryBuilder.andWhere('prop.y >= :minY', {minY});
-              }
-
-              if (maxY) {
-                maxY = parseInt(maxY);
-
-                if (!isFinite(maxY)) {
-                  res.status(400).json({});
-                  return;
-                }
-
-                queryBuilder.andWhere('prop.y < :maxY', {maxY});
-              }
-
-              if (minZ) {
-                minZ = parseInt(minZ);
-
-                if (!isFinite(minZ)) {
-                  res.status(400).json({});
-                  return;
-                }
-
-                queryBuilder.andWhere('prop.z >= :minZ', {minZ});
-              }
-
-              if (maxZ) {
-                maxZ = parseInt(maxZ);
-
-                if (!isFinite(maxZ)) {
-                  res.status(400).json({});
-                  return;
-                }
-
-                queryBuilder.andWhere('prop.z < :maxZ', {maxZ});
-              }
-
-              // Respond with list of props
-              queryBuilder.getMany().then((props) => res.send(props));
-            }
-          })
-          .catch((err) => res.status(500).json({}));
-    });
+    registerPropsEndpoints(app, authenticate, connection);
 
     app.get('/api/worlds/:id/terrain/:x/:z/elevation', authenticate,
         (req, res) => {
@@ -233,14 +116,15 @@ const spawnHttpServer = async (path, port, secret, worldFolder, userCache,
               .where('world.id = :wid', {wid}).getOne().then((world) => {
                 if (!world) {
                   res.status(404).send();
-                } else {
-                  getTerrainStorage(wid).getPage(pageX, pageZ).then(
-                      (page) => {
-                        const packed = packElevationData(page.elevationData);
-                        res.send(Buffer.from(packed, 'binary'));
-                      },
-                  );
+                  return;
                 }
+
+                getTerrainStorage(wid).getPage(pageX, pageZ).then(
+                    (page) => {
+                      const packed = packElevationData(page.elevationData);
+                      res.send(Buffer.from(packed, 'binary'));
+                    },
+                );
               });
         });
 

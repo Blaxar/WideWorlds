@@ -26,7 +26,6 @@ class TerrainStorage {
     if (!fs.existsSync(this.folder)) {
       fs.mkdirSync(this.folder, {recursive: true});
     }
-    // TODO: load all available pages from storages
   }
 
   /**
