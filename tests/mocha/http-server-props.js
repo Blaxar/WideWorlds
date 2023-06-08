@@ -3,7 +3,7 @@
  */
 
 import Prop from '../../common/db/model/Prop.js';
-import makeHttpTestBase from '../utils.js';
+import makeHttpTestBase, {epsEqual} from '../utils.js';
 import TypeORM from 'typeorm';
 import request from 'superwstest';
 import * as assert from 'assert';
@@ -22,7 +22,7 @@ describe('http server props', () => {
 
   after(ctx.after);
 
-  // Testing Prop API
+  // Testing GET Prop API
 
   it('GET /api/worlds/id/props - OK', (done) => {
     request(base.server)
@@ -138,6 +138,8 @@ describe('http server props', () => {
         .expect(404, done);
   });
 
+  // Testing PUT Prop API
+
   it('PUT /api/worlds/id/props - OK', (done) => {
     const unknownPropId = 66666;
 
@@ -145,13 +147,18 @@ describe('http server props', () => {
     const payload = {};
 
     payload[base.firstPropId] = {
-      name: 'door01.rwx',
-      description: "Some new description.",
+      x: 1.23,
+      y: -4.56,
+      z: 0.2,
+      yaw: 3.141592,
+      pitch: -2.0,
+      roll: 5.2,
     };
 
     payload[base.secondPropId] = {
       name: 'door02.rwx',
       description: "Some renewed description.",
+      action: 'create color green;',
     };
 
     payload[unknownPropId] = {
@@ -192,14 +199,14 @@ describe('http server props', () => {
                 // Assert first prop fields
                 assert.equal(props[0].worldId, base.worldId);
                 assert.equal(props[0].userId, base.adminId);
-                assert.equal(props[0].x, 0);
-                assert.equal(props[0].y, 0);
-                assert.equal(props[0].z, 0);
-                assert.equal(props[0].yaw, 0);
-                assert.equal(props[0].pitch, 0);
-                assert.equal(props[0].roll, 0);
-                assert.equal(props[0].name, 'door01.rwx');
-                assert.equal(props[0].description, 'Some new description.');
+                assert.ok(epsEqual(props[0].x, 1.23));
+                assert.ok(epsEqual(props[0].y, -4.56));
+                assert.ok(epsEqual(props[0].z, 0.2));
+                assert.ok(epsEqual(props[0].yaw, 3.141592));
+                assert.ok(epsEqual(props[0].pitch, -2.0));
+                assert.ok(epsEqual(props[0].roll, 5.2));
+                assert.equal(props[0].name, 'wall01.rwx');
+                assert.equal(props[0].description, 'Some description.');
                 assert.equal(props[0].action, 'create color red;');
 
                 // Assert second prop fields
@@ -214,10 +221,88 @@ describe('http server props', () => {
                 assert.equal(props[1].roll, 1350);
                 assert.equal(props[1].name, 'door02.rwx');
                 assert.equal(props[1].description, 'Some renewed description.');
-                assert.equal(props[1].action, 'create color blue;');
+                assert.equal(props[1].action, 'create color green;');
             });
           done();
         })
         .catch((err) => done(err));
+  });
+
+  it('PUT /api/worlds/id/props - Bad request', (done) => {
+    const payload = {1: 'not an object'};
+
+    request(base.server)
+        .put('/api/worlds/' + base.worldId + '/props')
+        .set('Authorization', 'Bearer ' + base.adminBearerToken)
+        .set('Accept', 'application/json')
+        .send(payload)
+        .expect('Content-Type', /json/)
+        .expect(400, done);
+    });
+
+  it('PUT /api/worlds/id/props - Unauthorized', (done) => {
+    // Ready payload
+    const payload = {};
+
+    payload[base.firstPropId] = {
+      x: 1.23,
+      y: -4.56,
+      z: 0.2,
+      yaw: 3.141592,
+      pitch: -2.0,
+      roll: 5.2,
+    };
+
+    request(base.server)
+        .put('/api/worlds/' + base.worldId + '/props')
+        .set('Authorization', 'gibberish')
+        .set('Accept', 'application/json')
+        .send(payload)
+        .expect('Content-Type', /json/)
+        .expect(401, done);
+  });
+
+  it('PUT /api/worlds/id/props - Forbidden', (done) => {
+    // Ready payload
+    const payload = {};
+
+    payload[base.firstPropId] = {
+      x: 1.23,
+      y: -4.56,
+      z: 0.2,
+      yaw: 3.141592,
+      pitch: -2.0,
+      roll: 5.2,
+    };
+
+    request(base.server)
+        .put('/api/worlds/' + base.worldId + '/props')
+        .set('Authorization', 'Bearer iNvAlId')
+        .set('Accept', 'application/json')
+        .send(payload)
+        .expect('Content-Type', /json/)
+        .expect(403, done);
+  });
+
+  it('PUT /api/worlds/id/props - Not found', (done) => {
+    // Ready payload
+    const payload = {};
+
+    payload[base.firstPropId] = {
+      x: 1.23,
+      y: -4.56,
+      z: 0.2,
+      yaw: 3.141592,
+      pitch: -2.0,
+      roll: 5.2,
+    };
+
+    request(base.server)
+        .put('/api/worlds/77777/props')
+        .set('Authorization', 'Bearer ' + base.adminBearerToken)
+        .set('Accept', 'application/json')
+        .send(payload)
+        .expect('Content-Type', /json/)
+        .expect(404, done);
   });
 });

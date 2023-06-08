@@ -120,8 +120,8 @@ function registerPropsEndpoints(app, authenticate, connection) {
     // Get user ID and role
     const userRole = req.userRole;
     const userId = req.userId;
-    // Expect a json dictionary holding prop properties, indexed by prop id
-    const props = req.body || {};
+
+    const props = req.body;
 
     // We will respond with a dictionary as well
     const response = {};
@@ -133,27 +133,39 @@ function registerPropsEndpoints(app, authenticate, connection) {
             return;
           }
 
+          const propsToQuery = [];
+          const propsToSave = [];
+
           // World has been found: time to evaluate the content of the payload
           for (const [key, value] of Object.entries(props)) {
+            if (value.constructor.name !== 'Object') {
+              // Entry needs to be an object
+              res.status(400).json({});
+              return;
+            }
+
             response[key] = null;
             const propId = parseInt(key);
 
             if (isNaN(propId)) {
-            // Not found
+              // Not found
               continue;
             }
 
-            await connection.manager.createQueryBuilder(Prop, 'prop')
-                .where('prop.worldId = :wid', {wid})
-                .andWhere('prop.id = :propId', {propId}).getOne()
-                .then(async (prop) => {
-                  if (!prop) {
-                    // Not found
-                    return;
-                  } else if (userRole !== 'admin' && prop.uid != userId) {
-                    response[key] = false; // Not allowed
-                    return;
+            propsToQuery.push(propId);
+          }
+
+          await connection.manager.createQueryBuilder(Prop, 'prop')
+              .where('prop.worldId = :wid', {wid})
+              .andWhere('prop.id IN (:...inEntries)', {inEntries: propsToQuery})
+              .getMany().then((dbProps) => {
+                for (const prop of dbProps) {
+                  if (userRole !== 'admin' && prop.uid != userId) {
+                    response[prop.id] = false; // Not allowed
+                    continue;
                   }
+
+                  const value = props[prop.id];
 
                   // Apply all meaningful fields
                   prop.date = Date.now();
@@ -162,20 +174,21 @@ function registerPropsEndpoints(app, authenticate, connection) {
                   prop.z = value.z !== undefined ? value.z : prop.z;
                   prop.yaw = value.yaw !== undefined ? value.yaw : prop.yaw;
                   prop.pitch = value.pitch !== undefined ?
-                      value.pitch : prop.pitch;
+                    value.pitch : prop.pitch;
                   prop.roll = value.roll !== undefined ? value.roll : prop.roll;
                   prop.name = value.name ? value.name : prop.name;
                   prop.description = value.description ?
-                  value.description : prop.description;
+                    value.description : prop.description;
                   prop.action = value.action ?
-                  value.action : prop.action;
+                    value.action : prop.action;
 
-                  // Save updated prop to DB
-                  await connection.manager.save([prop]);
-                  response[key] = true;
-                });
-          }
+                  propsToSave.push(prop);
+                  response[prop.id] = true;
+                }
+              });
 
+          // Save updated props to DB
+          await connection.manager.save(propsToSave);
           res.json(response);
         });
   });
