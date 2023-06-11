@@ -35,6 +35,13 @@ const spawnHttpServer = async (path, port, secret, worldFolder, userCache,
     return terrainCache.get(worldId);
   };
 
+  // Default callback for props changes (POST, PUT, DELETE)
+  const ctx = {propsChangedCallback: (wid, data) => {}};
+
+  const onPropsChange = (cb) => {
+    ctx.propsChangedCallback = cb;
+  };
+
   return db.init(path).then(async (connection) => {
     // Ready the express app
     const app = express().use(express.json()).use(cors());
@@ -98,7 +105,7 @@ const spawnHttpServer = async (path, port, secret, worldFolder, userCache,
           .catch((err) => res.status(500).json({}));
     });
 
-    registerPropsEndpoints(app, authenticate, connection);
+    registerPropsEndpoints(app, authenticate, connection, ctx);
 
     app.get('/api/worlds/:id/terrain/:x/:z/elevation', authenticate,
         (req, res) => {
@@ -203,7 +210,7 @@ const spawnHttpServer = async (path, port, secret, worldFolder, userCache,
 
     server.listen(port);
 
-    return server;
+    return {server, onPropsChange};
   });
 };
 

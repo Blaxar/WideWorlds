@@ -11,8 +11,9 @@ import Prop from '../common/db/model/Prop.js';
  * @param {function} authenticate - Authentication function for the http
  *                                  requests.
  * @param {Object} connection - TypeORM connection instance.
+ * @param {Object} ctx - Parent HTTP spawner context.
  */
-function registerPropsEndpoints(app, authenticate, connection) {
+function registerPropsEndpoints(app, authenticate, connection, ctx) {
   app.get('/api/worlds/:id/props', authenticate, (req, res) => {
     res.setHeader('Content-Type', 'application/json');
     const wid = req.params.id;
@@ -189,6 +190,8 @@ function registerPropsEndpoints(app, authenticate, connection) {
 
           // Save updated props to DB
           await connection.manager.save(propsToSave);
+          ctx.propsChangedCallback(wid,
+              JSON.stringify({op: 'update', data: propsToSave}));
           res.json(response);
         });
   });

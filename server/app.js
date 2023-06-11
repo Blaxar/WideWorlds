@@ -38,5 +38,10 @@ const terrainCache = new Map();
 
 spawnHttpServer(argv.db, argv.port, secret, argv.worldFolder, userCache,
     terrainCache)
-    .then((server) => spawnWsServer(server, secret, userCache))
-    .then((wss) => wss.wsChannelManager.startBroadcasting());
+    .then(async ({server, onPropsChange}) => {
+      const wsChannelManager =
+          spawnWsServer(server, secret, userCache).wsChannelManager;
+      onPropsChange((wid, data) => {
+        wsChannelManager.broadcastWorldUpdate(wid, data);
+      });
+    });

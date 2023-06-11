@@ -60,11 +60,15 @@ const makeHttpTestBase = (port = 62931, dbFile = 'mocha-http-test-db.sqlite3', s
       throw("Test database file already exists, move it or delete it first.");
     }
 
-    base.server = await spawnHttpServer(base.dbFile, base.port, base.secret, base.worldFolder,
-        base.userCache, base.terrainCache);
-    const wsServer = await spawnWsServer(base.server, base.secret, base.userCache);
-    base.wss = wsServer.ws;
-    base.wsChannelManager = wsServer.wsChannelManager;
+    const {server, onPropsChange} = await spawnHttpServer(base.dbFile, base.port,
+        base.secret, base.worldFolder, base.userCache, base.terrainCache);
+    base.server = server;
+    const {wss, wsChannelManager} = await spawnWsServer(server, base.secret, base.userCache);
+    base.wss = wss;
+    base.wsChannelManager = wsChannelManager;
+    onPropsChange((wid, data) => {
+      wsChannelManager.broadcastWorldUpdate(wid, data);
+    });
   };
 
   const beforeEach = async () => {

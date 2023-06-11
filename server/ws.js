@@ -11,6 +11,7 @@ import {formatUserMessage, forwardEntityState, packEntityStates, entityType}
 const bearerRegex = /^Bearer (.*)$/i;
 const worldChatRegex = /^\/api\/worlds\/([0-9]+)\/ws\/chat$/;
 const worldStateRegex = /^\/api\/worlds\/([0-9]+)\/ws\/state$/;
+const worldUpdateRegex = /^\/api\/worlds\/([0-9]+)\/ws\/update$/;
 const userChatRegex = /^\/api\/users\/([0-9]+)\/ws\/chat$/;
 
 /** Core manager for WebSocket connections on the server */
@@ -59,7 +60,7 @@ class WsChannelManager {
   addWorldChatConnection(worldId, ws, clientId) {
     if (this.worldChannels[worldId] === undefined) {
       // No ongoing channel for this world, ready the base object first
-      this.worldChannels[worldId] = {chat: {}, state: {}};
+      this.worldChannels[worldId] = {chat: {}, state: {}, update: {}};
     }
 
     // Do not allow more than one connection per client, close the
@@ -111,7 +112,7 @@ class WsChannelManager {
   addWorldStateConnection(worldId, ws, clientId) {
     if (this.worldChannels[worldId] === undefined) {
       // No ongoing channel for this world, ready the base object first
-      this.worldChannels[worldId] = {chat: {}, state: {}};
+      this.worldChannels[worldId] = {chat: {}, state: {}, update: {}};
     }
 
     if (this.worldStateBuffers[worldId] === undefined) {
@@ -176,6 +177,53 @@ class WsChannelManager {
         ws.send(payload);
       }
     }
+  }
+
+  /**
+   * Create a new WebSocket world update connection
+   * @param {integer} worldId - ID of the world.
+   * @param {WebSocket} ws - WebSocket client instance.
+   * @param {integer} clientId - ID of the user to connect.
+   */
+  addWorldUpdateConnection(worldId, ws, clientId) {
+    if (this.worldChannels[worldId] === undefined) {
+      // No ongoing channel for this world, ready the base object first
+      this.worldChannels[worldId] = {chat: {}, state: {}, update: {}};
+    }
+
+    // Do not allow more than one connection per client, close the
+    // current one if any
+    this.worldChannels[worldId].update[clientId]?.close();
+
+    this.worldChannels[worldId].update[clientId] = ws;
+  }
+
+  /**
+   * Broadcast update to the world
+   * @param {integer} worldId - ID of the world to broadcast the update to.
+   * @param {string} data - Data to broadcast on the world chat.
+   */
+  broadcastWorldUpdate(worldId, data) {
+    const worldUpdate = this.worldChannels[worldId]?.update;
+    if (worldUpdate === undefined) {
+      // World not found: nobody is listening to it yet
+      return;
+    }
+
+    // TODO: maybe some sanitizing on the data?
+    for (const ws of Object.values(worldUpdate)) {
+      ws.send(data);
+    }
+  }
+
+  /**
+   * Remove an existing WebSocket world update connection
+   * @param {integer} worldId - ID of the world.
+   * @param {integer} clientId - ID of the user to disconnect.
+   */
+  removeWorldUpdateConnection(worldId, clientId) {
+    this.worldChannels[worldId]?.update[clientId]?.close();
+    delete this.worldChannels[worldId].update[clientId];
   }
 
   /**
@@ -285,6 +333,12 @@ const spawnWsServer = async (server, secret, userCache) => {
         ws.on('message', (data) => {
           wsChannelManager.updateWorldState(userId, id, new Uint8Array(data));
         });
+      } else if (type == 'update') {
+        wsChannelManager.addWorldUpdateConnection(id, ws, userId);
+
+        ws.on('close', () => {
+          wsChannelManager.removeWorldUpdateConnection(id, userId);
+        });
       }
     } else if (entity == 'user') {
       if (id == userId) {
@@ -312,9 +366,10 @@ const spawnWsServer = async (server, secret, userCache) => {
 
     const worldMatch = pathname.match(worldChatRegex);
     const stateMatch = pathname.match(worldStateRegex);
+    const updateMatch = pathname.match(worldUpdateRegex);
     const userMatch = pathname.match(userChatRegex);
 
-    if (!worldMatch && !stateMatch && !userMatch) {
+    if (!worldMatch && !stateMatch && !userMatch && !updateMatch) {
       socket.destroy();
       return;
     }
@@ -354,6 +409,9 @@ const spawnWsServer = async (server, secret, userCache) => {
         } else if (stateMatch) {
           wss.emit('connection', ws, request, 'world',
               stateMatch[1], 'state', userId);
+        } else if (updateMatch) {
+          wss.emit('connection', ws, request, 'world',
+              updateMatch[1], 'update', userId);
         } else if (userMatch) {
           wss.emit('connection', ws, request, 'user',
               userMatch[1], 'chat', userId);

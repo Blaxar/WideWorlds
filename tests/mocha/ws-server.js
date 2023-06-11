@@ -198,8 +198,43 @@ describe('ws server', () => {
         .expectConnectionError(403);
   });
 
-  it('WS world state connect with parameters - Forbidden', async () => {
-    await request(base.server).ws('/api/worlds/' + base.worldId + '/ws/state?token=iNvAlId')
+  it('WS world update connect with parameters - Forbidden', async () => {
+    await request(base.server).ws('/api/worlds/' + base.worldId + '/ws/update?token=iNvAlId')
+        .expectConnectionError(403);
+  });
+
+  it('WS world update connect with headers - OK', async () => {
+    await request(base.server).ws('/api/worlds/' + base.worldId + '/ws/update')
+        .set('Authorization', 'Bearer ' + base.adminBearerToken)
+        .close()
+        .expectClosed();
+  });
+
+  it('WS world update connect with parameters - OK', async () => {
+    await request(base.server).ws('/api/worlds/' + base.worldId + '/ws/update?token=' + base.adminBearerToken)
+        .close()
+        .expectClosed();
+  });
+
+  it('WS world update connect with headers - Unauthorized', async () => {
+    await request(base.server).ws('/api/worlds/' + base.worldId + '/ws/update')
+        .set('Authorization', 'gibberish')
+        .expectConnectionError(401);
+  });
+
+  it('WS world update connect with parameters - Unauthorized', async () => {
+    await request(base.server).ws('/api/worlds/' + base.worldId + '/ws/update?gibberish=' + 'gibberish')
+        .expectConnectionError(401);
+  });
+
+  it('WS world update connect with headers - Forbidden', async () => {
+    await request(base.server).ws('/api/worlds/' + base.worldId + '/ws/update')
+        .set('Authorization', 'Bearer iNvAlId')
+        .expectConnectionError(403);
+  });
+
+  it('WS world update connect with parameters - Forbidden', async () => {
+    await request(base.server).ws('/api/worlds/' + base.worldId + '/ws/update?token=iNvAlId')
         .expectConnectionError(403);
   });
 });
