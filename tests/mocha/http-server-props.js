@@ -7,6 +7,7 @@ import makeHttpTestBase, {epsEqual} from '../utils.js';
 import TypeORM from 'typeorm';
 import request from 'superwstest';
 import * as assert from 'assert';
+import WsClient from '../../client/src/core/ws-client.js';
 
 // Testing http server
 
@@ -166,46 +167,64 @@ describe('http server props', () => {
       description: "Some description",
     };
 
+    const propsUpdateCb = (actual) => {
+      const data = JSON.parse(actual);
+      assert.equal(data.op, 'update');
+
+      const props = data.data;
+      assert.equal(props.length, 2);
+
+      // Assert first prop fields
+      assert.equal(props[0].id, base.firstPropId);
+      assert.equal(props[0].worldId, base.worldId);
+      assert.equal(props[0].userId, base.adminId);
+      assert.ok(epsEqual(props[0].x, 1.23));
+      assert.ok(epsEqual(props[0].y, -4.56));
+      assert.ok(epsEqual(props[0].z, 0.2));
+      assert.ok(epsEqual(props[0].yaw, 3.141592));
+      assert.ok(epsEqual(props[0].pitch, -2.0));
+      assert.ok(epsEqual(props[0].roll, 5.2));
+      assert.equal(props[0].name, 'wall01.rwx');
+      assert.equal(props[0].description, 'Some description.');
+      assert.equal(props[0].action, 'create color red;');
+
+      // Assert second prop fields
+      assert.strictEqual(props[1].id, base.secondPropId);
+      assert.equal(props[1].worldId, base.worldId);
+      assert.equal(props[1].userId, base.adminId);
+      assert.equal(props[1].x, 100);
+      assert.equal(props[1].y, -200);
+      assert.equal(props[1].z, 300);
+      assert.equal(props[1].yaw, 450);
+      assert.equal(props[1].pitch, 900);
+      assert.equal(props[1].roll, 1350);
+      assert.equal(props[1].name, 'door02.rwx');
+      assert.equal(props[1].description, 'Some renewed description.');
+      assert.equal(props[1].action, 'create color green;');
+    };
+
+    const adminClient = new WsClient(`ws://127.0.0.1:${base.port}/api`, base.adminBearerToken);
+
     Promise.all([
       // Ready the Websocket client, we should be notified of the props update from there
       request(base.server).ws('/api/worlds/' + base.worldId + '/ws/update?token=' + base.citizenBearerToken)
-          .expectText((actual) => {
-            const data = JSON.parse(actual);
-            assert.equal(data.op, 'update');
-
-            const props = data.data;
-            assert.equal(props.length, 2);
-
-            // Assert first prop fields
-            assert.equal(props[0].id, base.firstPropId);
-            assert.equal(props[0].worldId, base.worldId);
-            assert.equal(props[0].userId, base.adminId);
-            assert.ok(epsEqual(props[0].x, 1.23));
-            assert.ok(epsEqual(props[0].y, -4.56));
-            assert.ok(epsEqual(props[0].z, 0.2));
-            assert.ok(epsEqual(props[0].yaw, 3.141592));
-            assert.ok(epsEqual(props[0].pitch, -2.0));
-            assert.ok(epsEqual(props[0].roll, 5.2));
-            assert.equal(props[0].name, 'wall01.rwx');
-            assert.equal(props[0].description, 'Some description.');
-            assert.equal(props[0].action, 'create color red;');
-
-            // Assert second prop fields
-            assert.strictEqual(props[1].id, base.secondPropId);
-            assert.equal(props[1].worldId, base.worldId);
-            assert.equal(props[1].userId, base.adminId);
-            assert.equal(props[1].x, 100);
-            assert.equal(props[1].y, -200);
-            assert.equal(props[1].z, 300);
-            assert.equal(props[1].yaw, 450);
-            assert.equal(props[1].pitch, 900);
-            assert.equal(props[1].roll, 1350);
-            assert.equal(props[1].name, 'door02.rwx');
-            assert.equal(props[1].description, 'Some renewed description.');
-            assert.equal(props[1].action, 'create color green;');
-          })
+          .expectText(propsUpdateCb)
           .close()
           .expectClosed(),
+      // Test the ws-client as well
+      adminClient.worldUpdateConnect(base.worldId).then(
+        (wu) => new Promise((resolve, reject) => {
+            wu.onMessage((data) => {
+              try {
+                propsUpdateCb(data);
+                wu.close();
+              } catch (e) {
+                reject(e);
+              }
+              resolve();
+            });
+          })
+        ),
       // Processing the PUT request should take a few ms, the websocket connection will have surely
       // been established by then
       request(base.server)

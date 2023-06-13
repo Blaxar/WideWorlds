@@ -72,7 +72,7 @@ class UserChat extends BaseWs {
   }
 }
 
-/** Wrapped WebSocket connection to a world state */
+/** Wrapped WebSocket connection to a world state channel */
 class WorldState extends BaseWs {
   /**
    * @constructor
@@ -104,6 +104,31 @@ class WorldState extends BaseWs {
       for (const state of states) {
         entries.push(deserializeEntityState(state));
       }
+
+      // Pass the list of plain json objects to the callback
+      cb(entries);
+    });
+  }
+}
+
+/** Wrapped WebSocket connection to a world update channel */
+class WorldUpdate extends BaseWs {
+  /**
+   * @constructor
+   * @param {WebSocket} ws - WebSocket client to wrap.
+   */
+  constructor(ws) {
+    super(ws);
+  }
+
+  /**
+   * Register a callback for the 'message' event on the WebSocket client
+   * @param {function} cb - Callback function to register.
+   */
+  onMessage(cb) {
+    this.ws.addEventListener('message', (event) => {
+      // TODO: sanitize/check entries first?
+      const entries = event.data;
 
       // Pass the list of plain json objects to the callback
       cb(entries);
@@ -186,7 +211,28 @@ class WsClient {
       });
     });
   }
+
+  /**
+   * Spawn a new world update connection
+   * @param {integer} id - ID of the world to connect to.
+   * @return {Promise} Promise of an already-opened WorldUpdate connection.
+   */
+  worldUpdateConnect(id) {
+    return new Promise((resolve, err) => {
+      const ws = new WebSocket(
+          `${this.baseUrl}/worlds/${id}/ws/update?token=${this.token}`,
+      );
+
+      ws.addEventListener('error', (event) => {
+        err(event);
+      });
+
+      ws.addEventListener('open', (event) => {
+        resolve(new WorldUpdate(ws));
+      });
+    });
+  }
 }
 
 export default WsClient;
-export {WorldChat, UserChat, WorldState};
+export {WorldChat, UserChat, WorldState, WorldUpdate};
