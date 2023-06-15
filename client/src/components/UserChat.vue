@@ -3,6 +3,7 @@
  * @author Julien 'Blaxar' Bardagi <blaxar.waldarax@gmail.com>
  */
 
+import UserFeed, {userFeedPriority} from '../core/user-feed.js';
 import {onMounted, onUnmounted, reactive} from 'vue';
 
 const props = defineProps({
@@ -12,51 +13,57 @@ const props = defineProps({
   },
   maxMessageAmount: {
     type: Number,
-    default: 6,
+    default: 128,
   },
-  worldChat: {
-    type: Promise,
+  feed: {
+    type: UserFeed,
+    required: true,
+  },
+  enablePrompt: {
+    type: Boolean,
     required: true,
   },
 });
 
 const messages = reactive([]);
+let feedListenerId = -1;
+
+const emit = defineEmits(['send']);
 
 onMounted(() => {
-  props.worldChat.then((chat) => {
-    chat.onMessage((data) => {
-      messages.push(JSON.parse(data));
-    });
+  feedListenerId = props.feed.addListener((entry, emitter, priority) => {
+    messages.push({entry, emitter, priority});
   });
 });
 
 onUnmounted(() => {
-  props.worldChat.then((chat) => {
-    chat.close();
-  });
+  props.feed.addListener(feedListenerId);
+  feedListenerId = -1;
 });
 
 const onSubmit = (event) => {
   const inputField = event.target.getElementsByTagName('input')[0];
   const value = inputField.value;
-  props.worldChat.then((chat) => {
-    if (value) chat.send(value);
-  });
+  emit('send', value);
   inputField.value = null;
 };
+
 
 </script>
 
 <template>
 
-<div class="bottom-bar window">
-<div class="window-body">
+<div class="bottom-bar">
 <pre id="chat-box">
-<span v-for="(entry, id) in messages.slice(-props.maxMessageAmount)"
-:key="id">{{entry.name}}: {{entry.msg}}</span>
+<!-- eslint-disable no-tabs -->
+<span :key="id" :class="{info: entry.priority == userFeedPriority.info,
+	warning: entry.priority == userFeedPriority.warning,
+	error: entry.priority == userFeedPriority.error}"
+v-for="(entry, id) in messages.slice(-props.maxMessageAmount).reverse()"
+><strong v-if="entry.emitter">{{entry.emitter}}: </strong>{{entry.entry}}</span>
+<!-- eslint-enable no-tabs -->
 </pre>
-</div>
-<form @submit.prevent="onSubmit">
+<form @submit.prevent="onSubmit" v-if="props.enablePrompt">
 <input type="text" :placeholder="promptPlaceholder" id="chat-prompt" />
 </form>
 </div>

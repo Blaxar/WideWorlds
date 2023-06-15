@@ -17,6 +17,7 @@ import EntityManager from './core/entity-manager.js';
 import UserConfig from './core/user-config.js';
 import WsClient from './core/ws-client.js';
 import Engine3D from './core/engine-3d.js';
+import UserFeed, {userFeedPriority} from './core/user-feed.js';
 import {SubjectBehaviorFactory, UserInputListener}
   from './core/user-input.js';
 import UserBehavior from './core/user-behavior.js';
@@ -43,6 +44,9 @@ const main = reactive({
   worlds: {},
   worldId: null,
 });
+
+const userFeed = new UserFeed();
+let worldChat = null;
 
 // Ready local storage
 const userConfig = new UserConfig('config', (config) => {
@@ -87,6 +91,7 @@ const exitHook = (state) => {
 };
 
 const fetchWorldList = () => {
+  main.worlds = {};
   httpClient.getWorlds()
       .then((json) => {
         for (const world of json) {
@@ -100,12 +105,17 @@ const fetchWorldList = () => {
       });
 };
 
-const clearWorldList = () => {
-  main.worlds = {};
+const plugWorldChat = async () => {
+  worldChat = await wsClient.worldChatConnect(main.worldId);
+  worldChat.onMessage((entry) => {
+    const data = JSON.parse(entry);
+    userFeed.publish(data.msg, data.name);
+  });
 };
 
-const getWorldChat = () => {
-  return wsClient.worldChatConnect(main.worldId); // Promise
+const unplugWorldChat = async () => {
+  worldChat?.close();
+  worldChat = null;
 };
 
 const hooks = {
@@ -119,10 +129,7 @@ const hooks = {
   [AppStates.SIGNING_IN]: [entranceHook, exitHook],
   [AppStates.WORLD_UNLOADED]: [(state) => {
     entranceHook(state); fetchWorldList();
-  },
-  (state) => {
-    exitHook(state); clearWorldList();
-  }],
+  }, exitHook],
   [AppStates.WORLD_LOADING]: [entranceHook, exitHook],
   [AppStates.WORLD_LOADED]: [entranceHook, exitHook],
 };
@@ -140,10 +147,13 @@ const handleLogin = (credentials) => {
         localStorage.setItem('userId', id);
         main.userId = id;
         wsClient = spawnWsClient(token);
+        userFeed.publish('Logged in successfully! Please select world.',
+            null, userFeedPriority.info);
         appState.toWorldSelection();
       })
       .catch((error) => {
-        console.log(error);
+        userFeed.publish('Could not log in, invalid username and/or password.',
+            null, userFeedPriority.error);
         appState.failedSigningIn();
       });
 };
@@ -160,14 +170,24 @@ const updateCamera = (cycleMode = false) => {
 
 const handleWorldSelection = (id) => {
   const world = main.worlds[id];
-  appState.loadWorld();
 
-  worldManager.load(world).then((avatars) => {
+  appState.loadWorld();
+  userFeed.publish(`Joining ${world.name}...`,
+      null, userFeedPriority.info);
+
+  worldManager.load(world).then(async (avatars) => {
     // Mark this world as default choice for the world selection
     // screen
     defaultWorldId = id;
     localStorage.setItem('defaultWorldId', id);
     main.worldId = id;
+    const motd = JSON.parse(world.data).welcome;
+    if (motd) {
+      userFeed.publish(`${motd}`,
+          null, userFeedPriority.info);
+    }
+    await unplugWorldChat();
+    await plugWorldChat();
     worldAvatars = avatars;
     updateCamera();
     worldState = wsClient.worldStateConnect(id);
@@ -180,16 +200,26 @@ const handleWorldSelection = (id) => {
   });
 };
 
-const handleWorldCancel = () => {
+const handleLogOut = () => {
+  userFeed.publish(`Logging out...`,
+      null, userFeedPriority.info);
   appState.signOut();
 };
 
 const handleLeave = () => {
+  const worldName = main.worlds[main.worldId].name;
+  userFeed.publish(`Leaving ${worldName}...`,
+      null, userFeedPriority.info);
   worldManager.unload();
   worldState.then((state) => {
     state.close();
   });
   appState.unloadWorld();
+  main.worldId = null;
+};
+
+const handleSendChat = (msg) => {
+  worldChat?.send(msg);
 };
 
 const handleAvatar = (avatarId) => {
@@ -354,8 +384,9 @@ function onPointerMove(engine3d, event) {
     <LoginForm v-if="displayLogin" @submit="handleLogin" />
     <WorldSelection v-if="displayWorldSelection"
     :worlds="Object.values(main.worlds)" @submit="handleWorldSelection"
-    :defaultWorldId="defaultWorldId" @cancel="handleWorldCancel" />
-    <UserChat v-if="displayEdgebars" :worldChat="getWorldChat()" />
+    :defaultWorldId="defaultWorldId" @cancel="handleLogOut" />
+    <UserChat @send="handleSendChat" :feed="userFeed"
+    :enablePrompt="main.worldId !== null" />
     </div>
 </template>
 

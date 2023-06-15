@@ -63,11 +63,12 @@ class UserFeed {
   /**
    * Publish entry to the feed
    * @param {string} entry - String to publish to the feed.
+   * @param {string} emitter - Name of the emitetr (if any).
    * @param {userFeedPriority} priority - Priority of this entry.
    */
-  publish(entry, priority = userFeedPriority.message) {
+  publish(entry, emitter = null, priority = userFeedPriority.message) {
     for (const cb of this.listeners) {
-      if (cb) cb(entry, priority);
+      if (cb) cb(entry, emitter, priority);
     }
   }
 }

@@ -39,14 +39,64 @@ body {
 .bottom-bar {
     width: 100%;
     height: min-content;
+    position: absolute;
+    bottom: 0;
+    left: 0;
 }
 
 #chat-prompt {
     width: 100%
 }
 
-#chat-box span {
+pre#chat-box{
+    width: 100%;
+    white-space: pre-wrap;       /* Since CSS 2.1 */
+    white-space: -moz-pre-wrap;  /* Mozilla, since 1999 */
+    white-space: -pre-wrap;      /* Opera 4-6 */
+    white-space: -o-pre-wrap;    /* Opera 7 */
+    word-wrap: break-word;       /* Internet Explorer 5.5+ */
+
+    /* Enable scrolling */
+    overflow: scroll;
+    overflow-x: hidden;
+    max-height: 5vh;
+    margin: 0;
+    padding: 0;
+
+    /* reverse vertical display: last elements go top */
+    display: flex;
+    flex-direction: column-reverse;
+
+    background: rgba(0,0,0,0.4);
+    transition: 0.3s;
+}
+
+pre#chat-box:hover{
+    max-height: 25vh;
+    background: rgba(0,0,0,0.85);
+}
+
+pre#chat-box span {
     display: block;
+    color: white;
+    text-shadow: 2px 2px 3px black;
+    margin-left: 0.07in;
+}
+
+pre#chat-box span.error {
+  color: #ff9999;
+}
+
+pre#chat-box span.warning {
+  color: #ffaa55;
+}
+
+pre#chat-box span.info {
+  color: #99ffff;
+}
+
+pre#chat-box span strong {
+    color: #55ff55;
 }
 
 .button-bar {
