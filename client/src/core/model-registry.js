@@ -6,7 +6,7 @@ import RWXLoader, {
   RWXMaterialManager, pictureTag, signTag,
 } from 'three-rwx-loader';
 import {Mesh, Group, BufferGeometry, BufferAttribute, MeshBasicMaterial,
-  SRGBColorSpace, TextureLoader, Color, CanvasTexture} from 'three';
+  SRGBColorSpace, TextureLoader, Color, CanvasTexture, BoxHelper} from 'three';
 import * as fflate from 'fflate';
 import {AWActionParser} from 'aw-action-parser';
 
@@ -14,6 +14,9 @@ const unknownObjectName = '_unknown_';
 const defaultFontSize = 128;
 const maxCanvasWidth = 256;
 const maxCanvasHeight = 256;
+
+const boundingBoxName = 'rwx-bounding-box';
+const boundingBoxColor = 0xffff00;
 
 /* Assume .rwx file extension if none is provided */
 const normalizePropName = (name) =>
@@ -82,8 +85,9 @@ class ModelRegistry {
   }
 
   /**
-   * Fetch an object from the registry, load it first if necessary and
-   * use placeholder if not found, all using light-sensitive materials
+   * Fetch an object from the registry, load it first if necessary
+   * (using light-sensitive materials) and generate a bounding box
+   * for it, use placeholder if not found
    * @param {string} rawName - Name of the 3D object to load.
    * @return {Promise} Promise of a three.js Object3D asset.
    */
@@ -92,7 +96,15 @@ class ModelRegistry {
     if (!this.models.has(name)) {
       this.models.set(name, new Promise((resolve) => {
         this.loader.load(name, (rwx) => {
-          rwx.name = name; resolve(rwx);
+          // Add bounding box
+          const boxHelper = new BoxHelper(rwx, boundingBoxColor);
+          boxHelper.name = boundingBoxName;
+          boxHelper.visible = false;
+          boxHelper.matrixAutoUpdate = false;
+          rwx.name = name;
+          rwx.add(boxHelper);
+          boxHelper.updateMatrix();
+          resolve(rwx);
         }, null, () => resolve(this.placeholder.clone()));
       }));
     }
@@ -416,4 +428,4 @@ class ModelRegistry {
 }
 
 export default ModelRegistry;
-export {normalizePropName, unknownObjectName};
+export {normalizePropName, unknownObjectName, boundingBoxName};

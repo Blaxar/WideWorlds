@@ -306,7 +306,7 @@ function adjustPageEdges(pagePlane, elevationData, left, topLeft, top, right,
   }
 
   // Then the right (1, 0) and bottom (0, 1) ones
-  for (let i = 0; i < nbSegments + 1; i++) {
+  for (let i = 0; i < nbSegments; i++) {
     if (right) {
       centerPositions[i * posStride + nbSegments * 3 + 1] =
           (right[i * nbSegments] - zeroElevationValue) / 100.0;

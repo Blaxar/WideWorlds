@@ -91,6 +91,12 @@ class WorldManager {
       }
     }
 
+    // Load closest chunks first
+    chunkLoadingPattern.sort((first, second) => {
+      return (first[0] * first[0] + first[1] * first[1]) -
+        (second[0] * second[0] + second[1] * second[1]);
+    });
+
     this.chunkLoadingPattern = chunkLoadingPattern;
   }
 
@@ -418,6 +424,7 @@ class WorldManager {
         this.pages.get(getPageName(pageX, pageZ - 1)),
         'page',
     );
+
     const right = this.pageData
         .get(getPageName(pageX + 1, pageZ))?.elevationData;
     const bottomRight = this.pageData

@@ -75,9 +75,6 @@ class Engine3D {
     this.user.add(this.head);
     this.scene.add(this.user);
     this.cameraDistance = 0;
-    this.clickRaycaster = new THREE.Raycaster();
-    this.pointer = new THREE.Vector2();
-    this.lastClickedObject = null;
 
     // Double buffered entity map, to be used each frame for rendering
     this.entities = new THREE.Group();
@@ -465,7 +462,6 @@ class Engine3D {
     this.tmpVec3.add(this.camera.position);
     this.userAvatar.lookAt(this.tmpVec3);
 
-    this.clickRaycaster.setFromCamera(this.pointer, this.camera);
 
     // Adjust the direction we're looking at based on the position of
     // the camera on the axis of view: if it's in front of the head:

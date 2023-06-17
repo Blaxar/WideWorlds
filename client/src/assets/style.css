@@ -59,7 +59,7 @@ pre#chat-box{
     /* Enable scrolling */
     overflow: scroll;
     overflow-x: hidden;
-    max-height: 5vh;
+    max-height: 7vh;
     margin: 0;
     padding: 0;
 
