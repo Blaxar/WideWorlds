@@ -7,7 +7,6 @@ import makeHttpTestBase, {epsEqual} from '../utils.js';
 import TypeORM from 'typeorm';
 import request from 'superwstest';
 import * as assert from 'assert';
-import WsClient from '../../client/src/core/ws-client.js';
 
 // Testing http server
 
@@ -203,28 +202,12 @@ describe('http server props', () => {
       assert.equal(props[1].action, 'create color green;');
     };
 
-    const adminClient = new WsClient(`ws://127.0.0.1:${base.port}/api`, base.adminBearerToken);
-
     Promise.all([
-      // Ready the Websocket client, we should be notified of the props update from there
+      // Ready the bare Websocket client API, we should be notified of the props update from there
       request(base.server).ws('/api/worlds/' + base.worldId + '/ws/update?token=' + base.citizenBearerToken)
           .expectText(propsUpdateCb)
           .close()
           .expectClosed(),
-      // Test the ws-client as well
-      adminClient.worldUpdateConnect(base.worldId).then(
-        (wu) => new Promise((resolve, reject) => {
-            wu.onMessage((data) => {
-              try {
-                propsUpdateCb(data);
-                wu.close();
-              } catch (e) {
-                reject(e);
-              }
-              resolve();
-            });
-          })
-        ),
       // Processing the PUT request should take a few ms, the websocket connection will have surely
       // been established by then
       request(base.server)

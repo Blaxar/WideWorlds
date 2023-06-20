@@ -42,7 +42,7 @@ class HttpClient {
    * of success
    * @param {string} username - Name of the user.
    * @param {string} password - Password of the user.
-   * @return {Promise} Promise of a valid authorization token.
+   * @return {Object} Valid authorization token.
    */
   async login(username, password) {
     const request = new Request(this.url + '/login', {
@@ -68,7 +68,7 @@ class HttpClient {
 
   /**
    * Get a list of available worlds to connect to
-   * @return {Promise} Promise of a list of worlds.
+   * @return {Array<World>} List of worlds.
    */
   async getWorlds() {
     const request = new Request(`${this.url}/worlds`, {
@@ -92,7 +92,7 @@ class HttpClient {
    * @param {integer} maxY - Maximum Y coordinate value (in meters).
    * @param {integer} minZ - Minimum Z coordinate value (in meters).
    * @param {integer} maxZ - Maximum Z coordinate value (in meters).
-   * @return {Promise} Promise of a list of props.
+   * @return {Array<Prop>} List of props.
    */
   async getProps(wid, minX, maxX, minY, maxY, minZ, maxZ) {
     let params = [];
@@ -113,6 +113,31 @@ class HttpClient {
     const request = new Request(`${this.url}/worlds/${wid}/props${params}`, {
       method: 'GET',
       headers: this.headers,
+      mode: this.cors ? 'cors' : undefined,
+    });
+
+    return await fetch(request).then((response) => {
+      if (response.ok) return response.json();
+      else throw new Error(response.status);
+    });
+  }
+
+  /**
+   * Update certain props on a given world
+   * @param {integer} wid - ID of the world to get props from.
+   * @param {Object} props - Map of props to be updated, indexed by their ID
+   *                         an holding all meaningful properties in an object
+   *                         as value.
+   * @return {Object} Map of results for props to be updated, indexed by their
+   *                  ID, value is true in case of success, false in case of
+   *                  failure (because of privilege/ownership) and null when
+   *                  the prop wasn't found.
+   */
+  async putProps(wid, props) {
+    const request = new Request(`${this.url}/worlds/${wid}/props`, {
+      method: 'PUT',
+      headers: this.headers,
+      body: JSON.stringify(props),
       mode: this.cors ? 'cors' : undefined,
     });
 
