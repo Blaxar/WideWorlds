@@ -97,6 +97,9 @@ class WsChannelManager {
       throw new Error('User not found, can\'t send message');
     }
 
+    // Do not propagate empty messages, ignore silently
+    if (!msg.length) return;
+
     const data = formatUserMessage(true, clientId, user.name, user.role, msg);
     for (const ws of Object.values(worldChat)) {
       ws.send(data);
@@ -272,6 +275,9 @@ class WsChannelManager {
       clientChat.send(data);
       return;
     }
+
+    // Do not propagate empty messages, ignore silently
+    if (!msg.length) return;
 
     // Destination user is online
     data = formatUserMessage(true, clientId, user.name, user.role, msg);

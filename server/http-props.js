@@ -5,6 +5,8 @@
 import World from '../common/db/model/World.js';
 import Prop from '../common/db/model/Prop.js';
 
+const notNullOrUndefined = (value) => value !== null && value !== undefined;
+
 /**
  * Register props-related endpoints into the expressjs app
  * @param {Object} app - express.js app.
@@ -161,7 +163,7 @@ function registerPropsEndpoints(app, authenticate, connection, ctx) {
               .andWhere('prop.id IN (:...inEntries)', {inEntries: propsToQuery})
               .getMany().then((dbProps) => {
                 for (const prop of dbProps) {
-                  if (userRole !== 'admin' && prop.uid != userId) {
+                  if (userRole !== 'admin' && prop.userId != userId) {
                     response[prop.id] = false; // Not allowed
                     continue;
                   }
@@ -170,17 +172,20 @@ function registerPropsEndpoints(app, authenticate, connection, ctx) {
 
                   // Apply all meaningful fields
                   prop.date = Date.now();
-                  prop.x = value.x !== undefined ? value.x : prop.x;
-                  prop.y = value.y !== undefined ? value.y : prop.y;
-                  prop.z = value.z !== undefined ? value.z : prop.z;
-                  prop.yaw = value.yaw !== undefined ? value.yaw : prop.yaw;
-                  prop.pitch = value.pitch !== undefined ?
+                  prop.x = notNullOrUndefined(value.x) ? value.x : prop.x;
+                  prop.y = notNullOrUndefined(value.y) ? value.y : prop.y;
+                  prop.z = notNullOrUndefined(value.z) ? value.z : prop.z;
+                  prop.yaw = notNullOrUndefined(value.yaw) ? value.yaw :
+                    prop.yaw;
+                  prop.pitch = notNullOrUndefined(value.pitch) ?
                     value.pitch : prop.pitch;
-                  prop.roll = value.roll !== undefined ? value.roll : prop.roll;
-                  prop.name = value.name ? value.name : prop.name;
-                  prop.description = value.description ?
+                  prop.roll = notNullOrUndefined(value.roll) ? value.roll :
+                    prop.roll;
+                  prop.name = notNullOrUndefined(value.name) ? value.name :
+                    prop.name;
+                  prop.description = notNullOrUndefined(value.description) ?
                     value.description : prop.description;
-                  prop.action = value.action ?
+                  prop.action = notNullOrUndefined(value.action) ?
                     value.action : prop.action;
 
                   propsToSave.push(prop);
@@ -190,8 +195,10 @@ function registerPropsEndpoints(app, authenticate, connection, ctx) {
 
           // Save updated props to DB
           await connection.manager.save(propsToSave);
-          ctx.propsChangedCallback(wid,
-              JSON.stringify({op: 'update', data: propsToSave}));
+          if (propsToSave.length) {
+            ctx.propsChangedCallback(wid,
+                JSON.stringify({op: 'update', data: propsToSave}));
+          }
           res.json(response);
         });
   });

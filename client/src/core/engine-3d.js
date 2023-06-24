@@ -303,6 +303,19 @@ class Engine3D {
   }
 
   /**
+   * Tell if a given object belongs to a specific node
+   * @param {integer} id - ID of the node to check.
+   * @param {Object3D} obj3d - Object to check.
+   * @return {boolean} True if the object belongs to the node,
+   *                   false otherwise.
+   */
+  belongsToNode(id, obj3d) {
+    if (!this.nodes.has(id)) return false;
+
+    return obj3d.parent === this.nodes.get(id);
+  }
+
+  /**
    * Get object by name from existing node in the scene
    * @param {integer} id - ID of the node to get the object from.
    * @param {string} name - Object to append to the node.

@@ -233,7 +233,7 @@ class ModelRegistry {
         } else if (action.commandType === 'picture') {
           picture = action.resource;
         } else if (action.commandType === 'sign') {
-          sign.text = action.text || obj3d.userData.description;
+          sign.text = action.text || obj3d.userData.prop?.description;
           sign.bcolor = action.bcolor;
           sign.color = action.color;
         } else if (action.commandType === 'scale') {

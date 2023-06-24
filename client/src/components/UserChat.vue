@@ -44,8 +44,12 @@ onUnmounted(() => {
 const onSubmit = (event) => {
   const inputField = event.target.getElementsByTagName('input')[0];
   const value = inputField.value;
-  emit('send', value);
   inputField.value = null;
+
+  // Do not send an empty string on the chat
+  if (!value.length) return;
+
+  emit('send', value);
 };
 
 

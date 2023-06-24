@@ -27,11 +27,10 @@ import {LoadingManager, Vector2} from 'three';
 
 // Three.js context-related settings
 let engine3d = null;
-let propSelector = null;
+let propsSelector = null;
 let someInputFocused = false;
 let worldManager = null;
 let worldState = null;
-let wsClient = null;
 let entityManager = null;
 const storedKeyBindings = {};
 let defaultWorldId = null;
@@ -39,6 +38,11 @@ let worldAvatars = [];
 const thirdPersonCameraDistance = 8;
 let cameraMode = 0; // 0 is first person view, 1 is rear view, 2 is front view
 let lastAvatarUpdate = 0;
+
+const escapeKeyCode = 27;
+
+const wsClient = new WsClient(
+    import.meta.env.VITE_SERVER_URL.replace(/http\:\/\//g, 'ws://') + '/api');
 
 // Define reactive states for Vue.js
 const main = reactive({
@@ -58,14 +62,10 @@ const userConfig = new UserConfig('config', (config) => {
 const worldPathRegistry = new WorldPathRegistry(new LoadingManager(), 'rwx',
     'textures', userConfig.at('network').at('imageService'));
 
-const spawnWsClient = (token) =>
-  new WsClient(import.meta.env.VITE_SERVER_URL.replace(/http\:\/\//g, 'ws://') +
-  '/api', token);
-
 if (localStorage.getItem('token') && localStorage.getItem('userId')) {
   // If there's an authentication token in local storage: we skip
   // past the sign-in step
-  wsClient = spawnWsClient(localStorage.getItem('token'));
+  wsClient.setAuthToken(localStorage.getItem('token'));
   main.userId = parseInt(localStorage.getItem('userId'));
   main.state = AppStates.WORLD_UNLOADED;
 }
@@ -123,8 +123,8 @@ const unplugWorldChat = async () => {
 const hooks = {
   [AppStates.SIGNED_OUT]: [(state) => {
     entranceHook(state);
-    wsClient = null;
-    httpClient.clear();
+    wsClient?.clear();
+    httpClient?.clear();
     localStorage.removeItem('token');
     localStorage.removeItem('userId');
   }, exitHook],
@@ -148,7 +148,9 @@ const handleLogin = (credentials) => {
         localStorage.setItem('token', token);
         localStorage.setItem('userId', id);
         main.userId = id;
-        wsClient = spawnWsClient(token);
+
+        wsClient.setAuthToken(token);
+
         userFeed.publish('Logged in successfully! Please select world.',
             null, userFeedPriority.info);
         appState.toWorldSelection();
@@ -213,9 +215,10 @@ const handleLeave = () => {
   userFeed.publish(`Leaving ${worldName}...`,
       null, userFeedPriority.info);
   worldManager.unload();
-  worldState.then((state) => {
+  worldState?.then((state) => {
     state.close();
   });
+  worldState = null;
   appState.unloadWorld();
   main.worldId = null;
 };
@@ -262,7 +265,9 @@ const render = () => {
     lastAvatarUpdate = Date.now();
   }
 
-  entityManager?.step(delta);
+  // Only update entities if the world is loaded
+  if (worldState) entityManager.step(delta);
+
   if (engine3d.render(delta)) {
     requestAnimationFrame(render);
   }
@@ -279,7 +284,6 @@ onMounted(() => {
 
   const canvas = document.querySelector('#main-3d-canvas');
   engine3d = new Engine3D(canvas, userConfig.at('graphics'));
-  propSelector = new PropsSelector(engine3d);
 
   // Update user position based on controls
   // Note: we could be passing the whole engine3d object, this would work
@@ -289,7 +293,8 @@ onMounted(() => {
     runByDefaultNode: userConfig.at('controls').at('runByDefault')});
   // Ready world path registry for object caching
   worldManager = new WorldManager(engine3d, worldPathRegistry, httpClient,
-      userConfig.at('graphics').at('propsLoadingDistance'));
+      wsClient, userConfig.at('graphics').at('propsLoadingDistance'));
+  propsSelector = new PropsSelector(engine3d, worldManager);
   entityManager = new EntityManager(engine3d.entities, null,
       0.05,
       (node, avatarId) => { // Set callback for entity avatar update
@@ -322,6 +327,14 @@ const displayEdgebars = computed(() => main.state === AppStates.WORLD_LOADED);
 // focused
 document.addEventListener('keyup', (event) => {
   if (someInputFocused) return;
+
+  if (event.keyCode == escapeKeyCode && !propsSelector.isEmpty()) {
+    // Break out of the build mode
+    propsSelector.commitAndClear();
+    inputListener.setSubject('user', {user: engine3d.user, tilt: engine3d.tilt,
+      runByDefaultNode: userConfig.at('controls').at('runByDefault')});
+  }
+
   inputListener.releaseKey(event.keyCode);
 }, false);
 document.addEventListener('keydown', (event) => {
@@ -345,9 +358,18 @@ document.addEventListener('contextmenu', (event) => {
   const x = ( event.clientX / window.innerWidth ) * 2 - 1;
   const y = - ( event.clientY / window.innerHeight ) * 2 + 1;
 
-  propSelector.select(new Vector2(x, y));
+  propsSelector.select(new Vector2(x, y));
 
-  // TODO: use PropBehavior
+  if (propsSelector.isEmpty()) {
+    // No prop selected: give back the user its fremdom to move
+    inputListener.setSubject('user', {user: engine3d.user, tilt: engine3d.tilt,
+      runByDefaultNode: userConfig.at('controls').at('runByDefault')});
+  } else {
+    // prop(s) selected: the selector will be the subject of every
+    // input from now on
+    propsSelector.updateMainAxis(engine3d.camera);
+    inputListener.setSubject('props', propsSelector);
+  }
 }, false);
 
 </script>

@@ -40,8 +40,10 @@ spawnHttpServer(argv.db, argv.port, secret, argv.worldFolder, userCache,
     terrainCache)
     .then(async ({server, onPropsChange}) => {
       const wsChannelManager =
-          spawnWsServer(server, secret, userCache).wsChannelManager;
+          (await spawnWsServer(server, secret, userCache))
+              .wsChannelManager;
       onPropsChange((wid, data) => {
         wsChannelManager.broadcastWorldUpdate(wid, data);
       });
+      wsChannelManager.startBroadcasting();
     });

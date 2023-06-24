@@ -182,7 +182,7 @@ describe('http client', () => {
     };
 
     const propsUpdateCb = (actual) => {
-      const data = JSON.parse(actual);
+      const data = actual;
       assert.equal(data.op, 'update');
 
       const props = data.data;

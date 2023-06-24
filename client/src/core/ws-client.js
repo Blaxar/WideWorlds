@@ -128,7 +128,7 @@ class WorldUpdate extends BaseWs {
   onMessage(cb) {
     this.ws.addEventListener('message', (event) => {
       // TODO: sanitize/check entries first?
-      const entries = event.data;
+      const entries = JSON.parse(event.data);
 
       // Pass the list of plain json objects to the callback
       cb(entries);
@@ -143,9 +143,22 @@ class WsClient {
    * @param {string} baseUrl - Base API url to prepend to all API calls.
    * @param {string} token - JWT authentication token of the user.
    */
-  constructor(baseUrl, token) {
+  constructor(baseUrl, token = null) {
     this.baseUrl = baseUrl;
+    this.setAuthToken(token);
+  }
+
+  /**
+   * Set the authentication token value to be used for WS requests
+   * @param {string} token - User authetication token.
+   */
+  setAuthToken(token) {
     this.token = encodeURIComponent(token);
+  }
+
+  /** Clear current authentication token */
+  clear() {
+    this.token = null;
   }
 
   /**

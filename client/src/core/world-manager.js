@@ -5,7 +5,8 @@
 import {loadAvatarsZip} from '../../../common/avatars-dat-parser.js';
 import {getPageName, defaultPageDiameter}
   from '../../../common/terrain-utils.js';
-import {makePagePlane, adjustPageEdges} from './utils-3d.js';
+import {makePagePlane, adjustPageEdges}
+  from './utils-3d.js';
 import {Vector3, Vector2, Color} from 'three';
 
 const defaultChunkLoadingPattern = [[-1, 1], [0, 1], [1, 1],
@@ -25,6 +26,8 @@ class WorldManager {
    *                                                3D assets loading.
    * @param {HttpClient} httpClient - HTTP client managing API requests to
    *                                  the server.
+   * @param {HttpClient} wsClient - WS client for listening to world update
+   *                                events coming from the server.
    * @param {UserConfigNode} propsLoadingNode - Configuration node for the
    *                                            props loading distance.
    * @param {integer} chunkSide - Chunk side length (in meters).
@@ -32,15 +35,17 @@ class WorldManager {
    *                                       before moving animated textures to
    *                                       their next frame.
    */
-  constructor(engine3d, worldPathRegistry, httpClient, propsLoadingNode = null,
-      chunkSide = 20, textureUpdatePeriod = 0.20) {
+  constructor(engine3d, worldPathRegistry, httpClient, wsClient,
+      propsLoadingNode = null, chunkSide = 20, textureUpdatePeriod = 0.20) {
     this.chunkLoadingPattern = defaultChunkLoadingPattern;
     this.engine3d = engine3d;
     this.worldPathRegistry = worldPathRegistry;
     this.httpClient = httpClient;
+    this.wsClient = wsClient;
     this.textureUpdatePeriod = textureUpdatePeriod; // In seconds
     this.currentWorld = null;
     this.currentModelRegistry = null;
+    this.currentWorldUpdateClient = null;
     this.currentTerrainMaterials = [];
 
     // Props handling
@@ -54,7 +59,7 @@ class WorldManager {
     this.terrainMaterials = new Map();
 
     this.lastTextureUpdate = 0;
-    this.sprites = [];
+    this.sprites = new Map();
     this.cameraDirection = new Vector3();
     this.xzDirection = new Vector2();
     this.terrainEnabled = false;
@@ -159,6 +164,36 @@ class WorldManager {
     if (!data.path) throw new Error('Missing path field from world data json');
 
     this.currentModelRegistry = await this.worldPathRegistry.get(data.path);
+    this.currentWorldUpdateClient =
+        await this.wsClient.worldUpdateConnect(world.id);
+
+    this.currentWorldUpdateClient.onMessage(async (entries) => {
+      if (entries.op === 'update') {
+        for (const value of entries.data) {
+          const {cX, cZ} = this.getChunkCoordinates(value.x, value.z);
+
+          if (this.isChunkLoaded(cX, cZ)) {
+            // Only update props on already-loaded chunks
+            if (this.props.has(value.id)) {
+              // Remove original object
+              const oldObj3d = this.props.get(value.id);
+              oldObj3d.removeFromParent();
+
+              // Remove it from the sprites list (when applicable)
+              this.sprites.delete(value.id);
+
+              // Spawn a new one of the same type and update it
+              const newObj3d = await this.currentModelRegistry
+                  .get(oldObj3d.userData.prop.name);
+              newObj3d.userData.rwx = oldObj3d.userData.rwx;
+
+              this.updateAssetFromProp(newObj3d, value);
+            }
+          }
+        }
+      }
+    });
+
     this.currentTerrainMaterials =
         this.worldPathRegistry.getTerrainMaterials(data.path);
 
@@ -183,6 +218,8 @@ class WorldManager {
   /** Clear current world data, reset engine3d state and chunks */
   unload() {
     this.currentWorld = null;
+    this.currentWorldUpdateClient?.close();
+    this.currentWorldUpdateClient = null;
     this.currentModelRegistry = null;
     this.engine3d.setCameraDistance(0);
     this.engine3d.clearEntities();
@@ -196,12 +233,40 @@ class WorldManager {
     this.clearChunks();
     this.clearPages();
     this.lastTextureUpdate = 0;
-    this.sprites = [];
+    this.sprites.clear();
     this.cameraDirection.set(0, 0, 0);
     this.xzDirection.set(0, 0);
     this.terrainEnabled = false;
     this.terrainElevationOffset = 0.0;
     this.previousCX = this.previousCZ = null;
+  }
+
+  /**
+   * Get tile-space coordinates of a chunk covering a real-space position
+   * @param {number} x - Position along the X axis (in meters).
+   * @param {number} z - Position along the Z axis (in meters).
+   * @return {Object} Object holding {cX, cZ}, respectively tile coordinates
+   *                  for the X and the Z axis
+   */
+  getChunkCoordinates(x, z) {
+    const cX = Math.floor(x / (this.chunkSide) + 0.5);
+    const cZ = Math.floor(z / (this.chunkSide) + 0.5);
+
+    return {cX, cZ};
+  }
+
+  /**
+   * Get tile-space coordinates of a page covering a real-space position
+   * @param {number} x - Position along the X axis (in meters).
+   * @param {number} z - Position along the Z axis (in meters).
+   * @return {Object} Object holding {cX, cZ}, respectively tile coordinates
+   *                  for the X and the Z axis
+   */
+  getPageCoordinates(x, z) {
+    const pX = Math.floor(x / (defaultPageDiameter * 10) + 0.5);
+    const pZ = Math.floor(z / (defaultPageDiameter * 10) + 0.5);
+
+    return {pX, pZ};
   }
 
   /** Clear all chunks */
@@ -244,15 +309,13 @@ class WorldManager {
     this.xzDirection.set(this.cameraDirection.x, this.cameraDirection.z);
     const facingAngle = - this.xzDirection.angle() - Math.PI / 2;
 
-    for (const sprite of this.sprites) {
+    this.sprites.forEach((sprite) => {
       sprite.rotation.set(0, facingAngle, 0);
       sprite.updateMatrix();
-    }
+    });
 
-    const cX = Math.floor(pos.x / (this.chunkSide) + 0.5);
-    const cZ = Math.floor(pos.z / (this.chunkSide) + 0.5);
-    const pX = Math.floor(pos.x / (defaultPageDiameter * 10) + 0.5);
-    const pZ = Math.floor(pos.z / (defaultPageDiameter * 10) + 0.5);
+    const {cX, cZ} = this.getChunkCoordinates(pos.x, pos.z);
+    const {pX, pZ} = this.getPageCoordinates(pos.x, pos.y);
 
     if (this.previousCX !== cX || this.previousCZ !== cZ) {
       const lodCamera = this.engine3d.camera.clone();
@@ -292,6 +355,17 @@ class WorldManager {
   }
 
   /**
+   * Tell if a given chunk is already loaded
+   * @param {integer} x - Index of the chunk on the X axis.
+   * @param {integer} z - Index of the chunk on the Z axis.
+   * @return {boolean} True if chunk is loaded, false otherwise.
+   */
+  isChunkLoaded(x, z) {
+    const chunkId = `${x}_${z}`;
+    return this.chunks.has(chunkId);
+  }
+
+  /**
    * Load a single terrain page, return right away if already loaded
    * @param {integer} pageX - Index of the page on the X axis.
    * @param {integer} pageZ - Index of the page on the Z axis.
@@ -315,6 +389,30 @@ class WorldManager {
   }
 
   /**
+   * Get chunk center pos in real-space coordinates, along with
+   * its corresponding 3D node in the engine (will create one if
+   * none yet)
+   * @param {integer} cX - Index of the chunk on the X axis.
+   * @param {integer} cZ - Index of the chunk on the Z axis.
+   * @return {Object} Object holding chunk position and node handler.
+   */
+  getChunkAnchor(cX, cZ) {
+    const chunkPos = new Vector3(cX * this.chunkSide, 0,
+        cZ * this.chunkSide);
+
+    let chunkNodeHandle = this.chunks.get(`${cX}_${cZ}`);
+
+    if (chunkNodeHandle === undefined) {
+      chunkNodeHandle =
+        this.engine3d.spawnNode(chunkPos.x, chunkPos.y, chunkPos.z,
+            true);
+      this.chunks.set(`${cX}_${cZ}`, chunkNodeHandle);
+    }
+
+    return {chunkPos, chunkNodeHandle};
+  }
+
+  /**
    * Reload a single prop chunk no matter what
    * @param {integer} x - Index of the chunk on the X axis.
    * @param {integer} z - Index of the chunk on the Z axis.
@@ -328,10 +426,7 @@ class WorldManager {
       this.chunks.remove(chunkId);
     }
 
-    const chunkPos = [x * this.chunkSide, 0,
-      z * this.chunkSide];
-    const chunkNodeHandle = this.engine3d.spawnNode(...chunkPos, true);
-    this.chunks.set(`${x}_${z}`, chunkNodeHandle);
+    const chunkAnchor = this.getChunkAnchor(x, z);
 
     const halfChunkSide = this.chunkSide / 2;
     const chunk = await this.httpClient.getProps(this.currentWorld.id,
@@ -344,35 +439,13 @@ class WorldManager {
     const modelRegistry = this.currentModelRegistry;
 
     for (const prop of chunk) {
+      // Cancel any pending loading if the chunk has been removed
+      // or the world has been unloaded
+      if (!modelRegistry || !this.isChunkLoaded(x, z)) break;
+
       const obj3d = await modelRegistry.get(prop.name);
-      obj3d.position.set(prop.x - chunkPos[0], prop.y,
-          prop.z - chunkPos[2]);
 
-      obj3d.rotation.set(prop.pitch, prop.yaw, prop.roll,
-          'YZX');
-
-      obj3d.userData.action = prop?.action;
-      obj3d.userData.description = prop?.description;
-
-      if (obj3d.userData.rwx?.axisAlignment !== 'none') {
-        this.sprites.push(obj3d);
-      }
-
-      try {
-        modelRegistry.applyActionString(obj3d, prop.action);
-      } catch (e) {
-        console.error(e);
-      }
-
-      if (!this.engine3d.appendToNode(chunkNodeHandle, obj3d)) {
-        // Could not append object to node, meaning node (chunk) no
-        // longer exists, we just silently cancel the whole loading.
-        return;
-      }
-
-      obj3d.matrixAutoUpdate = false;
-      obj3d.updateMatrix();
-      this.props.set(prop.id, obj3d);
+      this.updateAssetFromProp(obj3d, prop, chunkAnchor);
     }
   }
 
@@ -436,6 +509,87 @@ class WorldManager {
         bottomRight, bottom, defaultPageDiameter);
 
     this.engine3d.appendToNode(pageNodeHandle, pagePlane);
+  }
+
+  /**
+   * Update props on the server
+   * @param {Array<Prop>} props - Props to update
+   */
+  async updateProps(props) {
+    if (!props.length) return;
+
+    const propsToBeReset = new Set();
+
+    const propsData = {};
+
+    for (const prop of props) {
+      propsData[prop.userData.prop.id] = prop.userData.prop;
+    }
+
+    const results = await this.httpClient.putProps(
+        this.currentWorld.id, propsData,
+    );
+
+    for (const [key, value] of Object.entries(results)) {
+      if (value !== true) propsToBeReset.add(parseInt(key));
+    }
+
+    propsToBeReset.forEach((id) => {
+      if (!this.props.has(id)) return;
+
+      const obj3d = this.props.get(id);
+      obj3d.userData.prop = obj3d.userData.originalProp;
+      delete obj3d.userData.originalProp;
+      this.updateAssetFromProp(obj3d, obj3d.userData.prop);
+    });
+  }
+
+  /**
+   * Update three.js Object3D position, rotation and metadata based on
+   * provided prop description object
+   * @param {Object3D} obj3d - 3D asset to update.
+   * @param {Prop} prop - Object describing a prop.
+   * @param{Object} chunkAnchor - Object holding chunk position and node
+   *                              handler.
+   */
+  updateAssetFromProp(obj3d, prop, chunkAnchor = null) {
+    // Cancel operation if the world has been unloaded in the meantime
+    if (!this.currentModelRegistry) return;
+
+    const {cX, cZ} = this.getChunkCoordinates(prop.x, prop.z);
+    const {chunkPos, chunkNodeHandle} = chunkAnchor ? chunkAnchor :
+        this.getChunkAnchor(cX, cZ);
+
+    obj3d.position.set(prop.x - chunkPos.x, prop.y,
+        prop.z - chunkPos.z);
+    obj3d.rotation.set(prop.pitch, prop.yaw, prop.roll, 'YZX');
+    obj3d.userData.prop = prop;
+
+    if (obj3d.userData.rwx?.axisAlignment !== 'none') {
+      this.sprites.set(obj3d.userData.prop.id, obj3d);
+    }
+
+    try {
+      this.currentModelRegistry.applyActionString(obj3d, prop.action);
+    } catch (e) {
+      console.error(e);
+    }
+
+    if (obj3d.parent) {
+      obj3d.removeFromParent();
+    }
+
+    this.engine3d.appendToNode(chunkNodeHandle, obj3d);
+
+    if (!this.engine3d.appendToNode(chunkNodeHandle, obj3d)) {
+      // Could not append object to node, meaning node (chunk) no
+      // longer exists, we just silently cancel the whole loading.
+      return;
+    }
+
+    obj3d.matrixAutoUpdate = false;
+    obj3d.updateMatrix();
+    this.props.set(prop.id, obj3d);
   }
 }
 
