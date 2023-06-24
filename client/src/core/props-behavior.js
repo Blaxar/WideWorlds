@@ -210,7 +210,7 @@ class PropsBehavior extends SubjectBehavior {
       obj3d.userData.prop.y = this.absPropPos.y;
       obj3d.userData.prop.z = this.absPropPos.z;
 
-      if (obj3d.userData.rwx?.axisAlignment !== 'none') {
+      if (obj3d.userData.rwx.axisAlignment === 'none') {
         obj3d.userData.prop.pitch = obj3d.rotation.x;
         obj3d.userData.prop.yaw = obj3d.rotation.y;
         obj3d.userData.prop.roll = obj3d.rotation.z;
