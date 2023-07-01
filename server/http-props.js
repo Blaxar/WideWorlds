@@ -5,7 +5,7 @@
 import World from '../common/db/model/World.js';
 import Prop from '../common/db/model/Prop.js';
 
-const notNullOrUndefined = (value) => value !== null && value !== undefined;
+const isNullOrUndefined = (value) => value === null || value === undefined;
 
 /**
  * Register props-related endpoints into the expressjs app
@@ -172,21 +172,21 @@ function registerPropsEndpoints(app, authenticate, connection, ctx) {
 
                   // Apply all meaningful fields
                   prop.date = Date.now();
-                  prop.x = notNullOrUndefined(value.x) ? value.x : prop.x;
-                  prop.y = notNullOrUndefined(value.y) ? value.y : prop.y;
-                  prop.z = notNullOrUndefined(value.z) ? value.z : prop.z;
-                  prop.yaw = notNullOrUndefined(value.yaw) ? value.yaw :
-                    prop.yaw;
-                  prop.pitch = notNullOrUndefined(value.pitch) ?
-                    value.pitch : prop.pitch;
-                  prop.roll = notNullOrUndefined(value.roll) ? value.roll :
-                    prop.roll;
-                  prop.name = notNullOrUndefined(value.name) ? value.name :
-                    prop.name;
-                  prop.description = notNullOrUndefined(value.description) ?
-                    value.description : prop.description;
-                  prop.action = notNullOrUndefined(value.action) ?
-                    value.action : prop.action;
+                  prop.x = isNullOrUndefined(value.x) ? prop.x : value.x;
+                  prop.y = isNullOrUndefined(value.y) ? prop.y : value.y;
+                  prop.z = isNullOrUndefined(value.z) ? prop.z : value.z;
+                  prop.yaw = isNullOrUndefined(value.yaw) ? prop.yaw :
+                    value.yaw;
+                  prop.pitch = isNullOrUndefined(value.pitch) ?
+                    prop.pitch : value.pitch;
+                  prop.roll = isNullOrUndefined(value.roll) ? prop.roll :
+                    value.roll;
+                  prop.name = isNullOrUndefined(value.name) ? prop.name :
+                    value.name;
+                  prop.description = isNullOrUndefined(value.description) ?
+                    prop.description : value.description;
+                  prop.action = isNullOrUndefined(value.action) ?
+                    prop.action : value.action;
 
                   propsToSave.push(prop);
                   response[prop.id] = true;
@@ -194,12 +194,104 @@ function registerPropsEndpoints(app, authenticate, connection, ctx) {
               });
 
           // Save updated props to DB
-          await connection.manager.save(propsToSave);
           if (propsToSave.length) {
+            await connection.manager.save(propsToSave);
             ctx.propsChangedCallback(wid,
                 JSON.stringify({op: 'update', data: propsToSave}));
           }
           res.json(response);
+        });
+  });
+
+  app.post('/api/worlds/:id/props', authenticate, (req, res) => {
+    res.setHeader('Content-Type', 'application/json');
+
+    // Get world ID
+    const wid = req.params.id;
+
+    // Get user ID
+    const userId = req.userId;
+
+    const props = req.body;
+    const propsToSave = [];
+
+    connection.manager.createQueryBuilder(World, 'world')
+        .where('world.id = :wid', {wid}).getOne().then(async (world) => {
+          if (!world) {
+            res.status(404).json({});
+            return;
+          }
+
+          if (props.constructor.name !== 'Array') {
+            // Entry needs to be an object
+            res.status(400).json({});
+            return;
+          }
+
+          // We will respond an array as well
+          const response = [];
+
+          for (const value of props) {
+            if (value.constructor.name !== 'Object') {
+              // Entry needs to be an object
+              res.status(400).json({});
+              return;
+            }
+
+            if (isNullOrUndefined(value.x) ||
+                isNaN(parseFloat(value.x)) ||
+                isNullOrUndefined(value.y) ||
+                isNaN(parseFloat(value.y)) ||
+                isNullOrUndefined(value.z) ||
+                isNaN(parseFloat(value.z)) ||
+                isNullOrUndefined(value.yaw) ||
+                isNaN(parseFloat(value.yaw)) ||
+                isNullOrUndefined(value.pitch) ||
+                isNaN(parseFloat(value.pitch)) ||
+                isNullOrUndefined(value.roll) ||
+                isNaN(parseFloat(value.roll)) ||
+                isNullOrUndefined(value.name) ||
+                isNullOrUndefined(value.description) ||
+                isNullOrUndefined(value.action)
+            ) {
+              // Invalid or missing field values
+              response.push(null);
+              continue;
+            }
+
+            const prop = new Prop(
+                undefined,
+                wid,
+                userId,
+                Date.now(),
+                value.x,
+                value.y,
+                value.z,
+                value.yaw,
+                value.pitch,
+                value.roll,
+                value.name,
+                value.description,
+                value.action,
+            );
+
+            propsToSave.push(prop);
+            response.push(true);
+          }
+
+          // Save created props to DB
+          if (propsToSave.length) {
+            connection.manager.save(propsToSave)
+                .then((savedProps) => {
+                  ctx.propsChangedCallback(wid,
+                      JSON.stringify({op: 'create', data: savedProps}));
+                  res.json(response);
+                })
+                .catch((err) => {
+                // Entry needs to be an object
+                  res.status(500).json({});
+                });
+          }
         });
   });
 }
