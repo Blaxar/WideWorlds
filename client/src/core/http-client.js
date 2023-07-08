@@ -124,9 +124,9 @@ class HttpClient {
 
   /**
    * Update certain props on a given world
-   * @param {integer} wid - ID of the world to get props from.
+   * @param {integer} wid - ID of the world to update props on.
    * @param {Object} props - Map of props to be updated, indexed by their ID
-   *                         an holding all meaningful properties in an object
+   *                         and holding all meaningful properties in an object
    *                         as value.
    * @return {Object} Map of results for props to be updated, indexed by their
    *                  ID, value is true in case of success, false in case of
@@ -136,6 +136,30 @@ class HttpClient {
   async putProps(wid, props) {
     const request = new Request(`${this.url}/worlds/${wid}/props`, {
       method: 'PUT',
+      headers: this.headers,
+      body: JSON.stringify(props),
+      mode: this.cors ? 'cors' : undefined,
+    });
+
+    return await fetch(request).then((response) => {
+      if (response.ok) return response.json();
+      else throw new Error(response.status);
+    });
+  }
+
+  /**
+   * Create props on a given world
+   * @param {integer} wid - ID of the world to create props on.
+   * @param {Array} props - List props to be updated, holding all meaningful
+   *                        properties in objects as individual items.
+   * @return {Array} List of results for props to be created, item is true in
+   *                 case of success, false in case of failure (because of
+   *                 privilege/ownership) and null if provided data was invalid
+   *                 or incomplete.
+   */
+  async postProps(wid, props) {
+    const request = new Request(`${this.url}/worlds/${wid}/props`, {
+      method: 'POST',
       headers: this.headers,
       body: JSON.stringify(props),
       mode: this.cors ? 'cors' : undefined,

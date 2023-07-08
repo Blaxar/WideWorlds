@@ -381,7 +381,7 @@ describe('http server props', () => {
       }
     ];
 
-    const propsUpdateCb = (actual) => {
+    const propsCreateCb = (actual) => {
       const data = JSON.parse(actual);
       assert.equal(data.op, 'create');
 
@@ -424,7 +424,7 @@ describe('http server props', () => {
     Promise.all([
       // Ready the bare Websocket client API, we should be notified of the props update from there
       request(base.server).ws('/api/worlds/' + base.worldId + '/ws/update?token=' + base.citizenBearerToken)
-          .expectText(propsUpdateCb)
+          .expectText(propsCreateCb)
           .close()
           .expectClosed(),
       // Processing the PUT request should take a few ms, the websocket connection will have surely
