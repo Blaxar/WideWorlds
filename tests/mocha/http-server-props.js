@@ -422,7 +422,7 @@ describe('http server props', () => {
     };
 
     Promise.all([
-      // Ready the bare Websocket client API, we should be notified of the props update from there
+      // Ready the bare Websocket client API, we should be notified of the props creation from there
       request(base.server).ws('/api/worlds/' + base.worldId + '/ws/update?token=' + base.citizenBearerToken)
           .expectText(propsCreateCb)
           .close()
@@ -572,6 +572,129 @@ describe('http server props', () => {
 
     request(base.server)
         .post('/api/worlds/77777/props')
+        .set('Authorization', 'Bearer ' + base.adminBearerToken)
+        .set('Accept', 'application/json')
+        .send(payload)
+        .expect('Content-Type', /json/)
+        .expect(404, done);
+  });
+
+  // Testing DELETE Prop API
+
+  it('DELETE /api/worlds/id/props - OK', (done) => {
+    // Ready payload
+    const payload = [base.firstPropId, base.secondPropId, 66666];
+
+    const propsDeleteCb = (actual) => {
+      const data = JSON.parse(actual);
+      assert.equal(data.op, 'delete');
+
+      const props = data.data;
+      assert.equal(props.length, 2);
+
+      // Assert first prop ID
+      assert.strictEqual(props[0], base.firstPropId);
+
+      // Assert second prop ID
+      assert.strictEqual(props[1], base.secondPropId);
+    };
+
+    Promise.all([
+      // Ready the bare Websocket client API, we should be notified of the props deletion from there
+      request(base.server).ws('/api/worlds/' + base.worldId + '/ws/update?token=' + base.citizenBearerToken)
+          .expectText(propsDeleteCb)
+          .close()
+          .expectClosed(),
+      // Processing the DELETE request should take a few ms, the websocket connection will have surely
+      // been established by then
+      request(base.server)
+        .delete('/api/worlds/' + base.worldId + '/props')
+        .set('Authorization', 'Bearer ' + base.adminBearerToken)
+        .set('Accept', 'application/json')
+        .send(payload)
+        .expect('Content-Type', /json/)
+        .expect(200).then(async (response) => {
+          // Get the body (json content) of the request
+          const body = response.body;
+
+          // We expect three entries
+          assert.equal(Object.entries(body).length, 3);
+
+          // Assert first prop status
+          assert.strictEqual(body[0], true);
+
+          // Assert second prop status
+          assert.strictEqual(body[1], true);
+
+          // Assert unknown prop status
+          assert.strictEqual(body[2], null);
+
+          await TypeORM.getConnection().manager.createQueryBuilder(Prop, 'prop')
+              .where('prop.worldId = :wid', {wid: base.worldId}).getMany()
+              .then((props) => {
+                // We expect no entries has all should have been deleted
+                assert.equal(props.length, 0);
+              });
+        })
+    ]).then(() => done()).catch((err) => done(err));
+  });
+
+  it('DELETE /api/worlds/id/props - Bad request', (done) => {
+    const payload = ['not an integer'];
+
+    request(base.server)
+        .delete('/api/worlds/' + base.worldId + '/props')
+        .set('Authorization', 'Bearer ' + base.adminBearerToken)
+        .set('Accept', 'application/json')
+        .send(payload)
+        .expect('Content-Type', /json/)
+        .expect(400, done);
+    });
+
+  it('DELETE /api/worlds/id/props - Duplicated IDs', (done) => {
+    const payload = [base.firstPropId, base.firstPropId];
+
+    request(base.server)
+        .delete('/api/worlds/' + base.worldId + '/props')
+        .set('Authorization', 'Bearer ' + base.adminBearerToken)
+        .set('Accept', 'application/json')
+        .send(payload)
+        .expect('Content-Type', /json/)
+        .expect(400, done);
+    });
+
+  it('DELETE /api/worlds/id/props - Unauthorized', (done) => {
+    // Ready payload
+    const payload = [base.firstPropId, base.secondPropId, 66666];
+
+    request(base.server)
+        .delete('/api/worlds/' + base.worldId + '/props')
+        .set('Authorization', 'gibberish')
+        .set('Accept', 'application/json')
+        .send(payload)
+        .expect('Content-Type', /json/)
+        .expect(401, done);
+  });
+
+  it('DELETE /api/worlds/id/props - Forbidden', (done) => {
+    // Ready payload
+    const payload = [base.firstPropId, base.secondPropId, 66666];
+
+    request(base.server)
+        .delete('/api/worlds/' + base.worldId + '/props')
+        .set('Authorization', 'Bearer iNvAlId')
+        .set('Accept', 'application/json')
+        .send(payload)
+        .expect('Content-Type', /json/)
+        .expect(403, done);
+  });
+
+  it('DELETE /api/worlds/id/props - Not found', (done) => {
+    // Ready payload
+    const payload = [base.firstPropId, base.secondPropId, 66666];
+
+    request(base.server)
+        .delete('/api/worlds/77777/props')
         .set('Authorization', 'Bearer ' + base.adminBearerToken)
         .set('Accept', 'application/json')
         .send(payload)

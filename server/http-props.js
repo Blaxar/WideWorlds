@@ -160,7 +160,7 @@ function registerPropsEndpoints(app, authenticate, connection, ctx) {
 
           await connection.manager.createQueryBuilder(Prop, 'prop')
               .where('prop.worldId = :wid', {wid})
-              .andWhere('prop.id IN (:...inEntries)', {inEntries: propsToQuery})
+              .andWhere('prop.id IN (:...entries)', {entries: propsToQuery})
               .getMany().then((dbProps) => {
                 for (const prop of dbProps) {
                   if (userRole !== 'admin' && prop.userId != userId) {
@@ -195,11 +195,16 @@ function registerPropsEndpoints(app, authenticate, connection, ctx) {
 
           // Save updated props to DB
           if (propsToSave.length) {
-            await connection.manager.save(propsToSave);
-            ctx.propsChangedCallback(wid,
-                JSON.stringify({op: 'update', data: propsToSave}));
+            connection.manager.save(propsToSave).then(() => {
+              res.json(response);
+              ctx.propsChangedCallback(wid,
+                  JSON.stringify({op: 'update', data: propsToSave}));
+            }).catch((err) => {
+              res.status(500).json({});
+            });
+          } else {
+            res.json(response);
           }
-          res.json(response);
         });
   });
 
@@ -223,12 +228,12 @@ function registerPropsEndpoints(app, authenticate, connection, ctx) {
           }
 
           if (props.constructor.name !== 'Array') {
-            // Entry needs to be an object
+            // Payload needs to be an array
             res.status(400).json({});
             return;
           }
 
-          // We will respond an array as well
+          // We will respond with an array as well
           const response = [];
 
           for (const value of props) {
@@ -283,14 +288,102 @@ function registerPropsEndpoints(app, authenticate, connection, ctx) {
           if (propsToSave.length) {
             connection.manager.save(propsToSave)
                 .then((savedProps) => {
+                  res.json(response);
                   ctx.propsChangedCallback(wid,
                       JSON.stringify({op: 'create', data: savedProps}));
-                  res.json(response);
                 })
                 .catch((err) => {
-                // Entry needs to be an object
                   res.status(500).json({});
                 });
+          } else {
+            res.json(response);
+          }
+        });
+  });
+
+  app.delete('/api/worlds/:id/props', authenticate, (req, res) => {
+    res.setHeader('Content-Type', 'application/json');
+
+    // Get world ID
+    const wid = req.params.id;
+
+    // Get user ID and role
+    const userRole = req.userRole;
+    const userId = req.userId;
+
+    const props = req.body;
+
+    connection.manager.createQueryBuilder(World, 'world')
+        .where('world.id = :wid', {wid}).getOne().then(async (world) => {
+          if (!world) {
+            res.status(404).json({});
+            return;
+          }
+
+          if (props.constructor.name !== 'Array') {
+            // Payload needs to be an array
+            res.status(400).json({});
+            return;
+          }
+
+          if (new Set(props).size !== props.length) {
+            // The array cannot have duplicated values
+            res.status(400).json({});
+            return;
+          }
+
+          const propsToQuery = [];
+          const propsToDelete = [];
+          const propIdtoEntry = {};
+
+          // We will respond with an array as well
+          const response = [];
+          response.length = props.length;
+          response.fill(null, 0, props.length);
+
+          // Evaluate the content of the payload
+          for (const [id, propId] of Object.entries(props)) {
+            if (!Number.isInteger(propId) || propId < 0) {
+              // Entry needs to be a positive integer
+              res.status(400).json({});
+              return;
+            }
+
+            propsToQuery.push(propId);
+            propIdtoEntry[propId] = id;
+          }
+
+          await connection.manager.createQueryBuilder(Prop, 'prop')
+              .where('prop.worldId = :wid', {wid})
+              .andWhere('prop.id IN (:...entries)', {entries: propsToQuery})
+              .getMany().then((dbProps) => {
+                for (const prop of dbProps) {
+                  if (userRole !== 'admin' && prop.userId != userId) {
+                    response[propIdtoEntry[prop.id]] = false; // Not allowed
+                    continue;
+                  }
+
+                  propsToDelete.push(prop.id);
+                  response[propIdtoEntry[prop.id]] = true;
+                }
+              });
+
+          // Delete props from DB
+          if (propsToDelete.length) {
+            connection.manager.createQueryBuilder(Prop, 'prop')
+                .delete()
+                .where('prop.worldId = :wid', {wid})
+                .andWhere('prop.id IN (:...entries)', {entries: propsToDelete})
+                .execute()
+                .then(() => {
+                  res.json(response);
+                  ctx.propsChangedCallback(wid,
+                      JSON.stringify({op: 'delete', data: propsToDelete}));
+                }).catch((err) => {
+                  res.status(500).json({});
+                });
+          } else {
+            res.json(response);
           }
         });
   });
