@@ -440,7 +440,7 @@ describe('http server props', () => {
           const body = response.body;
 
           // We expect three entries
-          assert.equal(Object.entries(body).length, 3);
+          assert.equal(body.length, 3);
 
           // Assert first prop status
           assert.strictEqual(body[0], true);
@@ -618,7 +618,7 @@ describe('http server props', () => {
           const body = response.body;
 
           // We expect three entries
-          assert.equal(Object.entries(body).length, 3);
+          assert.equal(body.length, 3);
 
           // Assert first prop status
           assert.strictEqual(body[0], true);

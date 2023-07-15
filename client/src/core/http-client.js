@@ -172,6 +172,28 @@ class HttpClient {
   }
 
   /**
+   * Delete props on a given world
+   * @param {integer} wid - ID of the world to deleted props from.
+   * @param {Array} props - List of props to be deleted, entries are prop IDs.
+   * @return {Array} List of results for props to be deleted, item is true in
+   *                 case of success, false in case of failure (because of
+   *                 privilege/ownership) and null if prop was not found.
+   */
+  async deleteProps(wid, props) {
+    const request = new Request(`${this.url}/worlds/${wid}/props`, {
+      method: 'DELETE',
+      headers: this.headers,
+      body: JSON.stringify(props),
+      mode: this.cors ? 'cors' : undefined,
+    });
+
+    return await fetch(request).then((response) => {
+      if (response.ok) return response.json();
+      else throw new Error(response.status);
+    });
+  }
+
+  /**
    * Get terrain terrain page
    * @param {integer} wid - ID of the world to get the URLs from.
    * @param {integer} pageX - Index of the page on the X axis.

@@ -332,7 +332,6 @@ describe('http client', () => {
   });
 
   it('postProps - OK', (done) => {
-
     // Ready payload
     const payload = [
       {
@@ -428,7 +427,7 @@ describe('http client', () => {
           payload,
         ).then((body) => {
           // We expect three entries
-          assert.equal(Object.entries(body).length, 3);
+          assert.equal(body.length, 3);
 
           // Assert first prop status
           assert.strictEqual(body[0], true);
@@ -487,7 +486,6 @@ describe('http client', () => {
   });
 
   it('postProps - Unauthorized', (done) => {
-
     // Ready payload
     const payload = [
       {
@@ -519,6 +517,94 @@ describe('http client', () => {
     ];
 
     httpClient.postProps(
+      base.worldId,
+      payload,
+    ).then(() => done('Creating props should not work here'))
+      .catch((err) => {
+        if (err.message == 401) done();
+        else done(err);
+      });
+  });
+
+  it('deleteProps - OK', (done) => {
+    // Ready payload
+    const payload = [base.firstPropId, base.secondPropId, 66666];
+
+    const propsDeleteCb = (actual) => {
+      const data = actual;
+      assert.equal(data.op, 'delete');
+
+      const props = data.data;
+      assert.equal(props.length, 2);
+
+      // Assert first prop ID
+      assert.strictEqual(props[0], base.firstPropId);
+
+      // Assert second prop ID
+      assert.strictEqual(props[1], base.secondPropId);
+    };
+
+    const adminClient = new WsClient(`ws://127.0.0.1:${base.port}/api`, base.adminBearerToken);
+
+    Promise.all([
+      // Test the ws-client, we should be notified of the props deletion from there
+      adminClient.worldUpdateConnect(base.worldId).then(
+        (wu) => new Promise((resolve, reject) => {
+            wu.onMessage((data) => {
+              try {
+                propsDeleteCb(data);
+                wu.close();
+              } catch (e) {
+                reject(e);
+              }
+              resolve();
+            });
+          })
+        ),
+      // Processing the DELETE request should take a few ms, the websocket connection will have surely
+      // been established by then
+      login().then(async () => {
+        await httpClient.deleteProps(
+          base.worldId,
+          payload,
+        ).then((body) => {
+          // We expect three entries
+          assert.equal(body.length, 3);
+
+          // Assert first prop status
+          assert.strictEqual(body[0], true);
+
+          // Assert second prop status
+          assert.strictEqual(body[1], true);
+
+          // Assert unknown prop status
+          assert.strictEqual(body[2], null);
+        });
+      })
+    ]).then(() => done()).catch((err) => done(err));
+  });
+
+  it('deleteProps - Not found', (done) => {
+    // Ready payload
+    const payload = [base.firstPropId, base.secondPropId, 66666];
+
+    login().then(() => {
+      httpClient.deleteProps(
+        base.worldId + 3000,
+        payload,
+      ).then(() => done('Creating props should not work here'))
+        .catch((err) => {
+          if (err.message == 404) done();
+          else done(err);
+        });
+    });
+  });
+
+  it('deleteProps - Unauthorized', (done) => {
+    // Ready payload
+    const payload = [base.firstPropId, base.secondPropId, 66666];
+
+    httpClient.deleteProps(
       base.worldId,
       payload,
     ).then(() => done('Creating props should not work here'))
