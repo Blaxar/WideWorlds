@@ -130,6 +130,12 @@ const getRenderingDistance = () => {
 const setRenderingDistance = (event) => {
   const value = parseInt(event.target.value);
   localRenderingDistance.value = value;
+  props.userConfig.at('graphics').at('renderingDistance').set(value, false);
+};
+
+const saveRenderingDistance = (event) => {
+  const value = parseInt(event.target.value);
+  localRenderingDistance.value = value;
   props.userConfig.at('graphics').at('renderingDistance').set(value);
 };
 
@@ -138,6 +144,12 @@ const getPropsLoadingDistance = () => {
 };
 
 const setPropsLoadingDistance = (event) => {
+  const value = parseInt(event.target.value);
+  localPropsLoadingDistance.value = value;
+  props.userConfig.at('graphics').at('propsLoadingDistance').set(value, false);
+};
+
+const savePropsLoadingDistance = (event) => {
   const value = parseInt(event.target.value);
   localPropsLoadingDistance.value = value;
   props.userConfig.at('graphics').at('propsLoadingDistance').set(value);
@@ -171,16 +183,16 @@ onUnmounted(() => {
 <template>
 <div class="controls-container window">
 <table :key="componentKey">
-    <tr><th scope="col" class="controls-header">Controls</th>
-    <th scope="col">Key Bindings</th></tr>
-    <tr v-for="name in userInputs" :key="name">
-    <td>{{ formatLabel(name) }}</td>
-    <td>
-        <input type="text" maxlength="0" placeholder="none" :name="name"
-        @keyup="onBindingKeyUp" :value="keyToName(listener.getKey(name))"
-        ref="inputField" />
-    </td>
-    </tr>
+  <tr><th scope="col" class="controls-header">Controls</th>
+  <th scope="col">Key Bindings</th></tr>
+  <tr v-for="name in userInputs" :key="name">
+  <td>{{ formatLabel(name) }}</td>
+  <td>
+    <input type="text" maxlength="0" placeholder="none" :name="name"
+    @keyup="onBindingKeyUp" :value="keyToName(listener.getKey(name))"
+    ref="inputField" />
+  </td>
+  </tr>
 </table>
 
 <table>
@@ -188,8 +200,8 @@ onUnmounted(() => {
     <button @click="resetKeys" name="resetKeys">{{resetKeysButtonText}}</button>
     </td><td>
     <input type="checkbox" id="runByDefault"
-:checked="props.userConfig.at('controls').at('runByDefault').value()"
-    @change="setRunByDefault"/>
+    :checked="props.userConfig.at('controls').at('runByDefault').value()"
+    @change="setRunByDefault" />
     <label for="runByDefault">{{runByDefaultText}}</label>
   </td></tr>
   <tr><td colspan="2"></td></tr>
@@ -207,16 +219,18 @@ onUnmounted(() => {
     Rendering distance: {{localRenderingDistance}}m
   </label>
   <input id="renderingDistance" type="range" :min="renderingDistance.min"
-    :max="renderingDistance.max" :value="getRenderingDistance()"
-    :step="renderingDistance.step" @input="setRenderingDistance" />
+    :max="renderingDistance.max" :defaultValue="getRenderingDistance()"
+    :step="renderingDistance.step" @input="setRenderingDistance"
+    @change="saveRenderingDistance" />
   </td></tr>
   <tr><td colspan="2">
   <label for="propsLoadingDistance">
     Props loading distance: {{localPropsLoadingDistance}}m
   </label>
   <input id="propsLoadingDistance" type="range" :min="propsLoadingDistance.min"
-    :max="propsLoadingDistance.max" :value="getPropsLoadingDistance()"
-    :step="propsLoadingDistance.step" @input="setPropsLoadingDistance" />
+    :max="propsLoadingDistance.max" :defaultValue="getPropsLoadingDistance()"
+    :step="propsLoadingDistance.step" @input="setPropsLoadingDistance"
+    @change="savePropsLoadingDistance" />
   </td></tr>
 </table>
 </div>

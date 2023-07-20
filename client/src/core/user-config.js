@@ -120,8 +120,12 @@ class UserConfigNode {
   /**
    * Set configuration leaf node (value) on current node
    * @param {any} value - Value to set.
+   * @param {boolean} save - Whether or not to save the new value to the local
+   *                         configuration (true by default), false means only
+   *                         the update event will be fired without any storage
+   *                         persistency.
    */
-  set(value) {
+  set(value, save = true) {
     const path = this.path();
     const entry = this.entry();
     const parentEntry = this.parent.entry();
@@ -141,8 +145,11 @@ class UserConfigNode {
         JSON.parse(JSON.stringify(this.defaultEntry));
     }
 
-    parentEntry[this.key] = value;
-    this.userConfig.save();
+    if (save) {
+      parentEntry[this.key] = value;
+      this.userConfig.save();
+    }
+
     this.userConfig.fireUpdateEvent(`${path}`, value);
   }
 

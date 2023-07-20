@@ -68,14 +68,23 @@ describe('UserConfig', () => {
     assert.throws(() => userConfig.at('controls').at('keyBindings').at('footward').onUpdate(() => {}), Error);
 
     // Value should have been saved to storage
-    const stored = JSON.parse(storage.getItem(configKey));
+    let stored = JSON.parse(storage.getItem(configKey));
+    assert.strictEqual(stored.controls.keyBindings.backward, 200);
+
+    // Try again without saving to storage
+    userConfig.at('controls').at('keyBindings').at('backward').set(202, false);
+    assert.strictEqual(firstValue, 202);
+    assert.strictEqual(secondValue, 202);
+
+    // New value should not have been saved to storage
+    stored = JSON.parse(storage.getItem(configKey));
     assert.strictEqual(stored.controls.keyBindings.backward, 200);
 
     // Clearing listeners: callback functions should no longer be called
     userConfig.at('controls').at('keyBindings').at('backward').clearListeners();
     userConfig.at('controls').at('keyBindings').at('backward').set(400);
-    assert.strictEqual(firstValue, 200);
-    assert.strictEqual(secondValue, 200);
+    assert.strictEqual(firstValue, 202);
+    assert.strictEqual(secondValue, 202);
   });
 
   it('getNodeFromPath', async () => {
