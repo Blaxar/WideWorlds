@@ -9,11 +9,12 @@ import {Mesh, Group, BufferGeometry, BufferAttribute, MeshBasicMaterial,
   SRGBColorSpace, TextureLoader, Color, CanvasTexture, BoxHelper} from 'three';
 import * as fflate from 'fflate';
 import {AWActionParser} from 'aw-action-parser';
+import formatSignLines, {mesureLineHTML, mesureLineCanvas,
+  makeSignHTML, makeSignCanvas} from './sign-utils.js';
 
 const unknownObjectName = '_unknown_';
-const defaultFontSize = 128;
-const maxCanvasWidth = 256;
-const maxCanvasHeight = 256;
+const maxCanvasWidth = 512;
+const maxCanvasHeight = 512;
 
 const boundingBoxName = 'rwx-bounding-box';
 const boundingBoxColor = 0xffff00;
@@ -31,8 +32,12 @@ class ModelRegistry {
    * @param {string} resourcePath - Full path to the textures folder.
    * @param {UserConfigNode} imageServiceNode - Configuration node for
    *                                            the image service.
+   * @param {rasterizeHTML} rasterizeHTML - Instance of rasterizeHTML.
+   * @param {UserConfigNode} htmlSignRenderingNode - Configuration node for
+   *                                                 HTML sign rendering.
    */
-  constructor(loadingManager, path, resourcePath, imageServiceNode = null) {
+  constructor(loadingManager, path, resourcePath, imageServiceNode = null,
+      rasterizeHTML = null, htmlSignRenderingNode = null) {
     this.textureColorSpace = SRGBColorSpace;
 
     this.materialManager = new RWXMaterialManager(resourcePath,
@@ -41,6 +46,8 @@ class ModelRegistry {
         '.jpg', '.zip', fflate, true, this.textureColorSpace);
 
     this.imageService = '';
+    this.rasterizeHTML = rasterizeHTML;
+    this.htmlSignRenderingNode = htmlSignRenderingNode;
 
     if (imageServiceNode) {
       // Ready image service URL and its update callback
@@ -269,14 +276,14 @@ class ModelRegistry {
           .threeMat);
 
       // Check if we need to apply a picture
-      //  and if said picture can be applied here to begin with...
+      // and if said picture can be applied here to begin with...
       if (picture && obj3d.userData.taggedMaterials[pictureTag]
           ?.includes(lastMatId)) {
         const url = this.imageService + picture;
 
         // Doing the above ensures us the new array of materials
-        //  will be updated, so if a picture is applied:
-        //   it will actually be visible
+        // will be updated, so if a picture is applied:
+        // it will actually be visible
         materialChanged = true;
 
         this.pictureLoader.load(url, (image) => {
@@ -291,22 +298,19 @@ class ModelRegistry {
       }
 
       // Check if we need to apply a sign
-      //  and if said sign can be applied here to begin with...
+      // and if said sign can be applied here to begin with...
       if (sign && obj3d.userData.taggedMaterials[signTag]
           ?.includes(lastMatId)) {
         materialChanged = true;
 
         materials[lastMatId] = materials[lastMatId].clone();
         materials[lastMatId].color = new Color(1.0, 1.0, 1.0);
-        materials[lastMatId].map = new CanvasTexture(
-            this.textCanvas(
-                sign.text,
-                materials[lastMatId].userData.ratio,
-                sign.color,
-                sign.bcolor,
-            ),
+        this.writeTextToCanvas(
+            materials[lastMatId],
+            sign.text,
+            sign.color,
+            sign.bcolor,
         );
-        materials[lastMatId].map.colorSpace = SRGBColorSpace;
       }
     }
 
@@ -314,116 +318,73 @@ class ModelRegistry {
   }
 
   /**
-   * Draws an HTMLCanvasElement as a CanvasTexture on top of a Sign object
-   * for internal use by {@link applyActionsRecursive}
-   * @param {string} text - Sign text to write on the canvas
-   * @param {integer} ratio - Sign ratio, to make the text fit
-   * @param {Array.<integer>} color - Text colour for the canvas
-   * @param {Array.<integer>} bcolor - Background colour for the canvas
-   * @return {CanvasTexture} Sign Canvas Texture
+   * Whether or not to use HTML rendering for signs
+   * @return {boolean} True if HTML sign rendering should be used,
+   *                   false otherwise.
   */
-  textCanvas(text = '', ratio = 1,
-      color = {r: 255, g: 255, b: 255},
-      bcolor = {r: 0, g: 0, b: 255}) {
+  useHtmlSignRendering() {
+    return this.htmlSignRenderingNode ?
+        this.htmlSignRenderingNode.value() : false;
+  }
+
+  /**
+   * Write text content as a texture on a material, for internal
+   * use by {@link applyActionsRecursive}
+   * @param {Material} material - three.js material for the sign
+   * @param {string} text - Text to write on the canvas
+   * @param {Object} textColor - Text colour for the canvas
+   * @param {Object} backgroundColor - Background colour for the canvas
+  */
+  writeTextToCanvas(material, text = '',
+      textColor = {r: 255, g: 255, b: 255},
+      backgroundColor = {r: 0, g: 0, b: 255}) {
+    const ratio = material.userData?.ratio ? material.userData.ratio : 1.0;
     const canvas = document.createElement('canvas');
     const canvasWidth = ratio > 1 ? maxCanvasWidth : maxCanvasWidth * ratio;
     const canvasHeight = ratio > 1 ? maxCanvasHeight / ratio : maxCanvasHeight;
 
     canvas.width = canvasWidth;
     canvas.height = canvasHeight;
+
+    const {r, g, b} = backgroundColor;
+
     const ctx = canvas.getContext('2d');
-    ctx.fillStyle = `rgb(${bcolor.r},${bcolor.g},${bcolor.b})`;
+    ctx.fillStyle = `rgb(${r},${g},${b})`;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.fillStyle = `rgb(${color.r},${color.g},${color.b})`;
-    ctx.textBaseline = 'middle';
 
-    let fontSize = defaultFontSize;
-    let fontFit = false;
+    if (this.useHtmlSignRendering() && this.rasterizeHTML) {
+      // HTML rasterization rendering
+      const {lines, fontSize} = formatSignLines(text, canvasWidth, canvasHeight,
+          mesureLineHTML);
 
-    // Find the maximum font size that fits the text without cropping
-    while (!fontFit && fontSize > 0) {
-      ctx.font = fontSize + 'px Arial';
-      const lines = this.breakTextIntoLines(text, ctx, canvasWidth);
+      const {r, g, b} = textColor;
 
-      const totalHeight = lines.length * fontSize * 1.2;
-      const totalWidth = Math.max(
-          ...lines.map((line) => ctx.measureText(line).width),
+      this.rasterizeHTML.drawHTML(
+          makeSignHTML(lines, fontSize, canvasWidth, canvasHeight, r, g, b),
+          canvas).then(
+          (res) => {
+            material.map = new CanvasTexture(canvas);
+            material.map.colorSpace = SRGBColorSpace;
+            material.needsUpdate = true;
+          },
+          (e) => {
+            console.log(e);
+          },
       );
+    } else {
+      // Bare canvas rendering
+      const {lines, fontSize, maxLineWidth} =
+          formatSignLines(text, canvasWidth, canvasHeight,
+              (line, fontSize) => mesureLineCanvas(line, fontSize, ctx));
 
-      if (totalHeight <= canvasHeight && totalWidth <= canvasWidth) {
-        fontFit = true;
-      } else {
-        fontSize--;
-      }
+      const {r, g, b} = textColor;
+
+      makeSignCanvas(ctx, lines, fontSize, canvasWidth, canvasHeight,
+          maxLineWidth, r, g, b);
+      material.map = new CanvasTexture(canvas);
+      material.map.colorSpace = SRGBColorSpace;
+      material.needsUpdate = true;
     }
-
-    const lines = this.breakTextIntoLines(text, ctx, canvasWidth);
-
-    ctx.font = fontSize + 'px Arial';
-    ctx.textBaseline = 'top';
-
-    const lineHeight = fontSize * 1.2;
-    const startY = (canvasHeight - lines.length * lineHeight) / 2;
-
-    lines.forEach((line, index) => {
-      const textWidth = ctx.measureText(line).width;
-      const startX = (canvasWidth - textWidth) / 2;
-      const y = startY + index * lineHeight;
-      ctx.fillText(line, startX, y);
-    });
-
-    return canvas;
-  }
-
-  /**
-   * Breaks the text into lines to fit within the given maximum width
-   * @param {string} text - The text to break into lines
-   * @param {CanvasRenderingContext2D} ctx - The canvas rendering context
-   * @param {integer} maxWidth - The maximum width of a line
-   * @return {Array.<string>} The array of lines
-  */
-  breakTextIntoLines( text = '', ctx, maxWidth) {
-    const lines = [];
-    const paragraphs = text.split('\n');
-
-    paragraphs.forEach((paragraph) => {
-      const words = paragraph.split(' ');
-      let currentLine = '';
-
-      words.forEach((word) => {
-        if (word.length === 0) {
-          // Skip empty words
-          return;
-        }
-
-        const metrics = ctx.measureText(`${currentLine} ${word}`);
-        const lineWidth = metrics.width;
-
-        if (lineWidth < maxWidth || currentLine.length === 0) {
-          currentLine += ` ${word}`;
-        } else {
-          lines.push(currentLine.trim());
-          currentLine = word;
-        }
-      });
-
-      if (currentLine.length > 0) {
-        lines.push(currentLine.trim());
-      }
-    });
-
-    // Handle empty lines at the end of the text
-    const emptyLineCount = [...text].reduceRight((count, char, index) => {
-      if (char === '\n' && index === text.length - count - 1) {
-        return count + 1;
-      }
-      return count;
-    }, 0);
-
-    // Add empty lines at the end
-    lines.push(...Array(emptyLineCount).fill(''));
-
-    return lines;
   }
 }
 

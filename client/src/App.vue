@@ -24,6 +24,7 @@ import UserBehavior from './core/user-behavior.js';
 import PropsBehavior, {PropsSelector} from './core/props-behavior.js';
 import {entityType, updateType} from '../../common/ws-data-format.js';
 import {LoadingManager, Vector2} from 'three';
+import rasterizeHTML from 'rasterizehtml';
 
 // Three.js context-related settings
 let engine3d = null;
@@ -60,7 +61,8 @@ const userConfig = new UserConfig('config', (config) => {
 });
 
 const worldPathRegistry = new WorldPathRegistry(new LoadingManager(), 'rwx',
-    'textures', userConfig.at('network').at('imageService'));
+    'textures', userConfig.at('network').at('imageService'), rasterizeHTML,
+    userConfig.at('graphics').at('useHtmlSignRendering'));
 
 if (localStorage.getItem('token') && localStorage.getItem('userId')) {
   // If there's an authentication token in local storage: we skip

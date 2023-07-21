@@ -64,6 +64,18 @@ const props = defineProps({
     type: String,
     default: 'Reset',
   },
+  renderingDistanceText: {
+    type: String,
+    default: 'Rendering distance:',
+  },
+  propsLoadingDistanceText: {
+    type: String,
+    default: 'Props loading distance:',
+  },
+  useHtmlSignRenderingText: {
+    type: String,
+    default: 'Use HTML rendering for signs',
+  },
   userInputs: {
     type: Array,
     default: UserInput,
@@ -155,6 +167,11 @@ const savePropsLoadingDistance = (event) => {
   props.userConfig.at('graphics').at('propsLoadingDistance').set(value);
 };
 
+const setUseHtmlSignRendering = (event) => {
+  props.userConfig.at('graphics')
+      .at('useHtmlSignRendering').set(event.target.checked);
+};
+
 const localRenderingDistance = ref(getRenderingDistance());
 const localPropsLoadingDistance = ref(getPropsLoadingDistance());
 
@@ -216,7 +233,7 @@ onUnmounted(() => {
   </td></tr>
   <tr><td colspan="2">
   <label for="renderingDistance">
-    Rendering distance: {{localRenderingDistance}}m
+    {{renderingDistanceText}}: {{localRenderingDistance}}m
   </label>
   <input id="renderingDistance" type="range" :min="renderingDistance.min"
     :max="renderingDistance.max" :defaultValue="getRenderingDistance()"
@@ -225,12 +242,21 @@ onUnmounted(() => {
   </td></tr>
   <tr><td colspan="2">
   <label for="propsLoadingDistance">
-    Props loading distance: {{localPropsLoadingDistance}}m
+    {{propsLoadingDistanceText}}: {{localPropsLoadingDistance}}m
   </label>
   <input id="propsLoadingDistance" type="range" :min="propsLoadingDistance.min"
     :max="propsLoadingDistance.max" :defaultValue="getPropsLoadingDistance()"
     :step="propsLoadingDistance.step" @input="setPropsLoadingDistance"
     @change="savePropsLoadingDistance" />
+  </td></tr>
+  <tr><td colspan="2">
+  <input type="checkbox" id="useHtmlSignRendering"
+    :checked=
+    "props.userConfig.at('graphics').at('useHtmlSignRendering').value()"
+    @change="setUseHtmlSignRendering" />
+    <label for="useHtmlSignRendering">
+      {{useHtmlSignRenderingText}}
+    </label>
   </td></tr>
 </table>
 </div>

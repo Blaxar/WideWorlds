@@ -31,6 +31,7 @@ const defaultConfig = {
   graphics: {
     renderingDistance: renderingDistance.default,
     propsLoadingDistance: propsLoadingDistance.default,
+    useHtmlSignRendering: false,
   },
   interface: {},
 };

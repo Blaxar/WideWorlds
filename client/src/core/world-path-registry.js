@@ -20,15 +20,21 @@ class WorldPathRegistry {
    * @param {string} resourcePath - Catalogue folder holding textures.
    * @param {UserConfigNode} imageServiceNode - Configuration node for
    *                                            the image service.
+   * @param {rasterizeHTML} rasterizeHTML - Instance of rasterizeHTML.
+   * @param {UserConfigNode} htmlSignRenderingNode - Configuration node for
+   *                                                 HTML sign rendering.
    */
   constructor(loadingManager, modelPath = 'rwx',
-      resourcePath = 'textures', imageServiceNode = null) {
+      resourcePath = 'textures', imageServiceNode = null,
+      rasterizeHTML = null, htmlSignRenderingNode = null) {
     this.modelRegistries = new Map();
     this.terrainMaterials = new Map();
     this.loadingManager = loadingManager;
     this.modelPath = modelPath;
     this.resourcePath = resourcePath;
     this.imageServiceNode = imageServiceNode;
+    this.rasterizeHTML = rasterizeHTML;
+    this.htmlSignRenderingNode = htmlSignRenderingNode;
   }
 
   /**
@@ -40,7 +46,8 @@ class WorldPathRegistry {
     if (!this.modelRegistries.has(path)) {
       this.modelRegistries.set(path, new ModelRegistry(this.loadingManager,
           `${path}/${this.modelPath}`, `${path}/${this.resourcePath}`,
-          this.imageServiceNode));
+          this.imageServiceNode, this.rasterizeHTML,
+          this.htmlSignRenderingNode));
     }
 
     return await this.modelRegistries.get(path);
