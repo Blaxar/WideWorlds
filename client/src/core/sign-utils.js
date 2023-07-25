@@ -4,8 +4,6 @@
 
 const lineHeightRatio = 1.2;
 const maxCharSizeRatio = 0.333;
-const fontCharRatio = 0.6;
-const fontSpaceRatio = 0.4;
 
 /**
  * Format raw text into displayable HTML content
@@ -23,32 +21,13 @@ function rawTextToHTML(rawText) {
 }
 
 /**
- * Guess the width of a single line of text for HTML sign rendering
- * @param {string} line - Text content to mesure.
- * @param {integer} fontSize - Font size, in pixels.
- * @return {integer} Width of the text, in pixels.
- */
-function mesureLineHTML(line, fontSize) {
-  let width = 0;
-  const charSize = fontSize * fontCharRatio;
-  const spaceSize = fontSize * fontSpaceRatio;
-
-  for (const char in line) {
-    if (char === ' ') width += spaceSize;
-    else width += charSize;
-  }
-
-  return width;
-}
-
-/**
  * Mesure the width of a single line of text for bare canvas sign rendering
  * @param {string} line - Text content to mesure.
  * @param {integer} fontSize - Font size, in pixels.
- * @param {canvas} canvasCtx - 2D HTML canvas context.
+ * @param {Object} canvasCtx - 2D HTML canvas context.
  * @return {integer} Width of the text, in pixels.
  */
-function mesureLineCanvas(line, fontSize, canvasCtx) {
+function mesureLine(line, fontSize, canvasCtx) {
   canvasCtx.font = `${fontSize}px Arial, Helvetica, sans-serif`;
   return canvasCtx.measureText(line).width;
 }
@@ -56,27 +35,18 @@ function mesureLineCanvas(line, fontSize, canvasCtx) {
 /**
  * Format text into an array of lines for it to fit into a given surface
  * @param {string} text - Text content to format.
- * @param {integer} width - Width of the canvas, in pixels.
- * @param {integer} height - Height of the canvas, in pixels.
- * @param {function} mesureLine - Function to use for line mesurement,
- *                                see {@link mesureLineHTML} and
- *                                {@link mesureLineCanvas}.
+ * @param {Object} canvasCtx - 2D HTML canvas context.
  * @return {Object} Object holding lines, fontSize (in pixels) and
  *                  maxLineWidth (in pixels)
  */
-function formatSignLines(text, width, height, mesureLine) {
+function formatSignLines(text, canvasCtx) {
   const finalText = text.replaceAll('\r\n', '\n').trim();
-
+  const {width, height} = canvasCtx.canvas;
   const maxSpan = width > height ? width : height;
 
-  const surface = width * height;
-  let fontSize = parseInt(Math.sqrt(surface / text.length) * 1.2);
+  let fontSize = parseInt(maxSpan * maxCharSizeRatio);
 
   if (!finalText.length) return {lines: [''], fontSize, maxLineWidth: width};
-
-  if (fontSize > maxSpan * maxCharSizeRatio) {
-    fontSize = parseInt(maxSpan * maxCharSizeRatio);
-  }
 
   let lineHeight = 0;
   let maxLineWidth = 0;
@@ -103,13 +73,13 @@ function formatSignLines(text, width, height, mesureLine) {
 
     const getNewLineWidth = (newWord = '') => {
       const fullLine = (lines[currentLineId] + newWord).trim();
-      return mesureLine(fullLine, fontSize);
+      return mesureLine(fullLine, fontSize, canvasCtx);
     };
 
     // Try to fit the text in the canvas
     for (const tmpLine of tmpLines) {
       for (const word of tmpLine.split(' ')) {
-        if (mesureLine(word, fontSize) > width) {
+        if (mesureLine(word, fontSize, canvasCtx) > width) {
           // Retry right away if the word itself is too big
           // for the container
           retry = true;
@@ -180,24 +150,25 @@ function makeSignHTML(lines, fontSize, width, height, r = 0, g = 0, b = 0) {
 
 /**
  * Draw text content on the provided canvas
- * @param {canvas} canvasCtx - 2D HTML canvas context to draw with.
+ * @param {Object} canvasCtx - 2D HTML canvas context to draw with.
  * @param {Array<string>} lines - Text lines ti display.
  * @param {integer} fontSize - Font size, in pixels.
- * @param {integer} width - Width of the canvas, in pixels.
- * @param {integer} height - Height of the canvas, in pixels.
  * @param {integer} maxLineWidth - Maximum line width, in pixels.
  * @param {integer} r - Red component of the text color (from 0 to 255).
  * @param {integer} g - Green component of the text color (from 0 to 255).
  * @param {integer} b - Blue component of the text color (from 0 to 255).
  */
-function makeSignCanvas(canvasCtx, lines, fontSize, width, height, maxLineWidth,
+function makeSignCanvas(canvasCtx, lines, fontSize, maxLineWidth,
     r = 0, g = 0, b = 0) {
   canvasCtx.font = `${fontSize}px Arial, Helvetica, sans-serif`;
   canvasCtx.fillStyle = `rgb(${r},${g},${b})`;
   canvasCtx.textBaseline = 'top';
 
+  const {width, height} = canvasCtx.canvas;
+
   const lineHeight = parseInt(fontSize * lineHeightRatio);
-  const spanHeight = lineHeight * lines.length;
+  // TODO: use ascent/descent value to better guess the height of the last line?
+  const spanHeight = lineHeight * (lines.length - 1) + fontSize;
   const marginTop = (height - spanHeight) / 2;
   const marginLeft = (width - maxLineWidth) / 2;
 
@@ -209,5 +180,4 @@ function makeSignCanvas(canvasCtx, lines, fontSize, width, height, maxLineWidth,
 }
 
 export default formatSignLines;
-export {rawTextToHTML, mesureLineHTML, mesureLineCanvas, makeSignHTML,
-  makeSignCanvas};
+export {rawTextToHTML, mesureLine, makeSignHTML, makeSignCanvas};

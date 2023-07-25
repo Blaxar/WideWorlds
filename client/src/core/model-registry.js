@@ -9,8 +9,7 @@ import {Mesh, Group, BufferGeometry, BufferAttribute, MeshBasicMaterial,
   SRGBColorSpace, TextureLoader, Color, CanvasTexture, BoxHelper} from 'three';
 import * as fflate from 'fflate';
 import {AWActionParser} from 'aw-action-parser';
-import formatSignLines, {mesureLineHTML, mesureLineCanvas,
-  makeSignHTML, makeSignCanvas} from './sign-utils.js';
+import formatSignLines, {makeSignHTML, makeSignCanvas} from './sign-utils.js';
 
 const unknownObjectName = '_unknown_';
 const maxCanvasWidth = 512;
@@ -351,12 +350,10 @@ class ModelRegistry {
     const ctx = canvas.getContext('2d');
     ctx.fillStyle = `rgb(${r},${g},${b})`;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
+    const {lines, fontSize, maxLineWidth} = formatSignLines(text, ctx);
 
     if (this.useHtmlSignRendering() && this.rasterizeHTML) {
       // HTML rasterization rendering
-      const {lines, fontSize} = formatSignLines(text, canvasWidth, canvasHeight,
-          mesureLineHTML);
-
       const {r, g, b} = textColor;
 
       this.rasterizeHTML.drawHTML(
@@ -373,14 +370,9 @@ class ModelRegistry {
       );
     } else {
       // Bare canvas rendering
-      const {lines, fontSize, maxLineWidth} =
-          formatSignLines(text, canvasWidth, canvasHeight,
-              (line, fontSize) => mesureLineCanvas(line, fontSize, ctx));
-
       const {r, g, b} = textColor;
 
-      makeSignCanvas(ctx, lines, fontSize, canvasWidth, canvasHeight,
-          maxLineWidth, r, g, b);
+      makeSignCanvas(ctx, lines, fontSize, maxLineWidth, r, g, b);
       material.map = new CanvasTexture(canvas);
       material.map.colorSpace = SRGBColorSpace;
       material.needsUpdate = true;
