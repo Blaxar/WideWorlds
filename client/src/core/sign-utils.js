@@ -3,7 +3,7 @@
  */
 
 const lineHeightRatio = 1.2;
-const maxCharSizeRatio = 0.333;
+const maxCharSizeRatio = 0.4;
 
 /**
  * Format raw text into displayable HTML content
@@ -21,14 +21,24 @@ function rawTextToHTML(rawText) {
 }
 
 /**
- * Mesure the width of a single line of text for bare canvas sign rendering
- * @param {string} line - Text content to mesure.
+ * Get the CSS font value to use for text rendering
+ * on signs
+ * @param {integer} fontSize - Font size, in pixels.
+ * @return {string} String to use as CSS font property.
+ */
+function getCssFontProperty(fontSize) {
+  return `bold ${fontSize}px Arial, Helvetica, sans-serif`;
+}
+
+/**
+ * Measure the width of a single line of text for bare canvas sign rendering
+ * @param {string} line - Text content to measure.
  * @param {integer} fontSize - Font size, in pixels.
  * @param {Object} canvasCtx - 2D HTML canvas context.
  * @return {integer} Width of the text, in pixels.
  */
-function mesureLine(line, fontSize, canvasCtx) {
-  canvasCtx.font = `${fontSize}px Arial, Helvetica, sans-serif`;
+function measureLine(line, fontSize, canvasCtx) {
+  canvasCtx.font = getCssFontProperty(fontSize);
   return canvasCtx.measureText(line).width;
 }
 
@@ -73,13 +83,13 @@ function formatSignLines(text, canvasCtx) {
 
     const getNewLineWidth = (newWord = '') => {
       const fullLine = (lines[currentLineId] + newWord).trim();
-      return mesureLine(fullLine, fontSize, canvasCtx);
+      return measureLine(fullLine, fontSize, canvasCtx);
     };
 
     // Try to fit the text in the canvas
     for (const tmpLine of tmpLines) {
       for (const word of tmpLine.split(' ')) {
-        if (mesureLine(word, fontSize, canvasCtx) > width) {
+        if (measureLine(word, fontSize, canvasCtx) > width) {
           // Retry right away if the word itself is too big
           // for the container
           retry = true;
@@ -137,14 +147,14 @@ function makeSignHTML(lines, fontSize, width, height, r = 0, g = 0, b = 0) {
   return `<body style="` +
     `color:rgb(${r},${g},${b});` +
     `text-align:center;` +
-    `font-family:Arial,Helvetica,sans-serif;` +
-    `margin:0;padding:0;font-size:${fontSize}px;` +
+    `font:${getCssFontProperty(fontSize)};` +
+    `margin:0;padding:0;` +
     `width:${width}px;height:${height}px;` +
     `line-height:${lineHeight}px;` +
     `"><span style="display:inline-block;` +
     `margin-top:${marginTop}px;` +
     `height:${spanHeight}px;` +
-    `white-space:nowrap;font-weight:500;padding:0;` +
+    `white-space:nowrap;padding:0;` +
     `vertical-align:middle;">${rawTextToHTML(finalText)}</span></body>`;
 }
 
@@ -162,7 +172,7 @@ function makeSignCanvas(canvasCtx, lines, fontSize, maxLineWidth,
     r = 0, g = 0, b = 0) {
   if (!lines.length) return;
 
-  canvasCtx.font = `${fontSize}px Arial, Helvetica, sans-serif`;
+  canvasCtx.font = getCssFontProperty(fontSize);
   canvasCtx.fillStyle = `rgb(${r},${g},${b})`;
   canvasCtx.textBaseline = 'top';
 
@@ -184,4 +194,5 @@ function makeSignCanvas(canvasCtx, lines, fontSize, maxLineWidth,
 }
 
 export default formatSignLines;
-export {rawTextToHTML, mesureLine, makeSignHTML, makeSignCanvas};
+export {rawTextToHTML, getCssFontProperty, measureLine, makeSignHTML,
+  makeSignCanvas};
