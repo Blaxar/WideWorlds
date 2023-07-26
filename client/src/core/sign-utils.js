@@ -42,9 +42,9 @@ function mesureLine(line, fontSize, canvasCtx) {
 function formatSignLines(text, canvasCtx) {
   const finalText = text.replaceAll('\r\n', '\n').trim();
   const {width, height} = canvasCtx.canvas;
-  const maxSpan = width > height ? width : height;
+  const minSpan = width < height ? width : height;
 
-  let fontSize = parseInt(maxSpan * maxCharSizeRatio);
+  let fontSize = parseInt(minSpan * maxCharSizeRatio);
 
   if (!finalText.length) return {lines: [''], fontSize, maxLineWidth: width};
 
@@ -160,6 +160,8 @@ function makeSignHTML(lines, fontSize, width, height, r = 0, g = 0, b = 0) {
  */
 function makeSignCanvas(canvasCtx, lines, fontSize, maxLineWidth,
     r = 0, g = 0, b = 0) {
+  if (!lines.length) return;
+
   canvasCtx.font = `${fontSize}px Arial, Helvetica, sans-serif`;
   canvasCtx.fillStyle = `rgb(${r},${g},${b})`;
   canvasCtx.textBaseline = 'top';
@@ -167,8 +169,10 @@ function makeSignCanvas(canvasCtx, lines, fontSize, maxLineWidth,
   const {width, height} = canvasCtx.canvas;
 
   const lineHeight = parseInt(fontSize * lineHeightRatio);
-  // TODO: use ascent/descent value to better guess the height of the last line?
-  const spanHeight = lineHeight * (lines.length - 1) + fontSize;
+  const descent = canvasCtx.measureText(lines[lines.length-1])
+      .actualBoundingBoxDescent;
+
+  const spanHeight = lineHeight * (lines.length - 1) + descent;
   const marginTop = (height - spanHeight) / 2;
   const marginLeft = (width - maxLineWidth) / 2;
 
