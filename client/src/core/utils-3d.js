@@ -254,7 +254,7 @@ function makePagePlane(elevationData, textureData, sideSize, nbSegments,
 }
 
 /**
- * Adjust edges for the page and its surroudings
+ * Adjust edges for the page and its surroundings
  * @param {Object3D} pagePlane - 3D plane for the page, as built by
  *                               makePagePlane.
  * @param {Uint16array} elevationData - Elevation data for the target page.
@@ -337,5 +337,79 @@ function adjustPageEdges(pagePlane, elevationData, left, topLeft, top, right,
   pagePlane.geometry.getAttribute('position').needsUpdate = true;
 }
 
+/**
+ * Build 3D asset for helper arrows
+ * @return {Group} three.js group entity holding the arrows.
+ */
+function makeHelperArrows() {
+  const arrows = new THREE.Group();
+
+  // Make X axis
+  const xMaterial = new THREE.LineBasicMaterial( {color: 0xff0000} );
+  const xArrowGeometry = new THREE.BufferGeometry().setFromPoints(
+      [
+        new THREE.Vector3(0.0, 0.0, 0.0),
+        new THREE.Vector3(2.0, 0.0, 0.0),
+        new THREE.Vector3(1.75, 0.25, 0.0),
+        new THREE.Vector3(1.75, -0.25, 0.0),
+        new THREE.Vector3(2.0, 0.0, 0.0),
+      ]);
+  const xSignGeometry = new THREE.BufferGeometry().setFromPoints(
+      [
+        new THREE.Vector3(2.15, -0.25, 0.0),
+        new THREE.Vector3(2.45, 0.25, 0.0),
+        new THREE.Vector3(2.3, 0.0, 0.0),
+        new THREE.Vector3(2.15, 0.25, 0.0),
+        new THREE.Vector3(2.45, -0.25, 0.0),
+      ]);
+  const xAxis = new THREE.Line(xArrowGeometry, xMaterial);
+  const xSign = new THREE.Line(xSignGeometry, xMaterial);
+
+  // Make Y axis
+  const yMaterial = new THREE.LineBasicMaterial( {color: 0x00ff00} );
+  const yArrowGeometry = new THREE.BufferGeometry().setFromPoints(
+      [
+        new THREE.Vector3(0.0, 0.0, 0.0),
+        new THREE.Vector3(0.0, 2.0, 0.0),
+        new THREE.Vector3(0.25, 1.75, 0.0),
+        new THREE.Vector3(-0.25, 1.75, 0.0),
+        new THREE.Vector3(0.0, 2.0, 0.0),
+      ]);
+  const ySignGeometry = new THREE.BufferGeometry().setFromPoints(
+      [
+        new THREE.Vector3(0.0, 2.1, 0.0),
+        new THREE.Vector3(0.0, 2.3, 0.0),
+        new THREE.Vector3(-0.20, 2.5, 0.0),
+        new THREE.Vector3(0.0, 2.3, 0.0),
+        new THREE.Vector3(0.20, 2.5, 0.0),
+      ]);
+  const yAxis = new THREE.Line(yArrowGeometry, yMaterial);
+  const ySign = new THREE.Line(ySignGeometry, yMaterial);
+
+  // Make Z axis
+  const zMaterial = new THREE.LineBasicMaterial( {color: 0x0000ff} );
+  const zArrowGeometry = new THREE.BufferGeometry().setFromPoints(
+      [
+        new THREE.Vector3(0.0, 0.0, 0.0),
+        new THREE.Vector3(0.0, 0.0, 2.0),
+        new THREE.Vector3(0.0, 0.25, 1.75),
+        new THREE.Vector3(0.0, -0.25, 1.75),
+        new THREE.Vector3(0.0, 0.0, 2.0),
+      ]);
+  const zSignGeometry = new THREE.BufferGeometry().setFromPoints(
+      [
+        new THREE.Vector3(0.0, 0.25, 2.45),
+        new THREE.Vector3(0.0, 0.25, 2.15),
+        new THREE.Vector3(0.0, -0.25, 2.45),
+        new THREE.Vector3(0.0, -0.25, 2.15),
+      ]);
+  const zAxis = new THREE.Line(zArrowGeometry, zMaterial);
+  const zSign = new THREE.Line(zSignGeometry, zMaterial);
+
+  arrows.add(xAxis, xSign, yAxis, ySign, zAxis, zSign);
+
+  return arrows;
+}
+
 export {makeReversedOctahedron, defaultSkyColors, generateTerrainMaterials,
-  makePagePlane, adjustPageEdges};
+  makePagePlane, adjustPageEdges, makeHelperArrows};

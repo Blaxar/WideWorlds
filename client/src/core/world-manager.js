@@ -230,6 +230,8 @@ class WorldManager {
     this.engine3d.resetSkyBox();
     this.engine3d.resetUserAvatar();
     this.engine3d.setSkyColorSpinning(true);
+    this.engine3d.unsetHelperArrows();
+    this.engine3d.removeAllHelperObjects();
     this.clearChunks();
     this.clearPages();
     this.lastTextureUpdate = 0;

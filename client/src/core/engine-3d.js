@@ -29,6 +29,7 @@ class Engine3D {
     this.clock = new THREE.Clock();
     this.scene = new THREE.Scene();
     this.backgroundScene = new THREE.Scene();
+    this.foregroundScene = new THREE.Scene();
     this.userHeight = defaultUserHeight;
 
     this.user = new THREE.Group();
@@ -96,6 +97,14 @@ class Engine3D {
     this.nodes = new Map();
     this.lodNodeIDs = new Set();
     this.lastId = 0;
+
+    this.helperArrows = utils3D.makeHelperArrows(1);
+    this.helperArrows.visible = false;
+    this.helperArrows.matrixAutoUpdate = false;
+    this.foregroundScene.add(this.helperArrows);
+
+    this.helperObjects = new THREE.Group();
+    this.foregroundScene.add(this.helperObjects);
   }
 
   /**
@@ -440,6 +449,46 @@ class Engine3D {
   }
 
   /**
+   * Set helper arrows visible with the given position and rotation
+   * @param {Vector3} pos - Position of the arrows.
+   * @param {Euler} rot - Rotation of the arrows.
+   */
+  setHelperArrows(pos, rot) {
+    this.helperArrows.position.copy(pos);
+    this.helperArrows.rotation.copy(rot);
+    this.helperArrows.updateMatrix();
+    this.helperArrows.visible = true;
+  }
+
+  /** Turn helper arrows invisible */
+  unsetHelperArrows() {
+    this.helperArrows.visible = false;
+  }
+
+  /**
+   * Add helper object to the foreground scene
+   * @param {Object3D} obj3d - Object to add to the foreground scene.
+   */
+  addHelperObject(obj3d) {
+    this.helperObjects.add(obj3d);
+  }
+
+  /**
+   * Remove helper object from the foreground scene
+   * @param {Object3D} obj3d - Object to remove from the foreground scene.
+   */
+  removeHelperObject(obj3d) {
+    this.helperObjects.remove(obj3d);
+  }
+
+  /**
+   * Remove all helper objects from the foreground scene
+   */
+  removeAllHelperObjects() {
+    this.helperObjects.clear();
+  }
+
+  /**
    * Rendering method to be called by the upper context
    * each time we need a new frame.
    * @param {number} deltaTime - Elapsed number of seconds since last update
@@ -513,6 +562,8 @@ class Engine3D {
     this.camera.updateProjectionMatrix();
     this.renderer.clearDepth();
     this.renderer.render(this.scene, this.camera);
+    this.renderer.clearDepth();
+    this.renderer.render(this.foregroundScene, this.camera);
 
     // Notify the upper window context that we can keep rendering
     return true;

@@ -3,7 +3,7 @@
  */
 
 import {SubjectBehavior} from './user-input.js';
-import {Raycaster, Vector3, Vector2, Quaternion} from 'three';
+import {Raycaster, Vector3, Vector2, Quaternion, Euler} from 'three';
 import {boundingBoxName} from './model-registry.js';
 
 const inputCooldown = 100; // In Milliseconds
@@ -31,6 +31,9 @@ class PropsSelector {
     ];
 
     this.props = [];
+
+    this.avgPos = new Vector3();
+    this.lastRot = new Euler();
   }
 
   /**
@@ -41,6 +44,8 @@ class PropsSelector {
    *                        list first.
    */
   select(pointer, add = false) {
+    let done = false;
+
     this.clickRaycaster.setFromCamera(
         pointer, this.engine3d.camera,
     );
@@ -63,39 +68,76 @@ class PropsSelector {
         }
 
         // We expect the object to have pre-computed bounding box geometry
-        const bb = intersects[i].object.getObjectByName(boundingBoxName);
-        if (!bb) continue;
+        let boundingBox = intersects[i].object
+            .getObjectByName(boundingBoxName);
+        if (!boundingBox) continue;
 
-        const prop = bb.parent;
+        const prop = boundingBox.parent;
         prop.userData['originalProp'] =
             JSON.parse(JSON.stringify(prop.userData.prop));
 
-        bb.visible = true;
-        this.props.push(prop);
+        boundingBox = boundingBox.clone();
+        const {x, y, z} = prop.userData.prop;
+        boundingBox.position.set(x, y, z);
+        boundingBox.visible = true;
+        this.engine3d.addHelperObject(boundingBox);
+        this.props.push({prop, boundingBox});
 
         // TODO: Remove when prop selection UI is implemented,
         //       left there in the meantime for debug purposes.
-        console.log(bb.parent);
+        console.log(prop);
         console.log('Avatar Pos: ' +
             [this.engine3d.user.position.x, this.engine3d.user.position.y,
               this.engine3d.user.position.z]);
-        return;
+        done = true;
+        break;
       }
     }
+
+    this.updateArrows();
+
+    if (done) return;
 
     // Clicked outside of a prop: commit everything
     this.commitAndClear();
   }
 
+  /** Clear selected props list */
+  clear() {
+    this.props = [];
+  }
+
+  /**
+   * Update helper arrows position and orientation, hide them
+   * if no props are provided
+   */
+  updateArrows() {
+    if (this.props.length) {
+      this.avgPos.set(0, 0, 0);
+
+      for (const {prop} of this.props) {
+        const {x, y, z} = prop.userData.prop;
+        this.avgPos.add(prop.position.clone().set(x, y, z)
+            .divideScalar(this.props.length));
+        this.lastRot.copy(prop.rotation);
+      }
+
+      this.engine3d.setHelperArrows(this.avgPos, this.lastRot);
+    } else {
+      this.engine3d.unsetHelperArrows();
+    }
+  }
+
   /** Commit changes to server and clear selected props list */
   commitAndClear() {
-    for (const prop of this.props) {
-      prop.getObjectByName(boundingBoxName).visible = false;
+    for (const {boundingBox} of this.props) {
+      this.engine3d.removeHelperObject(boundingBox);
     }
 
-    this.worldManager.updateProps(this.props);
+    this.worldManager.updateProps(this.props.map(({prop}) => prop));
 
-    this.props = [];
+    this.clear();
+    this.updateArrows();
   }
 
   /**
@@ -168,7 +210,8 @@ class PropsBehavior extends SubjectBehavior {
 
     this.lastInput = now;
 
-    propsSelector.props.forEach((obj3d) => {
+    propsSelector.props.forEach(({prop, boundingBox}) => {
+      const obj3d = prop;
       this.absPropPos.set(obj3d.userData.prop.x, obj3d.userData.prop.y,
           obj3d.userData.prop.z);
       this.relPropPos.set(obj3d.position.x, obj3d.position.y,
@@ -214,12 +257,17 @@ class PropsBehavior extends SubjectBehavior {
         obj3d.userData.prop.pitch = obj3d.rotation.x;
         obj3d.userData.prop.yaw = obj3d.rotation.y;
         obj3d.userData.prop.roll = obj3d.rotation.z;
+        boundingBox.rotation.copy(obj3d.rotation);
       }
 
-      obj3d.position.copy(this.absPropPos.sub(this.anchorPropPos));
+      boundingBox.position.copy(this.absPropPos);
+      boundingBox.updateMatrix();
 
+      obj3d.position.copy(this.absPropPos.sub(this.anchorPropPos));
       obj3d.updateMatrix();
     });
+
+    propsSelector.updateArrows();
   }
 }
 

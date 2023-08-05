@@ -142,6 +142,11 @@ const hooks = {
 // transitions (between offline and online)
 const appState = new AppState(hooks, main.state);
 
+const resetBehavior = () => {
+  inputListener.setSubject('user', {user: engine3d.user, tilt: engine3d.tilt,
+    runByDefaultNode: userConfig.at('controls').at('runByDefault')});
+};
+
 const handleLogin = (credentials) => {
   appState.signIn();
 
@@ -216,6 +221,8 @@ const handleLeave = () => {
   const worldName = main.worlds[main.worldId].name;
   userFeed.publish(`Leaving ${worldName}...`,
       null, userFeedPriority.info);
+  resetBehavior();
+  propsSelector?.clear();
   worldManager.unload();
   worldState?.then((state) => {
     state.close();
@@ -291,8 +298,8 @@ onMounted(() => {
   // Note: we could be passing the whole engine3d object, this would work
   //       as well, but let's be rigorous there and only expose the fields
   //       we need.
-  inputListener.setSubject('user', {user: engine3d.user, tilt: engine3d.tilt,
-    runByDefaultNode: userConfig.at('controls').at('runByDefault')});
+  resetBehavior();
+
   // Ready world path registry for object caching
   worldManager = new WorldManager(engine3d, worldPathRegistry, httpClient,
       wsClient, userConfig.at('graphics').at('propsLoadingDistance'));
@@ -333,8 +340,7 @@ document.addEventListener('keyup', (event) => {
   if (event.keyCode == escapeKeyCode && !propsSelector.isEmpty()) {
     // Break out of the build mode
     propsSelector.commitAndClear();
-    inputListener.setSubject('user', {user: engine3d.user, tilt: engine3d.tilt,
-      runByDefaultNode: userConfig.at('controls').at('runByDefault')});
+    resetBehavior();
   }
 
   inputListener.releaseKey(event.keyCode);
@@ -363,9 +369,8 @@ document.addEventListener('contextmenu', (event) => {
   propsSelector.select(new Vector2(x, y));
 
   if (propsSelector.isEmpty()) {
-    // No prop selected: give back the user its fremdom to move
-    inputListener.setSubject('user', {user: engine3d.user, tilt: engine3d.tilt,
-      runByDefaultNode: userConfig.at('controls').at('runByDefault')});
+    // No prop selected: give back the user its freedom to move
+    resetBehavior();
   } else {
     // prop(s) selected: the selector will be the subject of every
     // input from now on
