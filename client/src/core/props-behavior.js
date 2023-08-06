@@ -7,6 +7,7 @@ import {Raycaster, Vector3, Vector2, Quaternion, Euler} from 'three';
 import {boundingBoxName} from './model-registry.js';
 
 const inputCooldown = 100; // In Milliseconds
+const defaultMaxCastingDistance = 2000; // In meters
 
 /** Handle props selection */
 class PropsSelector {
@@ -14,8 +15,11 @@ class PropsSelector {
    * @constructor
    * @param {Engine3D} engine3d - Main WideWorlds 3D engine.
    * @param {Engine3D} worldManager - Main world manager instance.
+   * @param {UserConfigNode} renderingDistanceNode - Configuration node
+   *                                                 for the rendering
+   *                                                 distance.
    */
-  constructor(engine3d, worldManager) {
+  constructor(engine3d, worldManager, renderingDistanceNode = null) {
     this.engine3d = engine3d;
     this.worldManager = worldManager;
     this.clickRaycaster = new Raycaster();
@@ -34,6 +38,18 @@ class PropsSelector {
 
     this.avgPos = new Vector3();
     this.lastRot = new Euler();
+
+    this.renderingDistanceNode = renderingDistanceNode;
+    this.maxCastingDistance = defaultMaxCastingDistance;
+
+    if (this.renderingDistanceNode) {
+      this.maxCastingDistance =
+          this.renderingDistanceNode.value();
+
+      this.renderingDistanceNode.onUpdate((value) => {
+        this.maxCastingDistance = value;
+      });
+    }
   }
 
   /**
@@ -55,11 +71,13 @@ class PropsSelector {
             this.engine3d.scene.children, true,
         );
 
-    for (let i = 0; i < intersects.length; i++) {
-      if (intersects[i].object.name.length > 0 &&
-          intersects[i].object.name != boundingBoxName) {
+    for (const intersect of intersects) {
+      if (intersect.distance < this.maxCastingDistance &&
+          intersect.object.name.length > 0 &&
+          intersect.object.name != boundingBoxName &&
+          intersect.object.visible) {
         // If the object was already selected: nothing to be done
-        if (this.props.includes(intersects[i].object)) break;
+        if (this.props.includes(intersect.object)) break;
 
         if (!add) {
           // If we're not in multiprop selection mode:
@@ -68,7 +86,7 @@ class PropsSelector {
         }
 
         // We expect the object to have pre-computed bounding box geometry
-        let boundingBox = intersects[i].object
+        let boundingBox = intersect.object
             .getObjectByName(boundingBoxName);
         if (!boundingBox) continue;
 
@@ -257,9 +275,9 @@ class PropsBehavior extends SubjectBehavior {
         obj3d.userData.prop.pitch = obj3d.rotation.x;
         obj3d.userData.prop.yaw = obj3d.rotation.y;
         obj3d.userData.prop.roll = obj3d.rotation.z;
-        boundingBox.rotation.copy(obj3d.rotation);
       }
 
+      boundingBox.rotation.copy(obj3d.rotation);
       boundingBox.position.copy(this.absPropPos);
       boundingBox.updateMatrix();
 

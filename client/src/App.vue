@@ -303,7 +303,8 @@ onMounted(() => {
   // Ready world path registry for object caching
   worldManager = new WorldManager(engine3d, worldPathRegistry, httpClient,
       wsClient, userConfig.at('graphics').at('propsLoadingDistance'));
-  propsSelector = new PropsSelector(engine3d, worldManager);
+  propsSelector = new PropsSelector(engine3d, worldManager,
+      userConfig.at('graphics').at('renderingDistance'));
   entityManager = new EntityManager(engine3d.entities, null,
       0.05,
       (node, avatarId) => { // Set callback for entity avatar update
