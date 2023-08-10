@@ -353,6 +353,19 @@ class Engine3D {
   }
 
   /**
+   * Remove all objects from a node
+   * @param {integer} id - ID of the node to remove all objects from.
+   * @return {boolean} True if the node exists, false otherwise.
+   */
+  wipeNode(id) {
+    if (!this.nodes.has(id)) return false;
+
+    this.nodes.get(id).clear();
+
+    return true;
+  }
+
+  /**
    * Update all LOD levels based on current hiding distance and
    * camera position
    * @param {Set<integer>} lodNodeIDs - ID of the LOD nodes to update, none

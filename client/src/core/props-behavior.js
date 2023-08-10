@@ -42,6 +42,19 @@ class PropsSelector {
     this.renderingDistanceNode = renderingDistanceNode;
     this.maxCastingDistance = defaultMaxCastingDistance;
 
+    this.absPropPos = new Vector3();
+    this.relPropPos = new Vector3();
+    this.anchorPropPos = new Vector3();
+    this.rotateCenter = new Vector3();
+
+    // Create a node for staged objects, this will avoid
+    // committing props update on the fly in the real
+    // scene, thus simplifying rolling everything back
+    // if/when we get interrupted
+    this.stagingNode = this.engine3d.spawnNode();
+
+    this.hasChanged = false;
+
     if (this.renderingDistanceNode) {
       this.maxCastingDistance =
           this.renderingDistanceNode.value();
@@ -77,7 +90,9 @@ class PropsSelector {
           intersect.object.name != boundingBoxName &&
           intersect.object.visible) {
         // If the object was already selected: nothing to be done
-        if (this.props.includes(intersect.object)) break;
+        if (!this.props.every(({prop}) => {
+          return intersect.object != prop;
+        })) break;
 
         if (!add) {
           // If we're not in multiprop selection mode:
@@ -91,15 +106,26 @@ class PropsSelector {
         if (!boundingBox) continue;
 
         const prop = boundingBox.parent;
-        prop.userData['originalProp'] =
+        boundingBox = boundingBox.clone();
+
+        const {x, y, z} = prop.userData.prop;
+
+        // Ready the staging prop
+        const stagingProp = prop.clone();
+        stagingProp.position.set(x, y, z);
+        stagingProp.userData['originalProp'] =
             JSON.parse(JSON.stringify(prop.userData.prop));
 
-        boundingBox = boundingBox.clone();
-        const {x, y, z} = prop.userData.prop;
+        this.engine3d.appendToNode(this.stagingNode, stagingProp);
+        stagingProp.updateMatrix();
+        prop.visible = false;
+
         boundingBox.position.set(x, y, z);
+        boundingBox.rotation.copy(prop.rotation);
+        boundingBox.updateMatrix();
         boundingBox.visible = true;
         this.engine3d.addHelperObject(boundingBox);
-        this.props.push({prop, boundingBox});
+        this.props.push({prop, stagingProp, boundingBox});
 
         // TODO: Remove when prop selection UI is implemented,
         //       left there in the meantime for debug purposes.
@@ -122,7 +148,14 @@ class PropsSelector {
 
   /** Clear selected props list */
   clear() {
+    for (const {boundingBox} of this.props) {
+      this.engine3d.removeHelperObject(boundingBox);
+    }
+
     this.props = [];
+    this.engine3d.wipeNode(this.stagingNode);
+    this.hasChanged = false;
+    this.updateArrows();
   }
 
   /**
@@ -133,11 +166,11 @@ class PropsSelector {
     if (this.props.length) {
       this.avgPos.set(0, 0, 0);
 
-      for (const {prop} of this.props) {
-        const {x, y, z} = prop.userData.prop;
-        this.avgPos.add(prop.position.clone().set(x, y, z)
+      for (const {stagingProp} of this.props) {
+        const {x, y, z} = stagingProp.userData.prop;
+        this.avgPos.add(stagingProp.position.clone().set(x, y, z)
             .divideScalar(this.props.length));
-        this.lastRot.copy(prop.rotation);
+        this.lastRot.copy(stagingProp.rotation);
       }
 
       this.engine3d.setHelperArrows(this.avgPos, this.lastRot);
@@ -148,14 +181,21 @@ class PropsSelector {
 
   /** Commit changes to server and clear selected props list */
   commitAndClear() {
-    for (const {boundingBox} of this.props) {
-      this.engine3d.removeHelperObject(boundingBox);
+    if (this.hasChanged) {
+      this.worldManager
+          .updateProps(this.props.map(({stagingProp}) => stagingProp))
+          .then((propsToBeReset) => {
+            propsToBeReset.forEach((prop) => {
+              prop.visible = true;
+            });
+          });
+    } else {
+      this.props.forEach(({prop}) => {
+        prop.visible = true;
+      });
     }
 
-    this.worldManager.updateProps(this.props.map(({prop}) => prop));
-
     this.clear();
-    this.updateArrows();
   }
 
   /**
@@ -187,89 +227,74 @@ class PropsSelector {
 
     this.mainDirection.set(this.directions[0].x, 0.0, this.directions[0].y);
   }
-};
-
-/** Define the behavior of the props in the 3D space based on key inputs */
-class PropsBehavior extends SubjectBehavior {
-  /**
-   * @constructor
-   * @param {PropsSelector} subject - Subject to update on user input.
-   */
-  constructor(subject) {
-    super(subject);
-
-    this.upAxis = new Vector3(0.0, 1.0, 0.0);
-    this.quatRot = new Quaternion();
-    this.absPropPos = new Vector3();
-    this.relPropPos = new Vector3();
-    this.anchorPropPos = new Vector3();
-    this.lastInput = 0;
-  }
 
   /**
-   * Update props position and rotation based input commands
-   * @param {number} delta - Elapsed number of seconds since last call.
+   * Move the selected props in the given absolute direction
+   * @param {Vector3} direction - Direction to move the props (in meters).
    */
-  step(delta) {
-    const propsSelector = this.subject;
-    const now = Date.now();
-    let moveLength = 0.5; // half a meter
-    let rotateAngle = Math.PI / 12.0; // One clock-hour
+  move(direction) {
+    this.hasChanged = true;
 
-    if (now - this.lastInput < inputCooldown) {
-      // Too soon to do anything, skip
-      return;
-    }
-
-    if (this.strafe()) {
-      moveLength = 0.01; // one centimeter
-      rotateAngle = Math.PI / 1800.0; // tenth of a degree
-    }
-
-    this.lastInput = now;
-
-    propsSelector.props.forEach(({prop, boundingBox}) => {
-      const obj3d = prop;
+    this.props.forEach(({stagingProp, boundingBox}) => {
+      const obj3d = stagingProp;
       this.absPropPos.set(obj3d.userData.prop.x, obj3d.userData.prop.y,
           obj3d.userData.prop.z);
       this.relPropPos.set(obj3d.position.x, obj3d.position.y,
           obj3d.position.z);
       this.anchorPropPos.copy(this.absPropPos.clone().sub(this.relPropPos));
 
-      if (this.moveUp() && !this.moveDown()) {
-        this.absPropPos.setY(this.absPropPos.y + moveLength);
-      } else if (!this.moveUp() && this.moveDown()) {
-        this.absPropPos.setY(this.absPropPos.y - moveLength);
-      }
-
-      if (this.forward() && !this.backward()) {
-        this.absPropPos.add(propsSelector.mainDirection.clone()
-            .multiplyScalar(moveLength));
-      } else if (!this.forward() && this.backward()) {
-        this.absPropPos.sub(propsSelector.mainDirection.clone()
-            .multiplyScalar(moveLength));
-      }
-
-      if (this.left() && !this.right()) {
-        this.absPropPos.add(propsSelector.mainDirection.clone()
-            .applyAxisAngle(this.upAxis, Math.PI / 2)
-            .multiplyScalar(moveLength));
-      } else if (!this.left() && this.right()) {
-        this.absPropPos.add(propsSelector.mainDirection.clone()
-            .applyAxisAngle(this.upAxis, - Math.PI / 2)
-            .multiplyScalar(moveLength));
-      }
-
-      // TODO: other rotation axis
-      if (this.turnLeft() && !this.turnRight()) {
-        obj3d.rotateY(rotateAngle);
-      } else if (!this.turnLeft() && this.turnRight()) {
-        obj3d.rotateY(- rotateAngle);
-      }
+      this.absPropPos.add(direction);
 
       obj3d.userData.prop.x = this.absPropPos.x;
       obj3d.userData.prop.y = this.absPropPos.y;
       obj3d.userData.prop.z = this.absPropPos.z;
+
+      boundingBox.position.copy(this.absPropPos);
+      boundingBox.updateMatrix();
+
+      obj3d.position.copy(this.absPropPos.sub(this.anchorPropPos));
+      obj3d.updateMatrix();
+    });
+  }
+
+  /**
+   * Rotate the selected props around a certain axis and given
+   * a certain angle, the center position to rotate around will
+   * be the center of the group, averaged using the absolute
+   * position from each individual prop
+   * @param {Vector3} axis - Normalized 3D axis to rotate props around.
+   * @param {number} angle - Angle by which to rotate the prop around the
+   *                         axis (in radians).
+   */
+  rotate(axis, angle) {
+    this.rotateCenter.set(0.0, 0.0, 0.0);
+
+    this.hasChanged = true;
+
+    this.props.forEach(({stagingProp}) => {
+      const {x, y, z} = stagingProp.userData.prop;
+      this.rotateCenter.add(new Vector3(x, y, z));
+    });
+
+    this.rotateCenter.divideScalar(this.props.length);
+
+    this.props.forEach(({stagingProp, boundingBox}) => {
+      const obj3d = stagingProp;
+      this.absPropPos.set(obj3d.userData.prop.x, obj3d.userData.prop.y,
+          obj3d.userData.prop.z);
+      this.relPropPos.set(obj3d.position.x, obj3d.position.y,
+          obj3d.position.z);
+      this.anchorPropPos.copy(this.absPropPos.clone().sub(this.relPropPos));
+
+      this.absPropPos.sub(this.rotateCenter);
+      this.absPropPos.applyAxisAngle(axis, angle);
+      this.absPropPos.add(this.rotateCenter);
+
+      obj3d.userData.prop.x = this.absPropPos.x;
+      obj3d.userData.prop.y = this.absPropPos.y;
+      obj3d.userData.prop.z = this.absPropPos.z;
+
+      obj3d.rotateOnAxis(axis, angle);
 
       if (obj3d.userData.rwx.axisAlignment === 'none') {
         obj3d.userData.prop.pitch = obj3d.rotation.x;
@@ -284,6 +309,106 @@ class PropsBehavior extends SubjectBehavior {
       obj3d.position.copy(this.absPropPos.sub(this.anchorPropPos));
       obj3d.updateMatrix();
     });
+  }
+};
+
+/** Define the behavior of the props in the 3D space based on key inputs */
+class PropsBehavior extends SubjectBehavior {
+  /**
+   * @constructor
+   * @param {PropsSelector} subject - Subject to update on user input.
+   */
+  constructor(subject) {
+    super(subject);
+
+    this.upAxis = new Vector3(0.0, 1.0, 0.0);
+    this.quatRot = new Quaternion();
+    this.moveDirection = new Vector3();
+    this.rotateAxis = new Vector3();
+
+    this.lastInput = 0;
+  }
+
+  /**
+   * Update props position and rotation based input commands
+   * @param {number} delta - Elapsed number of seconds since last call.
+   */
+  step(delta) {
+    const propsSelector = this.subject;
+    let now = Date.now();
+    let moveLength = 0.5; // half a meter
+    let rotateAngle = Math.PI / 12.0; // One clock-hour
+
+    if (!this.moveUp() && !this.moveDown() &&
+        !this.forward() && !this.backward() &&
+        !this.left() && !this.right() &&
+        !this.turnLeft() && !this.turnRight()) {
+      // If no key is being pressed: disable the skipping
+      // behavior below, this allows for fast sequential key
+      // strokes without enduring the input cooldown
+      now = 0;
+    }
+
+    if (now - this.lastInput < inputCooldown) {
+      // Too soon to do anything, skip
+      return;
+    }
+
+    if (this.strafe()) {
+      moveLength = 0.01; // one centimeter
+      rotateAngle = Math.PI / 1800.0; // tenth of a degree
+    }
+
+    this.moveDirection.set(0.0, 0.0, 0.0);
+
+    this.lastInput = now;
+
+    let move = false;
+
+    if (this.moveUp() && !this.moveDown()) {
+      this.moveDirection.setY(moveLength);
+      move = true;
+    } else if (!this.moveUp() && this.moveDown()) {
+      this.moveDirection.setY(- moveLength);
+      move = true;
+    }
+
+    if (this.forward() && !this.backward()) {
+      this.moveDirection.add(propsSelector.mainDirection.clone()
+          .multiplyScalar(moveLength));
+      move = true;
+    } else if (!this.forward() && this.backward()) {
+      this.moveDirection.sub(propsSelector.mainDirection.clone()
+          .multiplyScalar(moveLength));
+      move = true;
+    }
+
+    if (this.left() && !this.right()) {
+      this.moveDirection.add(propsSelector.mainDirection.clone()
+          .applyAxisAngle(this.upAxis, Math.PI / 2)
+          .multiplyScalar(moveLength));
+      move = true;
+    } else if (!this.left() && this.right()) {
+      this.moveDirection.add(propsSelector.mainDirection.clone()
+          .applyAxisAngle(this.upAxis, - Math.PI / 2)
+          .multiplyScalar(moveLength));
+      move = true;
+    }
+
+    if (move) propsSelector.move(this.moveDirection);
+
+    let rotate = false;
+
+    if (this.turnLeft() && !this.turnRight()) {
+      this.rotateAxis.set(0.0, 1.0, 0.0);
+      rotate = true;
+    } else if (!this.turnLeft() && this.turnRight()) {
+      this.rotateAxis.set(0.0, 1.0, 0.0);
+      rotateAngle = - rotateAngle;
+      rotate = true;
+    }
+
+    if (rotate) propsSelector.rotate(this.rotateAxis, rotateAngle);
 
     propsSelector.updateArrows();
   }

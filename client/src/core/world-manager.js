@@ -515,12 +515,14 @@ class WorldManager {
 
   /**
    * Update props on the server
-   * @param {Array<Prop>} props - Props to update
+   * @param {Array<Prop>} props - Staged props to update.
+   * @return {Array<Prop>} - Original props to revert in case of
+   *                         failure.
    */
   async updateProps(props) {
-    if (!props.length) return;
+    const propsToBeReset = [];
 
-    const propsToBeReset = new Set();
+    if (!props.length) return propsToBeReset;
 
     const propsData = {};
 
@@ -533,17 +535,12 @@ class WorldManager {
     );
 
     for (const [key, value] of Object.entries(results)) {
-      if (value !== true) propsToBeReset.add(parseInt(key));
+      if (value !== true && this.props.has(key)) {
+        propsToBeReset.push(this.props.get(key));
+      }
     }
 
-    propsToBeReset.forEach((id) => {
-      if (!this.props.has(id)) return;
-
-      const obj3d = this.props.get(id);
-      obj3d.userData.prop = obj3d.userData.originalProp;
-      delete obj3d.userData.originalProp;
-      this.updateAssetFromProp(obj3d, obj3d.userData.prop);
-    });
+    return propsToBeReset;
   }
 
   /**

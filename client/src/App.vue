@@ -359,7 +359,7 @@ document.addEventListener('focusout', (event) => {
 }, false);
 
 document.addEventListener('contextmenu', (event) => {
-  if (someInputFocused) return;
+  if (someInputFocused) return true;
   event.preventDefault();
 
   // Note: here we're assuming that the 3D rendering canvas will always
@@ -370,7 +370,7 @@ document.addEventListener('contextmenu', (event) => {
   propsSelector.select(new Vector2(x, y));
 
   if (propsSelector.isEmpty()) {
-    // No prop selected: give back the user its freedom to move
+    // No prop selected: give back the user their freedom to move
     resetBehavior();
   } else {
     // prop(s) selected: the selector will be the subject of every
@@ -378,6 +378,8 @@ document.addEventListener('contextmenu', (event) => {
     propsSelector.updateMainAxis(engine3d.camera);
     inputListener.setSubject('props', propsSelector);
   }
+
+  return false;
 }, false);
 
 </script>
