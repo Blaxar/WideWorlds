@@ -118,14 +118,21 @@ const argv = yargs(hideBin(process.argv))
           })
           .option('enableTerrain', {
             alias: 'et',
-            description: 'Override the enableTerrain flag with the provided ' +
+            description: 'Override the enableTerrain flag with the provided' +
             ' value, keep the original one if none is provided',
             type: 'boolean',
             default: null,
+          }).option('fixEncoding', {
+            alias: 'fe',
+            description: 'Try to fix common encoding errors from props' +
+            ' action and description strings',
+            type: 'boolean',
+            default: false,
           })
           .help()
           .alias('help', 'h');
     }).argv;
+
 
 /**
  * Parse world attribute file
@@ -270,11 +277,11 @@ function parseAttrFile(path) {
 };
 
 /**
-  * Converts RGB values into Hex
+  * Convert RGB values into hexadecimal
   * @param {integer} r - red
   * @param {integer} g - green
   * @param {integer} b - blue
-  * @return {string} returns a hex color string
+  * @return {string} Return a hexadecimal color string
 */
 function rgbToHex(r, g, b) {
   const hex = ((r << 16) | (g << 8) | b).toString(16);
@@ -333,6 +340,16 @@ function* parsePropFile(path) {
   }
 };
 
+/**
+ * Fix various encoding issues from prop dump content
+ * @param {string} content - Content to be fixed.
+ * @return {string} Fixed content.
+ */
+function fixEncoding(content) {
+  // Fix faulty line breaks
+  return content.replaceAll('€\u007F', '\r\n');
+}
+
 const makeDefaultUser = (id) => {
   const name = 'user#' + id;
   const salt = crypto.randomBytes(db.saltLength).toString('base64');
@@ -356,8 +373,11 @@ db.init(argv.sql).then(async (connection) => {
     const userIdSet = new Set();
 
     for (const p of parsePropFile(argv.prop)) {
+      const description = argv.fixEncoding ? fixEncoding(p.description) :
+          p.description;
+      const action = argv.fixEncoding ? fixEncoding(p.action) : p.action;
       props.push(new Prop(undefined, worldId, p.userId, p.date, p.x, p.y, p.z,
-          p.yaw, p.pitch, p.roll, p.name, p.description, p.action));
+          p.yaw, p.pitch, p.roll, p.name, description, action));
 
       if (argv.autoGenerateUsers && !userIdSet.has(p.userId)) {
         // We generate a new user for each new user ID we encounter in prop
