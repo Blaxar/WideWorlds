@@ -535,8 +535,10 @@ class WorldManager {
     );
 
     for (const [key, value] of Object.entries(results)) {
-      if (value !== true && this.props.has(key)) {
-        propsToBeReset.push(this.props.get(key));
+      const id = parseInt(key);
+
+      if (value !== true && this.props.has(id)) {
+        propsToBeReset.push(this.props.get(id));
       }
     }
 
@@ -577,8 +579,6 @@ class WorldManager {
     if (obj3d.parent) {
       obj3d.removeFromParent();
     }
-
-    this.engine3d.appendToNode(chunkNodeHandle, obj3d);
 
     if (!this.engine3d.appendToNode(chunkNodeHandle, obj3d)) {
       // Could not append object to node, meaning node (chunk) no

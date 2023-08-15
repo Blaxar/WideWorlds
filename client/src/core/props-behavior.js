@@ -88,11 +88,15 @@ class PropsSelector {
       if (intersect.distance < this.maxCastingDistance &&
           intersect.object.name.length > 0 &&
           intersect.object.name != boundingBoxName &&
-          intersect.object.visible) {
+          intersect.object.visible &&
+          intersect.object.userData.prop) {
         // If the object was already selected: nothing to be done
         if (!this.props.every(({prop}) => {
-          return intersect.object != prop;
-        })) break;
+          return intersect.object.userData.prop.id !== prop.userData.prop.id;
+        })) {
+          done = true;
+          break;
+        }
 
         if (!add) {
           // If we're not in multiprop selection mode:
