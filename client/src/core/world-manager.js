@@ -191,6 +191,12 @@ class WorldManager {
             }
           }
         }
+      } else if (entries.op === 'delete') {
+        for (const id of entries.data) {
+          this.props.get(id)?.removeFromParent();
+          this.props.delete(id);
+          this.sprites.delete(id);
+        }
       }
     });
 
@@ -539,6 +545,34 @@ class WorldManager {
 
       if (value !== true && this.props.has(id)) {
         propsToBeReset.push(this.props.get(id));
+      }
+    }
+
+    return propsToBeReset;
+  }
+
+  /**
+   * Remove props on the server
+   * @param {Array<Prop>} props - Staged props to remove.
+   * @return {Array<Prop>} - Original props to revert in case of
+   *                         failure.
+   */
+  async removeProps(props) {
+    const propsToBeReset = [];
+
+    if (!props.length) return propsToBeReset;
+
+    const propsData = props.map((prop) => prop.userData.prop.id);
+
+    const results = await this.httpClient.deleteProps(
+        this.currentWorld.id, propsData,
+    );
+
+    for (const [key, value] of Object.entries(results)) {
+      const id = parseInt(key);
+
+      if (value !== true && this.props.has(propsData[id])) {
+        propsToBeReset.push(this.props.get(propsData[id]));
       }
     }
 

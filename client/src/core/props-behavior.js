@@ -202,6 +202,25 @@ class PropsSelector {
     this.clear();
   }
 
+  /** Delete props from the server and clear selected props list */
+  removeAndClear() {
+    this.worldManager
+        .removeProps(this.props.map(({stagingProp}) => stagingProp)
+            .filter((p) => {
+              // Props without any ID were meant to be created first
+              // and do not exist on the server
+              return p.userData.prop.id !== null &&
+                p.userData.prop.id !== undefined;
+            }))
+        .then((propsToBeReset) => {
+          propsToBeReset.forEach((prop) => {
+            prop.visible = true;
+          });
+        });
+
+    this.clear();
+  }
+
   /**
    * Tell whether or not the selection list is empty
    * @return {boolean} True if no props are selected, false otherwise.

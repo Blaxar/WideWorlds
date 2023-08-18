@@ -41,6 +41,7 @@ let cameraMode = 0; // 0 is first person view, 1 is rear view, 2 is front view
 let lastAvatarUpdate = 0;
 
 const escapeKeyCode = 27;
+const deleteKeyCode = 46;
 
 const wsClient = new WsClient(
     import.meta.env.VITE_SERVER_URL.replace(/http\:\/\//g, 'ws://') + '/api');
@@ -338,10 +339,16 @@ const displayEdgebars = computed(() => main.state === AppStates.WORLD_LOADED);
 document.addEventListener('keyup', (event) => {
   if (someInputFocused) return;
 
-  if (event.keyCode == escapeKeyCode && !propsSelector.isEmpty()) {
-    // Break out of the build mode
-    propsSelector.commitAndClear();
-    resetBehavior();
+  if (!propsSelector.isEmpty()) {
+    if (event.keyCode == escapeKeyCode) {
+      // Commit changes and break out of the build mode
+      propsSelector.commitAndClear();
+      resetBehavior();
+    } else if (event.keyCode == deleteKeyCode) {
+      // Delete props and break out of the build mode
+      propsSelector.removeAndClear();
+      resetBehavior();
+    }
   }
 
   inputListener.releaseKey(event.keyCode);
