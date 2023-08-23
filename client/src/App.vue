@@ -18,7 +18,7 @@ import UserConfig from './core/user-config.js';
 import WsClient from './core/ws-client.js';
 import Engine3D from './core/engine-3d.js';
 import UserFeed, {userFeedPriority} from './core/user-feed.js';
-import {SubjectBehaviorFactory, UserInputListener}
+import {SubjectBehaviorFactory, UserInputListener, qwertyBindings}
   from './core/user-input.js';
 import UserBehavior from './core/user-behavior.js';
 import PropsBehavior, {PropsSelector} from './core/props-behavior.js';
@@ -33,15 +33,15 @@ let someInputFocused = false;
 let worldManager = null;
 let worldState = null;
 let entityManager = null;
-const storedKeyBindings = {};
+
+// Ready key bindings with default values
+const storedKeyBindings = JSON.parse(JSON.stringify(qwertyBindings));
+
 let defaultWorldId = null;
 let worldAvatars = [];
 const thirdPersonCameraDistance = 8;
 let cameraMode = 0; // 0 is first person view, 1 is rear view, 2 is front view
 let lastAvatarUpdate = 0;
-
-const escapeKeyCode = 27;
-const deleteKeyCode = 46;
 
 const wsClient = new WsClient(
     import.meta.env.VITE_SERVER_URL.replace(/http\:\/\//g, 'ws://') + '/api');
@@ -58,6 +58,7 @@ let worldChat = null;
 
 // Ready local storage
 const userConfig = new UserConfig('config', (config) => {
+  // Assign proper key bindings when they are defined
   Object.assign(storedKeyBindings, config.controls.keyBindings);
 });
 
@@ -304,7 +305,7 @@ onMounted(() => {
   // Ready world path registry for object caching
   worldManager = new WorldManager(engine3d, worldPathRegistry, httpClient,
       wsClient, userConfig.at('graphics').at('propsLoadingDistance'));
-  propsSelector = new PropsSelector(engine3d, worldManager,
+  propsSelector = new PropsSelector(engine3d, worldManager, resetBehavior,
       userConfig.at('graphics').at('renderingDistance'));
   entityManager = new EntityManager(engine3d.entities, null,
       0.05,
@@ -338,19 +339,6 @@ const displayEdgebars = computed(() => main.state === AppStates.WORLD_LOADED);
 // focused
 document.addEventListener('keyup', (event) => {
   if (someInputFocused) return;
-
-  if (!propsSelector.isEmpty()) {
-    if (event.keyCode == escapeKeyCode) {
-      // Commit changes and break out of the build mode
-      propsSelector.commitAndClear();
-      resetBehavior();
-    } else if (event.keyCode == deleteKeyCode) {
-      // Delete props and break out of the build mode
-      propsSelector.removeAndClear();
-      resetBehavior();
-    }
-  }
-
   inputListener.releaseKey(event.keyCode);
 }, false);
 document.addEventListener('keydown', (event) => {
@@ -376,10 +364,7 @@ document.addEventListener('contextmenu', (event) => {
 
   propsSelector.select(new Vector2(x, y));
 
-  if (propsSelector.isEmpty()) {
-    // No prop selected: give back the user their freedom to move
-    resetBehavior();
-  } else {
+  if (!propsSelector.isEmpty()) {
     // prop(s) selected: the selector will be the subject of every
     // input from now on
     propsSelector.updateMainAxis(engine3d.camera);

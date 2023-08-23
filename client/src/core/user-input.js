@@ -17,6 +17,9 @@ const UserInput = [
   'strafe',
   'run',
   'crouch',
+  'exit',
+  'duplicate',
+  'delete',
 ];
 
 const qwertyBindings = {
@@ -34,6 +37,9 @@ const qwertyBindings = {
   strafe: 16, // Shift
   run: 17, // Ctrl
   crouch: 67, // C
+  exit: 27, // Escape
+  duplicate: 45, // Insert
+  delete: 46, // Delete
 };
 
 /** Factory for subject behaviors on user input */

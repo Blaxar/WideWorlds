@@ -15,11 +15,14 @@ class PropsSelector {
    * @constructor
    * @param {Engine3D} engine3d - Main WideWorlds 3D engine.
    * @param {Engine3D} worldManager - Main world manager instance.
+   * @param {function} onRelease - Callback function on release of
+   *                               the selection.
    * @param {UserConfigNode} renderingDistanceNode - Configuration node
    *                                                 for the rendering
    *                                                 distance.
    */
-  constructor(engine3d, worldManager, renderingDistanceNode = null) {
+  constructor(engine3d, worldManager, onRelease = () => {},
+      renderingDistanceNode = null) {
     this.engine3d = engine3d;
     this.worldManager = worldManager;
     this.clickRaycaster = new Raycaster();
@@ -39,6 +42,7 @@ class PropsSelector {
     this.avgPos = new Vector3();
     this.lastRot = new Euler();
 
+    this.release = onRelease;
     this.renderingDistanceNode = renderingDistanceNode;
     this.maxCastingDistance = defaultMaxCastingDistance;
 
@@ -200,6 +204,7 @@ class PropsSelector {
     }
 
     this.clear();
+    this.release();
   }
 
   /** Delete props from the server and clear selected props list */
@@ -219,6 +224,7 @@ class PropsSelector {
         });
 
     this.clear();
+    this.release();
   }
 
   /**
@@ -361,6 +367,14 @@ class PropsBehavior extends SubjectBehavior {
     let now = Date.now();
     let moveLength = 0.5; // half a meter
     let rotateAngle = Math.PI / 12.0; // One clock-hour
+
+    if (this.exit()) {
+      propsSelector.commitAndClear();
+      return;
+    } else if (this.delete()) {
+      propsSelector.removeAndClear();
+      return;
+    }
 
     if (!this.moveUp() && !this.moveDown() &&
         !this.forward() && !this.backward() &&
