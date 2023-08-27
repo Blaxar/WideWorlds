@@ -26,7 +26,7 @@ class WorldManager {
    *                                                3D assets loading.
    * @param {HttpClient} httpClient - HTTP client managing API requests to
    *                                  the server.
-   * @param {HttpClient} wsClient - WS client for listening to world update
+   * @param {WsClient} wsClient - WS client for listening to world update
    *                                events coming from the server.
    * @param {UserConfigNode} propsLoadingNode - Configuration node for the
    *                                            props loading distance.
@@ -168,28 +168,40 @@ class WorldManager {
         await this.wsClient.worldUpdateConnect(world.id);
 
     this.currentWorldUpdateClient.onMessage(async (entries) => {
-      if (entries.op === 'update') {
+      const modelRegistry = this.currentModelRegistry;
+
+      if (entries.op === 'create') {
+        for (const prop of entries.data) {
+          const {cX, cZ} = this.getChunkCoordinates(prop.x, prop.z);
+          if (!modelRegistry || !this.isChunkLoaded(cX, cZ)) continue;
+          const chunkAnchor = this.getChunkAnchor(cX, cZ);
+
+          const obj3d = await modelRegistry.get(prop.name);
+
+          this.updateAssetFromProp(obj3d, prop, chunkAnchor);
+        }
+      } else if (entries.op === 'update') {
         for (const value of entries.data) {
           const {cX, cZ} = this.getChunkCoordinates(value.x, value.z);
 
-          if (this.isChunkLoaded(cX, cZ)) {
-            // Only update props on already-loaded chunks
-            if (this.props.has(value.id)) {
-              // Remove original object
-              const oldObj3d = this.props.get(value.id);
-              oldObj3d.removeFromParent();
-
-              // Remove it from the sprites list (when applicable)
-              this.sprites.delete(value.id);
-
-              // Spawn a new one of the same type and update it
-              const newObj3d = await this.currentModelRegistry
-                  .get(oldObj3d.userData.prop.name);
-              newObj3d.userData.rwx = oldObj3d.userData.rwx;
-
-              this.updateAssetFromProp(newObj3d, value);
-            }
+          // Only update props on already-loaded chunks
+          if (!this.isChunkLoaded(cX, cZ) || !this.props.has(value.id)) {
+            continue;
           }
+
+          // Remove original object
+          const oldObj3d = this.props.get(value.id);
+          oldObj3d.removeFromParent();
+
+          // Remove it from the sprites list (when applicable)
+          this.sprites.delete(value.id);
+
+          // Spawn a new one of the same type and update it
+          const newObj3d = await modelRegistry
+              .get(oldObj3d.userData.prop.name);
+          newObj3d.userData.rwx = oldObj3d.userData.rwx;
+
+          this.updateAssetFromProp(newObj3d, value);
         }
       } else if (entries.op === 'delete') {
         for (const id of entries.data) {
@@ -520,9 +532,36 @@ class WorldManager {
   }
 
   /**
+   * Create props on the server
+   * @param {Array<Object3D>} props - Staged props to update.
+   * @return {Array<Object3D>} - Props that could not be created.
+   */
+  async createProps(props) {
+    const propsNotCreated = [];
+
+    if (!props.length) return propsNotCreated;
+
+    const propsData = props.map((prop) => prop.userData.prop);
+
+    const results = await this.httpClient.postProps(
+        this.currentWorld.id, propsData,
+    );
+
+    for (const [key, value] of Object.entries(results)) {
+      const id = parseInt(key);
+
+      if (value !== true) {
+        propsNotCreated.push(props[id]);
+      }
+    }
+
+    return propsNotCreated;
+  }
+
+  /**
    * Update props on the server
-   * @param {Array<Prop>} props - Staged props to update.
-   * @return {Array<Prop>} - Original props to revert in case of
+   * @param {Array<Object3D>} props - Staged props to update.
+   * @return {Array<Object3D>} - Original props to revert in case of
    *                         failure.
    */
   async updateProps(props) {
@@ -553,8 +592,8 @@ class WorldManager {
 
   /**
    * Remove props on the server
-   * @param {Array<Prop>} props - Staged props to remove.
-   * @return {Array<Prop>} - Original props to revert in case of
+   * @param {Array<Object3D>} props - Staged props to remove.
+   * @return {Array<Object3D>} - Original props to revert in case of
    *                         failure.
    */
   async removeProps(props) {

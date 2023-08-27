@@ -95,8 +95,8 @@ class PropsSelector {
           intersect.object.visible &&
           intersect.object.userData.prop) {
         // If the object was already selected: nothing to be done
-        if (!this.props.every(({prop}) => {
-          return intersect.object.userData.prop.id !== prop.userData.prop.id;
+        if (!this.props.every(({stagingProp}) => {
+          return intersect.object.id !== stagingProp.id;
         })) {
           done = true;
           break;
@@ -187,11 +187,25 @@ class PropsSelector {
     }
   }
 
-  /** Commit changes to server and clear selected props list */
-  commitAndClear() {
+  /** Commit changes to server */
+  commit() {
     if (this.hasChanged) {
+      const propsToCreate = [];
+      const propsToUpdate = [];
+
+      this.props.forEach(({stagingProp}) => {
+        if (stagingProp.userData.prop.id === null) {
+          propsToCreate.push(stagingProp);
+        } else {
+          propsToUpdate.push(stagingProp);
+        }
+      });
+
       this.worldManager
-          .updateProps(this.props.map(({stagingProp}) => stagingProp))
+          .createProps(propsToCreate);
+
+      this.worldManager
+          .updateProps(propsToUpdate)
           .then((propsToBeReset) => {
             propsToBeReset.forEach((prop) => {
               prop.visible = true;
@@ -202,9 +216,31 @@ class PropsSelector {
         prop.visible = true;
       });
     }
+  }
 
+  /** Commit changes to server and clear selected props list */
+  commitAndClear() {
+    this.commit();
     this.clear();
     this.release();
+  }
+
+  /**
+   * Commit changes to server and copy thee selected props list
+   * @param {Vector3} direction - Direction to move the props (in meters).
+   */
+  commitAndCopy(direction) {
+    this.commit();
+    this.move(direction);
+    this.hasChanged = true;
+    this.props.map(({prop, stagingProp, boundingBox}) => {
+      // We signify this is a brand new object by erasing the ID
+      // on the staginf prop.
+      stagingProp.userData.prop.id = null;
+
+      // Remove the reference to the original prop as well
+      return {prop: null, stagingProp, boundingBox};
+    });
   }
 
   /** Delete props from the server and clear selected props list */
@@ -356,6 +392,7 @@ class PropsBehavior extends SubjectBehavior {
     this.rotateAxis = new Vector3();
 
     this.lastInput = 0;
+    this.duplicating = false;
   }
 
   /**
@@ -368,6 +405,8 @@ class PropsBehavior extends SubjectBehavior {
     let moveLength = 0.5; // half a meter
     let rotateAngle = Math.PI / 12.0; // One clock-hour
 
+    this.moveDirection.set(0.0, 0.0, 0.0);
+
     if (this.exit()) {
       propsSelector.commitAndClear();
       return;
@@ -376,10 +415,15 @@ class PropsBehavior extends SubjectBehavior {
       return;
     }
 
+    if (!this.duplicate()) {
+      this.duplicating = false;
+    }
+
     if (!this.moveUp() && !this.moveDown() &&
         !this.forward() && !this.backward() &&
         !this.left() && !this.right() &&
-        !this.turnLeft() && !this.turnRight()) {
+        !this.turnLeft() && !this.turnRight() &&
+        !this.duplicate()) {
       // If no key is being pressed: disable the skipping
       // behavior below, this allows for fast sequential key
       // strokes without enduring the input cooldown
@@ -391,12 +435,19 @@ class PropsBehavior extends SubjectBehavior {
       return;
     }
 
+    // Only duplicate selection once per key stroke
+    if (this.duplicate() && !this.duplicating) {
+      this.moveDirection.add(propsSelector.mainDirection.clone()
+          .multiplyScalar(moveLength));
+      propsSelector.commitAndCopy(this.moveDirection);
+      this.duplicating = true;
+      return;
+    }
+
     if (this.strafe()) {
       moveLength = 0.01; // one centimeter
       rotateAngle = Math.PI / 1800.0; // tenth of a degree
     }
-
-    this.moveDirection.set(0.0, 0.0, 0.0);
 
     this.lastInput = now;
 
