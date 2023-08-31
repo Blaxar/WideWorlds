@@ -28,8 +28,11 @@ class PropsSelector {
     this.clickRaycaster = new Raycaster();
     this.currentWorldId = null;
     this.mainDirection = new Vector3(0.0, 0.0, 1.0); // North by default
+    this.propDirection = new Vector3(0.0, 0.0, 1.0); // Z by default
     this.tmpVec3 = new Vector3();
     this.tmpVec2 = new Vector2();
+    this.nullVec2 = new Vector2();
+
     this.directions = [
       new Vector2(0.0, 1.0),
       new Vector2(-1.0, 0.0),
@@ -294,6 +297,32 @@ class PropsSelector {
   }
 
   /**
+   * Determine the relative prop axis to move objects along when the 'forward'
+   * command is requested
+   * @param {Camera} camera - three.js camera instance.
+   */
+  updatePropAxis(camera) {
+    camera.getWorldDirection(this.tmpVec3);
+
+    // Flatten the vector so we get a meaningful ground direction (plane XZ)
+    this.tmpVec3.setY(0);
+    this.tmpVec3.normalize();
+
+    this.tmpVec2.set(this.tmpVec3.x, this.tmpVec3.z);
+
+    const propDirections = this.directions.map((vec2) => {
+      return vec2.clone().rotateAround(this.nullVec2, -this.lastRot.y);
+    });
+
+    // Find the best-matching direction
+    propDirections.sort((a, b) => {
+      return this.tmpVec2.dot(b) - this.tmpVec2.dot(a);
+    });
+
+    this.propDirection.set(propDirections[0].x, 0.0, propDirections[0].y);
+  }
+
+  /**
    * Move the selected props in the given absolute direction
    * @param {Vector3} direction - Direction to move the props (in meters).
    */
@@ -462,22 +491,22 @@ class PropsBehavior extends SubjectBehavior {
     }
 
     if (this.forward() && !this.backward()) {
-      this.moveDirection.add(propsSelector.mainDirection.clone()
+      this.moveDirection.add(propsSelector.propDirection.clone()
           .multiplyScalar(moveLength));
       move = true;
     } else if (!this.forward() && this.backward()) {
-      this.moveDirection.sub(propsSelector.mainDirection.clone()
+      this.moveDirection.sub(propsSelector.propDirection.clone()
           .multiplyScalar(moveLength));
       move = true;
     }
 
     if (this.left() && !this.right()) {
-      this.moveDirection.add(propsSelector.mainDirection.clone()
+      this.moveDirection.add(propsSelector.propDirection.clone()
           .applyAxisAngle(this.upAxis, Math.PI / 2)
           .multiplyScalar(moveLength));
       move = true;
     } else if (!this.left() && this.right()) {
-      this.moveDirection.add(propsSelector.mainDirection.clone()
+      this.moveDirection.add(propsSelector.propDirection.clone()
           .applyAxisAngle(this.upAxis, - Math.PI / 2)
           .multiplyScalar(moveLength));
       move = true;

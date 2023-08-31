@@ -276,6 +276,8 @@ const render = () => {
     lastAvatarUpdate = Date.now();
   }
 
+  propsSelector.updatePropAxis(engine3d.camera);
+
   // Only update entities if the world is loaded
   if (worldState) entityManager.step(delta);
 
