@@ -110,6 +110,7 @@ class ModelRegistry {
           rwx.name = name;
           rwx.add(boxHelper);
           boxHelper.updateMatrix();
+          boxHelper.geometry.computeBoundingBox();
           resolve(rwx);
         }, null, () => resolve(this.placeholder.clone()));
       }));

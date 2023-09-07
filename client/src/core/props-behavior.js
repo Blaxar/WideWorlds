@@ -3,7 +3,7 @@
  */
 
 import {SubjectBehavior} from './user-input.js';
-import {Raycaster, Vector3, Vector2, Quaternion, Euler} from 'three';
+import {Raycaster, Vector3, Vector2, Quaternion, Euler, Box3} from 'three';
 import {boundingBoxName} from './model-registry.js';
 
 const inputCooldown = 100; // In Milliseconds
@@ -30,6 +30,7 @@ class PropsSelector {
     this.mainDirection = new Vector3(0.0, 0.0, 1.0); // North by default
     this.propDirection = new Vector3(0.0, 0.0, 1.0); // Z by default
     this.tmpVec3 = new Vector3();
+    this.tmpVecSize = new Vector3();
     this.tmpVec2 = new Vector2();
     this.nullVec2 = new Vector2();
 
@@ -40,10 +41,13 @@ class PropsSelector {
       new Vector2(1.0, 0.0),
     ];
 
+    this.smartMoveLength = 0;
+
     this.props = [];
 
     this.avgPos = new Vector3();
     this.lastRot = new Euler();
+    this.lastBox = new Box3();
 
     this.release = onRelease;
     this.renderingDistanceNode = renderingDistanceNode;
@@ -177,12 +181,18 @@ class PropsSelector {
     if (this.props.length) {
       this.avgPos.set(0, 0, 0);
 
-      for (const {stagingProp} of this.props) {
+      for (const {stagingProp, boundingBox} of this.props) {
         const {x, y, z} = stagingProp.userData.prop;
         this.avgPos.add(stagingProp.position.clone().set(x, y, z)
             .divideScalar(this.props.length));
         this.lastRot.copy(stagingProp.rotation);
+        this.lastBox.copy(boundingBox.geometry.boundingBox);
       }
+
+      this.lastBox.getSize(this.tmpVecSize);
+
+      this.smartMoveLength = this.tmpVecSize.x > this.tmpVecSize.z ?
+        this.tmpVecSize.x : this.tmpVecSize.z;
 
       this.engine3d.setHelperArrows(this.avgPos, this.lastRot);
     } else {
@@ -466,8 +476,16 @@ class PropsBehavior extends SubjectBehavior {
 
     // Only duplicate selection once per key stroke
     if (this.duplicate() && !this.duplicating) {
-      this.moveDirection.add(propsSelector.mainDirection.clone()
-          .multiplyScalar(moveLength));
+      if (this.run()) {
+        // Smart placement: duplicate the prop with an offset
+        // matching its dimensions
+        this.moveDirection.add(propsSelector.mainDirection.clone()
+            .multiplyScalar(propsSelector.smartMoveLength));
+      } else {
+        this.moveDirection.add(propsSelector.mainDirection.clone()
+            .multiplyScalar(moveLength));
+      }
+
       propsSelector.commitAndCopy(this.moveDirection);
       this.duplicating = true;
       return;
