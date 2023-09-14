@@ -198,7 +198,8 @@ onUnmounted(() => {
 </script>
 
 <template>
-<div class="controls-container window">
+<div class="user-settings surface">
+<div class="controls-container">
 <table :key="componentKey">
   <tr><th scope="col" class="controls-header">Controls</th>
   <th scope="col">Key Bindings</th></tr>
@@ -260,7 +261,7 @@ onUnmounted(() => {
   </td></tr>
 </table>
 </div>
-
+</div>
 </template>
 
 <style scoped>

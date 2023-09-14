@@ -7,6 +7,7 @@ import {computed, reactive, onMounted} from 'vue';
 import LoginForm from './components/LoginForm.vue';
 import WorldSelection from './components/WorldSelection.vue';
 import TopBar from './components/TopBar.vue';
+import CentralOverlay from './components/CentralOverlay.vue';
 import UserChat from './components/UserChat.vue';
 import UserSettings from './components/UserSettings.vue';
 import AppState, {AppStates} from './core/app-state.js';
@@ -51,6 +52,7 @@ const main = reactive({
   state: AppStates.SIGNED_OUT,
   worlds: {},
   worldId: null,
+  displaySettings: false,
 });
 
 const userFeed = new UserFeed();
@@ -382,10 +384,14 @@ document.addEventListener('contextmenu', (event) => {
     <canvas id="main-3d-canvas"></canvas>
     <div id="overlay">
     <TopBar v-if="displayEdgebars" :avatars="worldAvatars" @leave="handleLeave"
-    @camera="updateCamera(true)" @avatar="handleAvatar">
-    <template v-slot:settings><UserSettings :listener="inputListener"
-    :userConfig="userConfig" /></template>
-    </TopBar>
+    @camera="updateCamera(true)" @avatar="handleAvatar"
+    @settings="main.displaySettings = !main.displaySettings" />
+    <CentralOverlay v-if="displayEdgebars">
+    <template v-slot:left v-if="main.displaySettings">
+    <UserSettings :listener="inputListener"
+    :userConfig="userConfig" />
+    </template>
+    </CentralOverlay>
     <LoginForm v-if="displayLogin" @submit="handleLogin" />
     <WorldSelection v-if="displayWorldSelection"
     :worlds="Object.values(main.worlds)" @submit="handleWorldSelection"

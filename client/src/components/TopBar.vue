@@ -3,7 +3,7 @@
  * @author Julien 'Blaxar' Bardagi <blaxar.waldarax@gmail.com>
  */
 
-import {onMounted, reactive, ref} from 'vue';
+import {onMounted, ref} from 'vue';
 
 /* eslint-disable no-unused-vars */
 const props = defineProps({
@@ -34,22 +34,16 @@ const props = defineProps({
 });
 /* eslint-enable no-unused-vars */
 
-const emit = defineEmits(['leave', 'camera', 'avatar']);
+const emit = defineEmits(['leave', 'camera', 'avatar', 'settings']);
 
 const avatarId = ref(null);
-
-const state = reactive({
-  displaySettings: false,
-});
 
 const select = (event) => {
   const selected = event.target.name;
 
   if (selected === 'leave') emit('leave');
   else if (selected === 'camera') emit('camera');
-  else if (selected === 'settings') {
-    state.displaySettings = !state.displaySettings;
-  }
+  else if (selected === 'settings') emit('settings');
 };
 
 const pickAvatar = () => {
@@ -76,9 +70,6 @@ onMounted(() => {
       </option>
     </select>
     </div>
-    </div>
-    <div class="settings-panel">
-    <slot name="settings" v-if="state.displaySettings" />
     </div>
     </div>
 </template>
