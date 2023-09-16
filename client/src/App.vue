@@ -10,6 +10,7 @@ import TopBar from './components/TopBar.vue';
 import CentralOverlay from './components/CentralOverlay.vue';
 import UserChat from './components/UserChat.vue';
 import UserSettings from './components/UserSettings.vue';
+import PropSettings from './components/PropSettings.vue';
 import AppState, {AppStates} from './core/app-state.js';
 import WorldPathRegistry from './core/world-path-registry.js';
 import WorldManager from './core/world-manager.js';
@@ -52,7 +53,9 @@ const main = reactive({
   state: AppStates.SIGNED_OUT,
   worlds: {},
   worldId: null,
-  displaySettings: false,
+  displayUserSettings: false,
+  displayPropSettings: false,
+  propSettingsTrigger: 0,
 });
 
 const userFeed = new UserFeed();
@@ -149,6 +152,22 @@ const appState = new AppState(hooks, main.state);
 const resetBehavior = () => {
   inputListener.setSubject('user', {user: engine3d.user, tilt: engine3d.tilt,
     runByDefaultNode: userConfig.at('controls').at('runByDefault')});
+  main.displayPropSettings = false;
+  someInputFocused = false;
+};
+
+const onPropsSelectionChange = (nbProps) => {
+  if (nbProps) {
+    main.propSettingsTrigger = (main.propSettingsTrigger + 1) % 2;
+    // prop(s) selected: the selector will be the subject of every
+    // input from now on
+    propsSelector.updateMainAxis(engine3d.camera);
+    inputListener.setSubject('props', propsSelector);
+    main.displayPropSettings = true;
+  } else {
+    main.displayPropSettings = false;
+    resetBehavior();
+  }
 };
 
 const handleLogin = (credentials) => {
@@ -309,8 +328,9 @@ onMounted(() => {
   // Ready world path registry for object caching
   worldManager = new WorldManager(engine3d, worldPathRegistry, httpClient,
       wsClient, userConfig.at('graphics').at('propsLoadingDistance'));
-  propsSelector = new PropsSelector(engine3d, worldManager, resetBehavior,
-      userConfig.at('graphics').at('renderingDistance'));
+  propsSelector = new PropsSelector(engine3d, worldManager,
+      onPropsSelectionChange, userConfig.at('graphics')
+          .at('renderingDistance'));
   entityManager = new EntityManager(engine3d.entities, null,
       0.05,
       (node, avatarId) => { // Set callback for entity avatar update
@@ -368,28 +388,27 @@ document.addEventListener('contextmenu', (event) => {
 
   propsSelector.select(new Vector2(x, y));
 
-  if (!propsSelector.isEmpty()) {
-    // prop(s) selected: the selector will be the subject of every
-    // input from now on
-    propsSelector.updateMainAxis(engine3d.camera);
-    inputListener.setSubject('props', propsSelector);
-  }
-
   return false;
 }, false);
 
 </script>
 
 <template>
-    <canvas id="main-3d-canvas"></canvas>
-    <div id="overlay">
+  <canvas id="main-3d-canvas"></canvas>
+  <div id="overlay">
     <TopBar v-if="displayEdgebars" :avatars="worldAvatars" @leave="handleLeave"
     @camera="updateCamera(true)" @avatar="handleAvatar"
-    @settings="main.displaySettings = !main.displaySettings" />
+    @settings="main.displayUserSettings = !main.displayUserSettings" />
     <CentralOverlay v-if="displayEdgebars">
-    <template v-slot:left v-if="main.displaySettings">
+    <template v-slot:left v-if="main.displayUserSettings">
     <UserSettings :listener="inputListener"
     :userConfig="userConfig" />
+    </template>
+    <template v-slot:right v-if="main.displayPropSettings">
+    <PropSettings :key="main.propSettingsTrigger" :propsSelector="propsSelector"
+    :exitKey="inputListener.getExitKey()"
+    :duplicateKey="inputListener.getDuplicateKey()"
+    @defocus="() => { someInputFocused = false; }" />
     </template>
     </CentralOverlay>
     <LoginForm v-if="displayLogin" @submit="handleLogin" />
@@ -398,7 +417,7 @@ document.addEventListener('contextmenu', (event) => {
     :defaultWorldId="defaultWorldId" @cancel="handleLogOut" />
     <UserChat @send="handleSendChat" :feed="userFeed"
     :enablePrompt="main.worldId !== null" />
-    </div>
+  </div>
 </template>
 
 <style>

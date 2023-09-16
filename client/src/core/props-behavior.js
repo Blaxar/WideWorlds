@@ -8,6 +8,7 @@ import {boundingBoxName} from './model-registry.js';
 
 const inputCooldown = 100; // In Milliseconds
 const defaultMaxCastingDistance = 2000; // In meters
+const defaultMoveLength = 0.5; // Half a meter
 
 /** Handle props selection */
 class PropsSelector {
@@ -15,13 +16,14 @@ class PropsSelector {
    * @constructor
    * @param {Engine3D} engine3d - Main WideWorlds 3D engine.
    * @param {Engine3D} worldManager - Main world manager instance.
-   * @param {function} onRelease - Callback function on release of
-   *                               the selection.
+   * @param {function} onChange - Callback function on change of
+   *                              the selection, takes the number
+   *                              of selected props as argument.
    * @param {UserConfigNode} renderingDistanceNode - Configuration node
    *                                                 for the rendering
    *                                                 distance.
    */
-  constructor(engine3d, worldManager, onRelease = () => {},
+  constructor(engine3d, worldManager, onChange = (n) => {},
       renderingDistanceNode = null) {
     this.engine3d = engine3d;
     this.worldManager = worldManager;
@@ -49,7 +51,7 @@ class PropsSelector {
     this.lastRot = new Euler();
     this.lastBox = new Box3();
 
-    this.release = onRelease;
+    this.notifyChange = onChange;
     this.renderingDistanceNode = renderingDistanceNode;
     this.maxCastingDistance = defaultMaxCastingDistance;
 
@@ -154,6 +156,7 @@ class PropsSelector {
     }
 
     this.updateArrows();
+    this.notifyChange(this.props.length);
 
     if (done) return;
 
@@ -235,17 +238,19 @@ class PropsSelector {
   commitAndClear() {
     this.commit();
     this.clear();
-    this.release();
+    this.notifyChange(this.props.length);
   }
 
   /**
    * Commit changes to server and copy thee selected props list
    * @param {Vector3} direction - Direction to move the props (in meters).
    */
-  commitAndCopy(direction) {
+  commitAndCopy(direction =
+  this.propDirection.clone().multiplyScalar(defaultMoveLength)) {
     this.commit();
     this.move(direction);
     this.hasChanged = true;
+
     this.props.map(({prop, stagingProp, boundingBox}) => {
       // We signify this is a brand new object by erasing the ID
       // on the staginf prop.
@@ -254,6 +259,8 @@ class PropsSelector {
       // Remove the reference to the original prop as well
       return {prop: null, stagingProp, boundingBox};
     });
+
+    this.notifyChange(this.props.length);
   }
 
   /** Delete props from the server and clear selected props list */
@@ -273,7 +280,7 @@ class PropsSelector {
         });
 
     this.clear();
-    this.release();
+    this.notifyChange(this.props.length);
   }
 
   /**
@@ -414,6 +421,66 @@ class PropsSelector {
       obj3d.updateMatrix();
     });
   }
+
+  /**
+   * Get the name of the single selected prop
+   * @return {string} Name of the prop, null if no prop or many props.
+   */
+  getSinglePropName() {
+    return this.props.length == 1 ?
+        this.props[0].stagingProp.userData.prop.name : null;
+  }
+
+  /**
+   * Get the description of the single selected prop
+   * @return {string} Description of the prop, null if no prop or many props.
+   */
+  getSinglePropDescription() {
+    return this.props.length == 1 ?
+        this.props[0].stagingProp.userData.prop.description : null;
+  }
+
+  /**
+   * Get the action string of the single selected prop
+   * @return {string} Action string of the prop, null if no prop or many props.
+   */
+  getSinglePropAction() {
+    return this.props.length == 1 ?
+        this.props[0].stagingProp.userData.prop.action : null;
+  }
+
+  /**
+   * Set the name of the single selected prop (when applicable)
+   * @param {string} name - Name to set for the prop.
+   */
+  setSinglePropName(name) {
+    if (this.props.length == 1) {
+      this.hasChanged = true;
+      this.props[0].stagingProp.userData.prop.name = name;
+    }
+  }
+
+  /**
+   * Set the description of the single selected prop (when applicable)
+   * @param {string} description - Description to set for the prop.
+   */
+  setSinglePropDescription(description) {
+    if (this.props.length == 1) {
+      this.hasChanged = true;
+      this.props[0].stagingProp.userData.prop.description = description;
+    }
+  }
+
+  /**
+   * Set the action string of the single selected prop (when applicable)
+   * @param {string} action - Action string to set for the prop.
+   */
+  setSinglePropAction(action) {
+    if (this.props.length == 1) {
+      this.hasChanged = true;
+      this.props[0].stagingProp.userData.prop.action = action;
+    }
+  }
 };
 
 /** Define the behavior of the props in the 3D space based on key inputs */
@@ -441,7 +508,7 @@ class PropsBehavior extends SubjectBehavior {
   step(delta) {
     const propsSelector = this.subject;
     let now = Date.now();
-    let moveLength = 0.5; // half a meter
+    let moveLength = defaultMoveLength;
     let rotateAngle = Math.PI / 12.0; // One clock-hour
 
     this.moveDirection.set(0.0, 0.0, 0.0);

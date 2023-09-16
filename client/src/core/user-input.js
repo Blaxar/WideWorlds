@@ -123,6 +123,7 @@ class UserInputListener {
       keyBindings = {}) {
     this.subjectBehaviorFactory = behaviorFactory;
     this.subjectBehavior = null;
+    this.subjectType = null;
     this.bindingListeners = [];
 
     this.bindAllKeys(keyBindings);
@@ -256,8 +257,12 @@ class UserInputListener {
    * @param {object} subject - Subject for the listener to focus on.
    */
   setSubject(subjectType, subject) {
+    if (this.subjectType === subjectType && this.subjectBehavior &&
+        this.subjectBehavior.subject === subject) return;
+
     this.subjectBehavior =
-      this.subjectBehaviorFactory.make(subjectType, subject);
+        this.subjectBehaviorFactory.make(subjectType, subject);
+    this.subjectType = subjectType;
   }
 
   /**

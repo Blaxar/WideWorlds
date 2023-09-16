@@ -38,8 +38,30 @@ body {
     flex-direction: row;
 }
 
-.user-settings {
-    max-width: 30vw;
+.left-surface, .central-surface, .right-surface {
+    width: 33.333vw;
+    vertical-align: middle;
+    height: 50vh;
+}
+
+table.prop-container {
+    width: 100%;
+}
+
+table.prop-container tr th {
+    width: 10%;
+    vertical-align: top;
+    text-align: right;
+}
+
+table.prop-container tr.prop-name th {
+    vertical-align: middle;
+}
+
+table.prop-container tr td textarea {
+    width: 100%;
+    min-height: 20vh;
+    resize: none;
 }
 
 .top-bar {
