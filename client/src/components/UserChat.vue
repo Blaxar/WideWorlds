@@ -68,7 +68,8 @@ v-for="(entry, id) in messages.slice(-props.maxMessageAmount).reverse()"
 <!-- eslint-enable no-tabs -->
 </pre>
 <form @submit.prevent="onSubmit" v-if="props.enablePrompt">
-<input type="text" :placeholder="promptPlaceholder" id="chat-prompt" />
+<input type="text" :placeholder="promptPlaceholder" id="chat-prompt"
+class="text-input" />
 </form>
 </div>
 

@@ -44,8 +44,10 @@ body {
     height: 50vh;
 }
 
-table.prop-container {
-    width: 100%;
+div.prop-settings {
+    width: 75%;
+    margin-left: auto;
+    margin-right: 0;
 }
 
 table.prop-container tr th {
@@ -54,13 +56,119 @@ table.prop-container tr th {
     text-align: right;
 }
 
+table.prop-container tr.button-bar button {
+    width: 2.6em;
+    height: 2.6em;
+    min-width: 1em;
+    min-height: 1em;
+    margin-right: 0.2em;
+}
+
+button[name=prop-delete] {
+    background: url(icons/prop-delete.svg);
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: 2.1em 2.1em;
+}
+
+button[name=prop-duplicate] {
+    background: url(icons/prop-duplicate.svg);
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: 2.1em 2.1em;
+}
+
+button[name=prop-up], button[name=prop-up]:active {
+    background: url(icons/prop-up.svg);
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: 2.1em 2.1em;
+}
+
+button[name=prop-down], button[name=prop-down]:active {
+    background: url(icons/prop-down.svg);
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: 2.1em 2.1em;
+}
+
+button[name=prop-left], button[name=prop-left]:active {
+    background: url(icons/prop-left.svg);
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: 2.1em 2.1em;
+}
+
+button[name=prop-right], button[name=prop-right]:active {
+    background: url(icons/prop-right.svg);
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: 2.1em 2.1em;
+}
+
+button[name=prop-forward], button[name=prop-forward]:active {
+    background: url(icons/prop-forward.svg);
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: 2.1em 2.1em;
+}
+
+button[name=prop-backward], button[name=prop-backward]:active {
+    background: url(icons/prop-backward.svg);
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: 2.1em 2.1em;
+}
+
+button[name=prop-rot-x-ccw], button[name=prop-rot-x-ccw]:active {
+    background: url(icons/prop-rot-x-ccw.svg);
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: 2.1em 2.1em;
+}
+
+button[name=prop-rot-x-cw], button[name=prop-rot-x-cw]:active {
+    background: url(icons/prop-rot-x-cw.svg);
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: 2.1em 2.1em;
+}
+
+button[name=prop-rot-y-ccw], button[name=prop-rot-y-ccw]:active {
+    background: url(icons/prop-rot-y-ccw.svg);
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: 2.1em 2.1em;
+}
+
+button[name=prop-rot-y-cw], button[name=prop-rot-y-cw]:active {
+    background: url(icons/prop-rot-y-cw.svg);
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: 2.1em 2.1em;
+}
+
+button[name=prop-rot-z-ccw], button[name=prop-rot-z-ccw]:active {
+    background: url(icons/prop-rot-z-ccw.svg);
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: 2.1em 2.1em;
+}
+
+button[name=prop-rot-z-cw], button[name=prop-rot-z-ccw]:active {
+    background: url(icons/prop-rot-z-cw.svg);
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: 2.1em 2.1em;
+}
+
 table.prop-container tr.prop-name th {
     vertical-align: middle;
 }
 
 table.prop-container tr td textarea {
     width: 100%;
-    min-height: 20vh;
+    min-height: 12vh;
     resize: none;
 }
 
@@ -159,4 +267,9 @@ th.controls-header {
     z-index: -1;
     height: 100%;
     width: 100%;
+}
+
+.text-input {
+    font-family: "Monospace";
+    font-size: 0.92em;
 }

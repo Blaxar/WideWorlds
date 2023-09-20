@@ -196,9 +196,8 @@ class WorldManager {
           // Remove it from the sprites list (when applicable)
           this.sprites.delete(value.id);
 
-          // Spawn a new one of the same type and update it
-          const newObj3d = await modelRegistry
-              .get(oldObj3d.userData.prop.name);
+          // Spawn a new one update it
+          const newObj3d = await modelRegistry.get(value.name);
           newObj3d.userData.rwx = oldObj3d.userData.rwx;
 
           this.updateAssetFromProp(newObj3d, value);
