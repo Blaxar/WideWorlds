@@ -9,6 +9,9 @@ import {boundingBoxName} from './model-registry.js';
 const inputCooldown = 100; // In Milliseconds
 const defaultMaxCastingDistance = 2000; // In meters
 const defaultMoveLength = 0.5; // Half a meter
+const defaultRotationAngle = Math.PI / 12.0; // One clock-hour
+const smallMoveLength = 0.01; // One centimeter
+const smallRotationAngle = Math.PI / 1800.0; // Tenth of a degree
 
 /** Handle props selection */
 class PropsSelector {
@@ -35,6 +38,7 @@ class PropsSelector {
     this.tmpVecSize = new Vector3();
     this.tmpVec2 = new Vector2();
     this.nullVec2 = new Vector2();
+    this.upAxis = new Vector3(0.0, 1.0, 0.0);
 
     this.directions = [
       new Vector2(0.0, 1.0),
@@ -44,7 +48,7 @@ class PropsSelector {
     ];
 
     this.smartMoveLength = 0;
-
+    this.useWorldDirection = false;
     this.props = [];
 
     this.avgPos = new Vector3();
@@ -340,6 +344,38 @@ class PropsSelector {
   }
 
   /**
+   * Get the forward direction to be considered when moving prop selection
+   * @return {Vector3D} Forward direction to be considered when moving prop
+   *                    selection.
+   */
+  cloneDirection() {
+    return this.useWorldDirection ? this.mainDirection.clone() :
+        this.propDirection.clone();
+  }
+
+  /**
+   * Tell if absolute world axes are being used as reference for direction
+   * when moving prop selection
+   * @return {boolean} Whether or not absolute world axes are being
+   *                   used as reference, false means relative
+   *                   prop direction will be used instead.
+   */
+  usingWorldDirection() {
+    return this.useWorldDirection;
+  }
+
+  /**
+   * Enable or disable absolute world axes as reference for direction when
+   * moving prop selection
+   * @param {boolean} value - Whether or not to use absolute world axes as
+   *                          reference, false means relative prop
+   *                          direction will be used instead.
+   */
+  setUseWorldDirection(value) {
+    this.useWorldDirection = value;
+  }
+
+  /**
    * Move the selected props in the given absolute direction
    * @param {Vector3} direction - Direction to move the props (in meters).
    */
@@ -366,6 +402,8 @@ class PropsSelector {
       obj3d.position.copy(this.absPropPos.sub(this.anchorPropPos));
       obj3d.updateMatrix();
     });
+
+    this.updateArrows();
   }
 
   /**
@@ -420,6 +458,8 @@ class PropsSelector {
       obj3d.position.copy(this.absPropPos.sub(this.anchorPropPos));
       obj3d.updateMatrix();
     });
+
+    this.updateArrows();
   }
 
   /**
@@ -447,6 +487,15 @@ class PropsSelector {
   getSinglePropAction() {
     return this.props.length == 1 ?
         this.props[0].stagingProp.userData.prop.action : null;
+  }
+
+  /**
+   * Get the user ID owning the single selected prop
+   * @return {integer} User ID owning the prop, null if no prop or many props.
+   */
+  getSinglePropUserId() {
+    return this.props.length == 1 ?
+        this.props[0].stagingProp.userData.prop.userId : null;
   }
 
   /**
@@ -481,6 +530,138 @@ class PropsSelector {
       this.props[0].stagingProp.userData.prop.action = action;
     }
   }
+
+  /**
+   * Duplicate prop selection
+   * @param {boolean} smartPlacement - Whether or not to duplicate the
+   *                                   prop with an offset matching its
+   *                                   dimensions.
+   */
+  duplicate(smartPlacement = false) {
+    this.commitAndCopy(this.cloneDirection()
+        .multiplyScalar(smartPlacement ? this.smartMoveLength :
+        defaultMoveLength));
+  }
+
+  /**
+   * Move prop selection up
+   * @param {boolean} scalar - Length to move by (in meters).
+   */
+  moveUp(scalar = defaultMoveLength) {
+    const moveDirection = new Vector3(0, 1, 0);
+
+    moveDirection
+        .multiplyScalar(scalar);
+    this.move(moveDirection);
+  }
+
+  /**
+   * Move prop selection down
+   * @param {boolean} scalar - Length to move by (in meters).
+   */
+  moveDown(scalar = defaultMoveLength) {
+    const moveDirection = new Vector3(0, -1, 0);
+
+    moveDirection
+        .multiplyScalar(scalar);
+    this.move(moveDirection);
+  }
+
+  /**
+   * Move prop selection left
+   * @param {boolean} scalar - Length to move by (in meters).
+   */
+  moveLeft(scalar = defaultMoveLength) {
+    const moveDirection = this.cloneDirection()
+        .applyAxisAngle(this.upAxis, Math.PI / 2)
+        .multiplyScalar(scalar);
+    this.move(moveDirection);
+  }
+
+  /**
+   * Move prop selection right
+   * @param {boolean} scalar - Length to move by (in meters).
+   */
+  moveRight(scalar = defaultMoveLength) {
+    const moveDirection = this.cloneDirection()
+        .applyAxisAngle(this.upAxis, -Math.PI / 2)
+        .multiplyScalar(scalar);
+    this.move(moveDirection);
+  }
+
+  /**
+   * Move prop selection forward
+   * @param {boolean} scalar - Length to move by (in meters).
+   */
+  moveForward(scalar = defaultMoveLength) {
+    const moveDirection = this.cloneDirection()
+        .multiplyScalar(scalar);
+    this.move(moveDirection);
+  }
+
+  /**
+   * Move prop selection backward
+   * @param {boolean} scalar - Length to move by (in meters).
+   */
+  moveBackward(scalar = defaultMoveLength) {
+    const moveDirection = this.cloneDirection()
+        .multiplyScalar(-scalar);
+    this.move(moveDirection);
+  }
+
+  /**
+   * Rotate prop selection counter-clockwise on the X axis
+   * @param {boolean} scalar - Angle to rotate by (in radians).
+   */
+  rotateXccw(scalar = defaultRotationAngle) {
+    const rotationAxis = new Vector3(1.0, 0.0, 0.0);
+    this.rotate(rotationAxis, scalar);
+  }
+
+  /**
+   * Rotate prop selection clockwise around the X axis
+   * @param {boolean} scalar - Angle to rotate by (in radians).
+   */
+  rotateXcw(scalar = defaultRotationAngle) {
+    const rotationAxis = new Vector3(1.0, 0.0, 0.0);
+    this.rotate(rotationAxis, -scalar);
+  }
+
+  /**
+   * Rotate prop selection counter-clockwise around the Y axis
+   * @param {boolean} scalar - Angle to rotate by (in radians).
+   */
+  rotateYccw(scalar = defaultRotationAngle) {
+    const rotationAxis = new Vector3(0.0, 1.0, 0.0);
+    this.rotate(rotationAxis, scalar);
+  }
+
+  /**
+   * Rotate prop selection clockwise around the Y axis
+   * @param {boolean} scalar - Angle to rotate by (in radians).
+   */
+  rotateYcw(scalar = defaultRotationAngle) {
+    const rotationAxis = new Vector3(0.0, 1.0, 0.0);
+    this.rotate(rotationAxis, -scalar);
+  }
+
+  /**
+   * Rotate prop selection counter-clockwise around the Y axis
+   * @param {boolean} scalar - Angle to rotate by (in radians).
+   */
+  rotateZccw(scalar = defaultRotationAngle) {
+    const rotationAxis = new Vector3(0.0, 0.0, 1.0);
+    this.rotate(rotationAxis, scalar);
+  }
+
+  /**
+   * Rotate prop selection clockwise around the Y axis
+   * @param {boolean} scalar - Angle to rotate by (in radians).
+   */
+  rotateZcw(scalar = defaultRotationAngle) {
+    const rotationAxis = new Vector3(0.0, 0.0, 1.0);
+    this.rotate(rotationAxis, -scalar);
+  }
 };
 
 /** Define the behavior of the props in the 3D space based on key inputs */
@@ -495,7 +676,7 @@ class PropsBehavior extends SubjectBehavior {
     this.upAxis = new Vector3(0.0, 1.0, 0.0);
     this.quatRot = new Quaternion();
     this.moveDirection = new Vector3();
-    this.rotateAxis = new Vector3();
+    this.rotationAxis = new Vector3();
 
     this.lastInput = 0;
     this.duplicating = false;
@@ -509,7 +690,7 @@ class PropsBehavior extends SubjectBehavior {
     const propsSelector = this.subject;
     let now = Date.now();
     let moveLength = defaultMoveLength;
-    let rotateAngle = Math.PI / 12.0; // One clock-hour
+    let rotationAngle = defaultRotationAngle;
 
     this.moveDirection.set(0.0, 0.0, 0.0);
 
@@ -543,30 +724,22 @@ class PropsBehavior extends SubjectBehavior {
 
     // Only duplicate selection once per key stroke
     if (this.duplicate() && !this.duplicating) {
-      if (this.run()) {
-        // Smart placement: duplicate the prop with an offset
-        // matching its dimensions
-        this.moveDirection.add(propsSelector.mainDirection.clone()
-            .multiplyScalar(propsSelector.smartMoveLength));
-      } else {
-        this.moveDirection.add(propsSelector.mainDirection.clone()
-            .multiplyScalar(moveLength));
-      }
-
-      propsSelector.commitAndCopy(this.moveDirection);
+      propsSelector.duplicate(this.run());
       this.duplicating = true;
       return;
     }
 
     if (this.strafe()) {
-      moveLength = 0.01; // one centimeter
-      rotateAngle = Math.PI / 1800.0; // tenth of a degree
+      moveLength = smallMoveLength;
+      rotationAngle = smallRotationAngle;
     }
 
     this.lastInput = now;
 
     let move = false;
 
+    // All the input will be considered, in the final move direction
+    // in case more than one axis is involved
     if (this.moveUp() && !this.moveDown()) {
       this.moveDirection.setY(moveLength);
       move = true;
@@ -576,11 +749,11 @@ class PropsBehavior extends SubjectBehavior {
     }
 
     if (this.forward() && !this.backward()) {
-      this.moveDirection.add(propsSelector.propDirection.clone()
+      this.moveDirection.add(propsSelector.cloneDirection()
           .multiplyScalar(moveLength));
       move = true;
     } else if (!this.forward() && this.backward()) {
-      this.moveDirection.sub(propsSelector.propDirection.clone()
+      this.moveDirection.sub(propsSelector.cloneDirection()
           .multiplyScalar(moveLength));
       move = true;
     }
@@ -602,19 +775,18 @@ class PropsBehavior extends SubjectBehavior {
     let rotate = false;
 
     if (this.turnLeft() && !this.turnRight()) {
-      this.rotateAxis.set(0.0, 1.0, 0.0);
+      this.rotationAxis.set(0.0, 1.0, 0.0);
       rotate = true;
     } else if (!this.turnLeft() && this.turnRight()) {
-      this.rotateAxis.set(0.0, 1.0, 0.0);
-      rotateAngle = - rotateAngle;
+      this.rotationAxis.set(0.0, 1.0, 0.0);
+      rotationAngle = - rotationAngle;
       rotate = true;
     }
 
-    if (rotate) propsSelector.rotate(this.rotateAxis, rotateAngle);
-
-    propsSelector.updateArrows();
+    if (rotate) propsSelector.rotate(this.rotationAxis, rotationAngle);
   }
 }
 
 export default PropsBehavior;
-export {PropsSelector};
+export {PropsSelector, defaultMoveLength, defaultRotationAngle,
+  smallMoveLength, smallRotationAngle};

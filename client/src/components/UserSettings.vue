@@ -208,7 +208,7 @@ onUnmounted(() => {
   <td>
     <input type="text" maxlength="0" placeholder="none" :name="name"
     @keyup="onBindingKeyUp" :value="keyToName(listener.getKey(name))"
-    ref="inputField" />
+    ref="inputField" class="text-input" />
   </td>
   </tr>
 </table>
@@ -227,7 +227,7 @@ onUnmounted(() => {
   <td><input type="text" placeholder="none"
     @change="onImageServiceChange"
     :value="props.userConfig.at('network').at('imageService').value()"
-    ref="imageService" />
+    ref="imageService" class="text-input" />
     <button @click="resetImageService" name="resetImageService">
       {{resetImageServiceButtonText}}
     </button>

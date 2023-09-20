@@ -56,6 +56,7 @@ const main = reactive({
   displayUserSettings: false,
   displayPropSettings: false,
   propSettingsTrigger: 0,
+  propSettings: {run: false, strafe: false},
 });
 
 const userFeed = new UserFeed();
@@ -362,10 +363,30 @@ const displayEdgebars = computed(() => main.state === AppStates.WORLD_LOADED);
 // Do not forward key events to the input listener if some html element is being
 // focused
 document.addEventListener('keyup', (event) => {
+  if (inputListener.getRunKey() === event.keyCode) {
+    main.propSettings.run = false;
+    inputListener.releaseKey(event.keyCode);
+    return;
+  } else if (inputListener.getStrafeKey() === event.keyCode) {
+    main.propSettings.strafe = false;
+    inputListener.releaseKey(event.keyCode);
+    return;
+  }
+
   if (someInputFocused) return;
   inputListener.releaseKey(event.keyCode);
 }, false);
 document.addEventListener('keydown', (event) => {
+  if (inputListener.getRunKey() === event.keyCode) {
+    main.propSettings.run = true;
+    inputListener.pressKey(event.keyCode);
+    return;
+  } else if (inputListener.getStrafeKey() === event.keyCode) {
+    main.propSettings.strafe = true;
+    inputListener.pressKey(event.keyCode);
+    return;
+  }
+
   if (someInputFocused) return;
   inputListener.pressKey(event.keyCode);
 }, false);
@@ -406,6 +427,8 @@ document.addEventListener('contextmenu', (event) => {
     </template>
     <template v-slot:right v-if="main.displayPropSettings">
     <PropSettings :key="main.propSettingsTrigger" :propsSelector="propsSelector"
+    :run="main.propSettings.run"
+    :strafe="main.propSettings.strafe"
     :exitKey="inputListener.getExitKey()"
     :duplicateKey="inputListener.getDuplicateKey()"
     @defocus="() => { someInputFocused = false; }" />
