@@ -312,8 +312,8 @@ function* parsePropFile(path) {
       continue;
     }
 
-    /* Parse date (timestamp) */
-    const date = parseInt(propSplit[1]);
+    /* Parse date (timestamp in seconds) and convert it to milliseconds */
+    const date = parseInt(propSplit[1]) * 1000;
 
     // Parse position and orientation
     const x = parseInt(propSplit[2]) * cmToMRatio;

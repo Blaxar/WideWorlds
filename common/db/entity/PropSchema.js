@@ -21,7 +21,7 @@ const PropSchema = new EntitySchema({
       type: 'int',
     },
     date: {
-      type: 'int',
+      type: 'bigint', // milliseconds
     },
     x: {
       type: 'double precision', // meters
