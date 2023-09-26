@@ -12,6 +12,7 @@ import {AWActionParser} from 'aw-action-parser';
 import formatSignLines, {makeSignHTML, makeSignCanvas} from './sign-utils.js';
 
 const unknownObjectName = '_unknown_';
+const unknownObjectAxisAlignment = 'zorienty';
 const maxCanvasWidth = 512;
 const maxCanvasHeight = 512;
 
@@ -21,6 +22,21 @@ const boundingBoxColor = 0xffff00;
 /* Assume .rwx file extension if none is provided */
 const normalizePropName = (name) =>
   name.match(/.+\.([a-zA-Z0-9]+)$/) ? name : name + '.rwx';
+
+/**
+ * Set bounding box on the input prop
+ * @param {Object3D} rwx - Prop to set the bounding box on.
+ */
+function setBoundingBox(rwx) {
+  // Add bounding box
+  const boxHelper = new BoxHelper(rwx, boundingBoxColor);
+  boxHelper.name = boundingBoxName;
+  boxHelper.visible = false;
+  boxHelper.matrixAutoUpdate = false;
+  rwx.add(boxHelper);
+  boxHelper.updateMatrix();
+  boxHelper.geometry.computeBoundingBox();
+}
 
 /** Model registry for a given world catalogue path */
 class ModelRegistry {
@@ -71,6 +87,8 @@ class ModelRegistry {
     this.placeholder = new Mesh(placeholderGeometry,
         [new MeshBasicMaterial({color: 0x000000})]);
     this.placeholder.name = unknownObjectName;
+    this.placeholder.userData.rwx =
+        {axisAlignment: unknownObjectAxisAlignment};
 
     this.models = new Map();
     this.basicModels = new Map();
@@ -102,17 +120,14 @@ class ModelRegistry {
     if (!this.models.has(name)) {
       this.models.set(name, new Promise((resolve) => {
         this.loader.load(name, (rwx) => {
-          // Add bounding box
-          const boxHelper = new BoxHelper(rwx, boundingBoxColor);
-          boxHelper.name = boundingBoxName;
-          boxHelper.visible = false;
-          boxHelper.matrixAutoUpdate = false;
+          setBoundingBox(rwx);
           rwx.name = name;
-          rwx.add(boxHelper);
-          boxHelper.updateMatrix();
-          boxHelper.geometry.computeBoundingBox();
           resolve(rwx);
-        }, null, () => resolve(this.placeholder.clone()));
+        }, null, () => {
+          const rwx = this.placeholder.clone();
+          setBoundingBox(rwx);
+          resolve(rwx);
+        });
       }));
     }
 
@@ -258,9 +273,11 @@ class ModelRegistry {
       }
       if (scale.factor) {
         obj3d.scale.copy(scale.factor);
+        obj3d.getObjectByName(boundingBoxName).scale.copy(scale.factor);
       }
       obj3d.userData.rwx.solid = solid;
       obj3d.visible = visible;
+      obj3d.userData.invisible = !visible;
 
       const newSignature = rwxMaterial.getMatSignature();
 

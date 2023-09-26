@@ -165,9 +165,11 @@ const onPropsSelectionChange = (nbProps) => {
     propsSelector.updateMainAxis(engine3d.camera);
     inputListener.setSubject('props', propsSelector);
     main.displayPropSettings = true;
+    engine3d.revealProps();
   } else {
     main.displayPropSettings = false;
     resetBehavior();
+    engine3d.hideProps();
   }
 };
 

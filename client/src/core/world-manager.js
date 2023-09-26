@@ -198,7 +198,6 @@ class WorldManager {
 
           // Spawn a new one update it
           const newObj3d = await modelRegistry.get(value.name);
-          newObj3d.userData.rwx = oldObj3d.userData.rwx;
 
           this.updateAssetFromProp(newObj3d, value);
         }
@@ -640,6 +639,8 @@ class WorldManager {
 
     if (obj3d.userData.rwx?.axisAlignment !== 'none') {
       this.sprites.set(obj3d.userData.prop.id, obj3d);
+    } else {
+      this.sprites.delete(obj3d.userData.prop.id);
     }
 
     try {

@@ -502,6 +502,36 @@ class Engine3D {
   }
 
   /**
+   * Reveal invisible props
+   */
+  revealProps() {
+    this.nodes.forEach((node) => {
+      if (!node.isLOD || node.getCurrentLevel() > 0) return;
+
+      node.levels[0].object.children.forEach((obj3d) => {
+        if (obj3d.userData.prop && obj3d.userData.invisible) {
+          obj3d.visible = true;
+        }
+      });
+    });
+  }
+
+  /**
+   * Hide invisible props
+   */
+  hideProps() {
+    this.nodes.forEach((node) => {
+      if (!node.isLOD || node.getCurrentLevel() > 0) return;
+
+      node.levels[0].object.children.forEach((obj3d) => {
+        if (obj3d.userData.prop && obj3d.userData.invisible) {
+          obj3d.visible = false;
+        }
+      });
+    });
+  }
+
+  /**
    * Rendering method to be called by the upper context
    * each time we need a new frame.
    * @param {number} deltaTime - Elapsed number of seconds since last update
