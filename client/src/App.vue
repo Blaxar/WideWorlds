@@ -409,7 +409,7 @@ document.addEventListener('contextmenu', (event) => {
   const x = ( event.clientX / window.innerWidth ) * 2 - 1;
   const y = - ( event.clientY / window.innerHeight ) * 2 + 1;
 
-  propsSelector.select(new Vector2(x, y));
+  propsSelector.select(new Vector2(x, y), main.propSettings.strafe);
 
   return false;
 }, false);

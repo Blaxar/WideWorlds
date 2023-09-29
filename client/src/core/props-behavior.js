@@ -106,7 +106,8 @@ class PropsSelector {
           intersect.object.name.length > 0 &&
           intersect.object.name != boundingBoxName &&
           intersect.object.visible &&
-          intersect.object.userData.prop) {
+          intersect.object.userData.prop &&
+          intersect.object.parent.visible) {
         // If the object was already selected: nothing to be done
         if (!this.props.every(({stagingProp}) => {
           return intersect.object.id !== stagingProp.id;
