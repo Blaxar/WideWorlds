@@ -663,6 +663,35 @@ class PropsSelector {
     const rotationAxis = new Vector3(0.0, 0.0, 1.0);
     this.rotate(rotationAxis, -scalar);
   }
+
+  /**
+   * Undo changes on current prop selection
+   */
+  undo() {
+    if (!this.hasChanged) return;
+
+    for (const {stagingProp, boundingBox} of this.props) {
+      const {x, y, z, pitch, yaw, roll,
+        name, action, description} =
+          stagingProp.userData.originalProp;
+      Object.assign(stagingProp.userData.prop,
+          {x, y, z, pitch, yaw, roll,
+            name, action, description});
+      stagingProp.position.set(x, y, z);
+      stagingProp.rotation.set(pitch, yaw, roll, 'YZX');
+      stagingProp.userData.prop.name = name;
+      stagingProp.userData.prop.description = description;
+      stagingProp.userData.prop.action = action;
+      boundingBox.position.copy(stagingProp.position);
+      boundingBox.rotation.copy(stagingProp.rotation);
+      stagingProp.updateMatrix();
+      boundingBox.updateMatrix();
+    }
+
+    this.updateArrows();
+    this.notifyChange(this.props.length);
+    this.hasChanged = false;
+  }
 };
 
 /** Define the behavior of the props in the 3D space based on key inputs */

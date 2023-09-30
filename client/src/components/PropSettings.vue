@@ -52,7 +52,10 @@ const keyupCb = (event) => {
 const onButtonClick = (event) => {
   const name = event.target.name;
 
-  if (name === 'prop-delete') {
+  if (name === 'prop-undo') {
+    props.propsSelector.undo();
+    emit('defocus');
+  } else if (name === 'prop-delete') {
     props.propsSelector.removeAndClear();
   } else if (name === 'prop-duplicate') {
     props.propsSelector.duplicate(props.run);
@@ -124,23 +127,31 @@ const setAbsoluteMove = (event) => {
 <div class="prop-settings surface">
 <table class="prop-container">
   <tr class="button-bar"><td colspan="3">
-  <button name="prop-delete" @click="onButtonClick" />
-  <button name="prop-duplicate" @click="onButtonClick" />
-  <button name="prop-up" @click="onButtonClick" />
-  <button name="prop-down" @click="onButtonClick" />
-  <button name="prop-left" @click="onButtonClick" />
-  <button name="prop-right" @click="onButtonClick" />
-  <button name="prop-forward" @click="onButtonClick" />
-  <button name="prop-backward" @click="onButtonClick" />
-  <button name="prop-rot-x-ccw" @click="onButtonClick" />
-  <button name="prop-rot-x-cw" @click="onButtonClick" />
-  <button name="prop-rot-y-ccw" @click="onButtonClick" />
-  <button name="prop-rot-y-cw" @click="onButtonClick" />
-  <button name="prop-rot-z-ccw" @click="onButtonClick" />
-  <button name="prop-rot-z-cw" @click="onButtonClick" />
+  <button name="prop-undo" @click="onButtonClick" title="Undo" />
+  <button name="prop-duplicate" @click="onButtonClick" title="Duplicate" />
+  <button name="prop-delete" @click="onButtonClick" title="Delete" />
+  <button name="prop-up" @click="onButtonClick" title="Move Up" />
+  <button name="prop-down" @click="onButtonClick" title="Move Down" />
+  <button name="prop-left" @click="onButtonClick" title="Move Left" />
+  <button name="prop-right" @click="onButtonClick" title="Move Right" />
+  <button name="prop-forward" @click="onButtonClick" title="Move Forward" />
+  <button name="prop-backward" @click="onButtonClick" title="Move Backward" />
+  <button name="prop-rot-x-ccw" @click="onButtonClick"
+    title="Rotate X Counter-Clockwise" />
+  <button name="prop-rot-x-cw" @click="onButtonClick"
+    title="Rotate X Clockwise" />
+  <button name="prop-rot-y-ccw" @click="onButtonClick"
+    title="Rotate Y Clockwise" />
+  <button name="prop-rot-y-cw" @click="onButtonClick"
+    title="Rotate Y Clockwise" />
+  <button name="prop-rot-z-ccw" @click="onButtonClick"
+    title="Rotate Z Counter-Clockwise" />
+  <button name="prop-rot-z-cw" @click="onButtonClick"
+    title="Rotate Z Clockwise" />
   </td></tr>
   <tr class="prop-name"><th scope="row">Name:</th>
   <td><input type="text"
+    :disabled="props.propsSelector.getSinglePropName() === null"
     :defaultValue="props.propsSelector.getSinglePropName()"
   name="name" @keyup="keyupCb" class="text-input" /></td>
   <td><input type="checkbox" id="absoluteMove"
@@ -150,10 +161,12 @@ const setAbsoluteMove = (event) => {
   </td></tr>
   <tr class="prop-description"><th scope="row">Description:</th>
   <td colspan="2"><textarea
+    :disabled="props.propsSelector.getSinglePropDescription() === null"
     :defaultValue="props.propsSelector.getSinglePropDescription()"
     name="description" @keyup="keyupCb" class="text-input" /></td></tr>
   <tr class="prop-action"><th scope="row">Action:</th>
   <td colspan="2"><textarea
+    :disabled="props.propsSelector.getSinglePropAction() === null"
     :defaultValue="props.propsSelector.getSinglePropAction()"
   name="action" @keyup="keyupCb" class="text-input" /></td></tr>
   <tr class="prop-owner-id"><th scope="row">Owner:</th>
