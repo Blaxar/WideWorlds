@@ -7,7 +7,7 @@ import {getPageName, defaultPageDiameter}
   from '../../../common/terrain-utils.js';
 import {makePagePlane, adjustPageEdges}
   from './utils-3d.js';
-import {Vector3, Vector2, Color} from 'three';
+import {Vector3, Color} from 'three';
 
 const defaultChunkLoadingPattern = [[-1, 1], [0, 1], [1, 1],
   [-1, 0], [0, 0], [1, 0],
@@ -59,9 +59,6 @@ class WorldManager {
     this.terrainMaterials = new Map();
 
     this.lastTextureUpdate = 0;
-    this.sprites = new Map();
-    this.cameraDirection = new Vector3();
-    this.xzDirection = new Vector2();
     this.terrainEnabled = false;
     this.terrainElevationOffset = 0.0; // In meters
     this.previousCX = this.previousCZ = null;
@@ -191,10 +188,12 @@ class WorldManager {
 
           // Remove original object
           const oldObj3d = this.props.get(value.id);
-          oldObj3d.removeFromParent();
 
-          // Remove it from the sprites list (when applicable)
-          this.sprites.delete(value.id);
+          // Remove it from the dynamic object list (when applicable)
+          this.engine3d.unsetDynamicOnNode(oldObj3d.userData.chunkNodeHandle,
+              oldObj3d);
+
+          oldObj3d.removeFromParent();
 
           // Spawn a new one update it
           const newObj3d = await modelRegistry.get(value.name);
@@ -203,9 +202,15 @@ class WorldManager {
         }
       } else if (entries.op === 'delete') {
         for (const id of entries.data) {
-          this.props.get(id)?.removeFromParent();
+          const obj3d = this.props.get(id);
+
+          if (!obj3d) return;
+
+          // Remove the object from the dynamic object list (when applicable)
+          this.engine3d.unsetDynamicOnNode(obj3d.userData.chunkNodeHandle,
+              obj3d);
+          obj3d.removeFromParent();
           this.props.delete(id);
-          this.sprites.delete(id);
         }
       }
     });
@@ -251,9 +256,6 @@ class WorldManager {
     this.clearChunks();
     this.clearPages();
     this.lastTextureUpdate = 0;
-    this.sprites.clear();
-    this.cameraDirection.set(0, 0, 0);
-    this.xzDirection.set(0, 0);
     this.terrainEnabled = false;
     this.terrainElevationOffset = 0.0;
     this.previousCX = this.previousCZ = null;
@@ -321,16 +323,6 @@ class WorldManager {
     } else {
       this.lastTextureUpdate += delta;
     }
-
-    // Compute the direction (XZ plane) the camera is facing to
-    this.engine3d.camera.getWorldDirection(this.cameraDirection);
-    this.xzDirection.set(this.cameraDirection.x, this.cameraDirection.z);
-    const facingAngle = - this.xzDirection.angle() - Math.PI / 2;
-
-    this.sprites.forEach((sprite) => {
-      sprite.rotation.set(0, facingAngle, 0);
-      sprite.updateMatrix();
-    });
 
     const {cX, cZ} = this.getChunkCoordinates(pos.x, pos.z);
     const {pX, pZ} = this.getPageCoordinates(pos.x, pos.y);
@@ -637,12 +629,6 @@ class WorldManager {
     obj3d.rotation.set(prop.pitch, prop.yaw, prop.roll, 'YZX');
     obj3d.userData.prop = prop;
 
-    if (obj3d.userData.rwx?.axisAlignment !== 'none') {
-      this.sprites.set(obj3d.userData.prop.id, obj3d);
-    } else {
-      this.sprites.delete(obj3d.userData.prop.id);
-    }
-
     try {
       this.currentModelRegistry.applyActionString(obj3d, prop.action);
     } catch (e) {
@@ -650,14 +636,19 @@ class WorldManager {
     }
 
     if (obj3d.parent) {
+      this.engine3d.unsetDynamicOnNode(obj3d.userData.chunkNodeHandle,
+          obj3d);
       obj3d.removeFromParent();
     }
 
-    if (!this.engine3d.appendToNode(chunkNodeHandle, obj3d)) {
+    if (!this.engine3d.appendToNode(chunkNodeHandle, obj3d, 0,
+        obj3d.userData.rwx?.axisAlignment !== 'none')) {
       // Could not append object to node, meaning node (chunk) no
       // longer exists, we just silently cancel the whole loading.
       return;
     }
+
+    obj3d.userData.chunkNodeHandle = chunkNodeHandle;
 
     obj3d.matrixAutoUpdate = false;
     obj3d.updateMatrix();

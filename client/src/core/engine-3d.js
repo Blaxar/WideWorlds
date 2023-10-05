@@ -69,6 +69,9 @@ class Engine3D {
     this.tmpVec3 = new THREE.Vector3();
     this.tmpQuat = new THREE.Quaternion();
 
+    this.cameraDirection = new THREE.Vector3();
+    this.xzDirection = new THREE.Vector2();
+
     this.camera = new THREE.PerspectiveCamera(fov, aspect, near,
         this.renderingDistance);
 
@@ -261,6 +264,7 @@ class Engine3D {
 
     node.position.set(x, y, z);
     this.scene.add(node);
+    node.userData['dynamic'] = new Map();
     return id;
   }
 
@@ -287,9 +291,12 @@ class Engine3D {
    * @param {integer} id - ID of the node to append the object to.
    * @param {Object3D} obj3d - Object to append to the node.
    * @param {integer} level - If node is LOD: level to set the object in.
+   * @param {boolean} dynamic - Whether or node to treat the object as
+   *                            a dynamic one to update it on every frame
+   *                            when visible
    * @return {boolean} True if node exists, false otherwise.
    */
-  appendToNode(id, obj3d, level = 0) {
+  appendToNode(id, obj3d, level = 0, dynamic = false) {
     if (!this.nodes.has(id)) return false;
 
     const node = this.nodes.get(id);
@@ -308,6 +315,10 @@ class Engine3D {
       node.add(obj3d);
     }
 
+    if (dynamic) {
+      node.userData.dynamic.set(obj3d.id, obj3d);
+    }
+
     return true;
   }
 
@@ -321,7 +332,74 @@ class Engine3D {
   belongsToNode(id, obj3d) {
     if (!this.nodes.has(id)) return false;
 
-    return obj3d.parent === this.nodes.get(id);
+    const node = this.nodes.get(id);
+
+    if (node.isLOD) {
+      return obj3d.parent === node.levels[0].object;
+    } else {
+      return obj3d.parent === node.parent;
+    }
+  }
+
+  /**
+   * Set an object as dynamic on a specific node
+   * @param {integer} id - ID of the node to check.
+   * @param {Object3D} obj3d - Object to check.
+   * @return {boolean} True if the object was set as dynamic on
+   *                   the node, false otherwise.
+   */
+  setDynamicOnNode(id, obj3d) {
+    if (!this.belongsToNode(id, obj3d)) return false;
+
+    const node = this.nodes.get(id);
+
+    node.userData.dynamic.set(obj3d.id, obj3d);
+
+    return true;
+  }
+
+  /**
+   * Unset an object as dynamic on a specific node
+   * @param {integer} id - ID of the node to check.
+   * @param {Object3D} obj3d - Object to check.
+   * @return {boolean} True if the object was set as dynamic on
+   *                   the node, false otherwise.
+   */
+  unsetDynamicOnNode(id, obj3d) {
+    if (!this.belongsToNode(id, obj3d)) return false;
+
+    const node = this.nodes.get(id);
+
+    node.userData.dynamic.delete(obj3d.id);
+
+    return true;
+  }
+
+  /**
+   * Update dynamic objects
+   * @param {number} deltaTime - Elapsed number of seconds since last update.
+   */
+  stepDynamicObjects(deltaTime) {
+    // Compute the direction (XZ plane) the camera is facing to
+    this.camera.getWorldDirection(this.cameraDirection);
+    this.xzDirection.set(this.cameraDirection.x, this.cameraDirection.z);
+    const facingAngle = - this.xzDirection.angle() - Math.PI / 2;
+
+    this.nodes.forEach((node) => {
+      const group = node.isLOD ? node.levels[0].object : node;
+
+      if (!group.visible || !node.userData.dynamic) return;
+
+      node.userData.dynamic.forEach((obj3d) => {
+        if (obj3d.visible) {
+          // Update front-facing objects (sprites)
+          if (obj3d.userData.rwx?.axisAlignment !== 'none') {
+            obj3d.rotation.set(0, facingAngle, 0);
+            obj3d.updateMatrix();
+          }
+        }
+      });
+    });
   }
 
   /**
@@ -360,7 +438,9 @@ class Engine3D {
   wipeNode(id) {
     if (!this.nodes.has(id)) return false;
 
-    this.nodes.get(id).clear();
+    const node = this.nodes.get(id);
+    node.userData.dynamic.clear();
+    node.clear();
 
     return true;
   }
@@ -508,7 +588,11 @@ class Engine3D {
     this.nodes.forEach((node) => {
       if (!node.isLOD || node.getCurrentLevel() > 0) return;
 
-      node.levels[0].object.children.forEach((obj3d) => {
+      const group = node.levels[0].object;
+
+      if (!group.visible) return;
+
+      group.children.forEach((obj3d) => {
         if (obj3d.userData.prop && obj3d.userData.invisible) {
           obj3d.visible = true;
         }
@@ -523,7 +607,11 @@ class Engine3D {
     this.nodes.forEach((node) => {
       if (!node.isLOD || node.getCurrentLevel() > 0) return;
 
-      node.levels[0].object.children.forEach((obj3d) => {
+      const group = node.levels[0].object;
+
+      if (!group.visible) return;
+
+      group.children.forEach((obj3d) => {
         if (obj3d.userData.prop && obj3d.userData.invisible) {
           obj3d.visible = false;
         }
@@ -533,9 +621,9 @@ class Engine3D {
 
   /**
    * Rendering method to be called by the upper context
-   * each time we need a new frame.
-   * @param {number} deltaTime - Elapsed number of seconds since last update
-   * @return {boolean} false if stopping request, true otherwise
+   * each time we need a new frame
+   * @param {number} deltaTime - Elapsed number of seconds since last update.
+   * @return {boolean} false if stopping request, true otherwise.
    */
   render(deltaTime = this.getDeltaTime()) {
     // Do not render anything: notify the upper window context
@@ -604,6 +692,7 @@ class Engine3D {
     this.camera.far = this.renderingDistance;
     this.camera.updateProjectionMatrix();
     this.renderer.clearDepth();
+    this.stepDynamicObjects(deltaTime);
     this.renderer.render(this.scene, this.camera);
     this.renderer.clearDepth();
     this.renderer.render(this.foregroundScene, this.camera);
