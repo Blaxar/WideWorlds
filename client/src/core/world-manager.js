@@ -330,7 +330,16 @@ class WorldManager {
     if (this.previousCX !== cX || this.previousCZ !== cZ) {
       const lodCamera = this.engine3d.camera.clone();
       lodCamera.position.setY(0.0);
-      this.engine3d.updateLODs(this.chunks, lodCamera);
+
+      // We notify the 3D engine that we want to update the current
+      // chunks around the camera
+      this.engine3d.updateLODs(new Set(this.chunkLoadingPattern.map(
+          ([x, z]) => {
+            const chunkId = `${cX + x}_${cZ + z}`;
+            return this.chunks.get(chunkId);
+          },
+      ).filter((nodeId) => nodeId !== undefined)),
+      lodCamera);
     }
 
     this.previousCX = cX;

@@ -31,6 +31,7 @@ class Engine3D {
     this.backgroundScene = new THREE.Scene();
     this.foregroundScene = new THREE.Scene();
     this.userHeight = defaultUserHeight;
+    this.visibleLODNodeIDs = new Set();
 
     this.user = new THREE.Group();
     this.head = new THREE.Group();
@@ -259,7 +260,9 @@ class Engine3D {
       for (const distance of this.lods) {
         node.addLevel(new THREE.Group(), distance);
       }
+
       this.lodNodeIDs.add(id);
+      this.visibleLODNodeIDs.add(id);
     }
 
     node.position.set(x, y, z);
@@ -278,7 +281,8 @@ class Engine3D {
 
     const node = this.nodes.get(id);
 
-    if (node.isLOD) this.lodNodeIDs.delete(id);
+    this.lodNodeIDs.delete(id);
+    this.visibleLODNodeIDs.delete(id);
 
     this.scene.remove(node);
     this.nodes.delete(id);
@@ -385,7 +389,10 @@ class Engine3D {
     this.xzDirection.set(this.cameraDirection.x, this.cameraDirection.z);
     const facingAngle = - this.xzDirection.angle() - Math.PI / 2;
 
-    this.nodes.forEach((node) => {
+    this.visibleLODNodeIDs.forEach((id) => {
+      const node = this.nodes.get(id);
+      if (!node) return;
+
       const group = node.isLOD ? node.levels[0].object : node;
 
       if (!group.visible || !node.userData.dynamic) return;
@@ -448,19 +455,43 @@ class Engine3D {
   /**
    * Update all LOD levels based on current hiding distance and
    * camera position
-   * @param {Set<integer>} lodNodeIDs - ID of the LOD nodes to update, none
-   +                                    LOD nodes or none existing nodes
-   *                                    will be ignored.
+   * @param {Set<integer>} lodNodeIDs - ID of the LOD nodes to update,
+   +                                    non-LOD nodes or none existing
+   *                                    nodes will be ignored.
    * @param {Camera} camera - Camera to use as a reference to update the
    *                          displayed level of each LOD node.
    */
   updateLODs(lodNodeIDs, camera = this.camera) {
+    this.visibleLODNodeIDs.forEach((id) => {
+      const node = this.nodes.get(id);
+      if (!node || !node.isLOD) return;
+
+      node.levels[1].distance = this.hidingDistance;
+      node.update(camera);
+
+      if (node.getCurrentLevel() > 0) {
+        // Node went invisible
+        this.visibleLODNodeIDs.delete(id);
+      }
+
+      // If the node was meant to turn invisible: then it will remain
+      // as such, no need to check it again.
+      // If the node was meant to remain visible, then keep it this way,
+      // no need to check it again.
+      lodNodeIDs.delete(id);
+    });
+
     lodNodeIDs.forEach((id) => {
       const node = this.nodes.get(id);
       if (!node || !node.isLOD) return;
 
       node.levels[1].distance = this.hidingDistance;
       node.update(camera);
+
+      if (node.getCurrentLevel() <= 0) {
+        // Node went visible
+        this.visibleLODNodeIDs.add(id);
+      }
     });
   }
 
