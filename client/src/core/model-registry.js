@@ -201,6 +201,7 @@ class ModelRegistry {
    * @param {string} actions - Parsed action commands.
    */
   applyActionsRecursive(obj3d, actions) {
+    const boundingBox = obj3d.getObjectByName(boundingBoxName);
     if (obj3d instanceof Group) {
       // We are dealing with a group, this means we must
       // perform a recursive call to its children
@@ -214,9 +215,11 @@ class ModelRegistry {
       // If the object is neither a Group nor a Mesh, then it's invalid
       throw new Error('Invalid object type provided for action parsing');
     }
-    // We only care for 'create' actions for the moment.
 
+
+    // We only care for 'create' actions for the moment.
     const createActions = actions.create ? actions.create : [];
+
     if (!actions.create) return;
     const materials = [];
 
@@ -273,7 +276,8 @@ class ModelRegistry {
       }
       if (scale.factor) {
         obj3d.scale.copy(scale.factor);
-        obj3d.getObjectByName(boundingBoxName).scale.copy(scale.factor);
+        boundingBox.scale.copy(scale.factor);
+        boundingBox.material.color = new Color(0xff7F00);
       }
       obj3d.userData.rwx.solid = solid;
       obj3d.visible = visible;
