@@ -237,6 +237,7 @@ class ModelRegistry {
       const originalSignature = material.name;
 
       let texture = null;
+      let mask = null;
       let color = null;
       let solid = true;
       let visible = true;
@@ -251,6 +252,7 @@ class ModelRegistry {
             action.color.b / 255.0];
         } else if (action.commandType === 'texture') {
           texture = action.texture;
+          mask = action.mask;
         } else if (action.commandType === 'visible') {
           visible = action.value;
         } else if (action.commandType === 'solid') {
@@ -268,7 +270,7 @@ class ModelRegistry {
 
       if (texture) {
         rwxMaterial.texture = texture;
-        rwxMaterial.mask = null;
+        rwxMaterial.mask = mask;
       } else if (color) {
         rwxMaterial.color = color;
         rwxMaterial.texture = null;
