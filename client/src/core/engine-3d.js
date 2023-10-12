@@ -717,7 +717,7 @@ class Engine3D {
     }
 
     this.renderer.clear();
-    this.camera.far = 1000; // Allow large skyboxes to be fully displayed
+    this.camera.far = 5000; // Allow large skyboxes to be fully displayed
     this.camera.updateProjectionMatrix();
     this.renderer.render(this.backgroundScene, this.camera);
     this.camera.far = this.renderingDistance;

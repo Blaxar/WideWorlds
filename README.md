@@ -94,15 +94,20 @@ Options:
       --pathOverride, --po   Set the object path value for the world to the prov
                              ided string, keep the original value otherwise
                                                         [string] [default: null]
-      --enableTerrain, --et  Override the enableTerrain flag with the provided
-                             value, keep the original one if none is provided
+      --enableTerrain, --et  Override the enableTerrain flag with the provided v
+                             alue, keep the original one if none is provided
                                                        [boolean] [default: null]
+      --fixEncoding, --fe    Try to fix common encoding errors from props action
+                              and description strings [boolean] [default: false]
+      --version5, --v5       Import a v5 propdump. Forces encoding to utf8
+                                                      [boolean] [default: false]
+
 ```
 
 #### Example:
 
 ```bash
-tools/aw2db.js myuniverse.sqlite3 --attr ./atworld.txt --prop ./propworld.txt
+tools/aw2db.js wideworlds.sqlite3 --attr ./atworld.txt --prop ./propworld.txt
 ```
 
 ### elev2terrain

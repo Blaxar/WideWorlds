@@ -128,6 +128,11 @@ const argv = yargs(hideBin(process.argv))
             ' action and description strings',
             type: 'boolean',
             default: false,
+          }).option('version5', {
+            alias: 'v5',
+            description: 'Import a v5 propdump. Forces encoding to utf8',
+            type: 'boolean',
+            default: false,
           })
           .help()
           .alias('help', 'h');
@@ -157,6 +162,7 @@ function parseAttrFile(path) {
   const directionalLightPosition = [];
 
   // Decode the file and parse each line
+  if (argv.v5) argv.encoding = 'utf8';
   for (const entry of iconvlite.decode(content, argv.encoding).split(/\r?\n/)) {
     // Fetch key and value
     const [id, value] = entry.split(/ (.*)/).slice(0, 2);
@@ -323,12 +329,30 @@ function* parsePropFile(path) {
     const pitch = parseInt(propSplit[6]) * tenthDegToRadRatio;
     const roll = parseInt(propSplit[7]) * tenthDegToRadRatio;
 
-    // Parse name, action and description
-    const nameLength = parseInt(propSplit[8]);
-    const descriptionLength = parseInt(propSplit[9]);
-    const actionLength = parseInt(propSplit[10]);
-    const propData = propSplit.slice(11).join(' ');
+    let propType;
+    let nameLength;
+    let descriptionLength;
+    let actionLength;
+    let dataLength;
+    let propData;
 
+    if (argv.v5) {
+      // Parse name, action and description
+      propType = parseInt(propSplit[8]);
+      nameLength = parseInt(propSplit[9]);
+      descriptionLength = parseInt(propSplit[10]);
+      actionLength = parseInt(propSplit[11]);
+      dataLength = parseInt(propSplit[12]);
+
+      propData = propSplit.slice(13).join(' ');
+    } else {
+      // Parse name, action and description
+      nameLength = parseInt(propSplit[8]);
+      descriptionLength = parseInt(propSplit[9]);
+      actionLength = parseInt(propSplit[10]);
+
+      propData = propSplit.slice(11).join(' ');
+    }
     let propDataOffset = 0;
     const name = propData.slice(propDataOffset, propDataOffset += nameLength);
     const description = propData.slice(propDataOffset,
@@ -336,7 +360,16 @@ function* parsePropFile(path) {
     const action = propData.slice(propDataOffset,
         propDataOffset += actionLength);
 
-    yield {userId, date, x, y, z, yaw, pitch, roll, name, description, action};
+    if (argv.v5) {
+      // TODO: Actually import v4 data into db
+      const objData = propData.slice(propDataOffset,
+          propDataOffset += dataLength);
+      yield {userId, date, x, y, z, yaw, pitch, roll, name, description, action,
+        propType, objData};
+    } else {
+      yield {userId, date, x, y, z, yaw, pitch, roll, name, description,
+        action};
+    }
   }
 };
 
@@ -347,7 +380,7 @@ function* parsePropFile(path) {
  */
 function fixEncoding(content) {
   // Fix faulty line breaks
-  return content.replaceAll('€\u007F', '\r\n');
+  return content.replaceAll('€\u007F', '\r\n').replaceAll('�\u007F', '\r\n');
 }
 
 const makeDefaultUser = (id) => {
