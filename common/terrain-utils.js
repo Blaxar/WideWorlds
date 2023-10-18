@@ -9,6 +9,8 @@ const defaultPageDiameter = 128; // In number of points
 const localEndiannessCue = 0x1144;
 const otherEndiannessCue = 0x4411;
 
+const pageAssetName = 'page';
+
 /**
   * Get page name for given coordinates
   * @param {integer} pageX - X coordinate of the page.
@@ -134,4 +136,4 @@ function packElevationData(elevationData) {
 
 export {zeroElevationValue, getPageName, isPointEnabled, getPointTexture,
   getPointRotation, pointDisabledValue, defaultPageDiameter,
-  unpackElevationData, packElevationData};
+  unpackElevationData, packElevationData, pageAssetName};

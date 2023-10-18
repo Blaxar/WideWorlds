@@ -5,6 +5,7 @@
 import {SubjectBehavior} from './user-input.js';
 import {Raycaster, Vector3, Vector2, Quaternion, Euler, Box3} from 'three';
 import {boundingBoxName} from './model-registry.js';
+import {pageAssetName} from '../../../common/terrain-utils.js';
 
 const inputCooldown = 100; // In Milliseconds
 const defaultMaxCastingDistance = 2000; // In meters
@@ -102,6 +103,20 @@ class PropsSelector {
         );
 
     for (const intersect of intersects) {
+      if (intersect.object.name == pageAssetName) {
+        // Some terrain page has been selected, which is the equivalent
+        // of clicking into the void as far as the props-selector
+        // is concerned
+        if (!add) {
+          // If we're not in multiprop selection mode:
+          // commit the current content to the server
+          this.commitAndClear();
+        }
+
+        done = true;
+        break;
+      }
+
       if (intersect.distance < this.maxCastingDistance &&
           intersect.object.name.length > 0 &&
           intersect.object.name != boundingBoxName &&

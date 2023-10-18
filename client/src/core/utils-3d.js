@@ -3,7 +3,7 @@
  */
 
 import {zeroElevationValue, isPointEnabled, getPointTexture,
-  getPointRotation} from '../../../common/terrain-utils.js';
+  getPointRotation, pageAssetName} from '../../../common/terrain-utils.js';
 import * as THREE from 'three';
 
 const maxNbTerrainTextures = 62;
@@ -127,11 +127,10 @@ function generateTerrainMaterials(path) {
  * @param {integer} sideSize - Length of the page side in real space.
  * @param {integer} nbSegments - Number of segments on both X and Z axis.
  * @param {Array<Array<Material>>} terrainMaterials - Terrain materials.
- * @param {string} name - Name to assign to the resulting 3D asset.
  * @return {Object3D} 3D asset for the terrain page
  */
 function makePagePlane(elevationData, textureData, sideSize, nbSegments,
-    terrainMaterials, name = 'page') {
+    terrainMaterials) {
   const pageGeometry = new THREE.BufferGeometry();
   const nbBufferEntries = (nbSegments + 1) * (nbSegments + 1);
   const positions = new Float32Array(nbBufferEntries * 3);
@@ -248,7 +247,7 @@ function makePagePlane(elevationData, textureData, sideSize, nbSegments,
       finalMaterials,
   );
 
-  page.name = name;
+  page.name = pageAssetName;
 
   return page;
 }
