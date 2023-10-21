@@ -9,6 +9,7 @@ const defaultUserHeight = 1.80; // In meters
 const defaultLightIntensity = 0.6;
 const defaultRenderingDistance = 100.0; // In meters
 const defaultHidingDistance = 60.0; // In meters
+const lightScalingFactor = Math.PI; // Since version 155 of three.js
 
 /**
  * Core 3D management class, meant to abstract several three.js
@@ -198,7 +199,7 @@ class Engine3D {
     this.resetAmbientLight();
 
     this.ambientLight = new THREE.AmbientLight(
-        color, intensity);
+        color, intensity * lightScalingFactor);
 
     this.scene.add(this.ambientLight);
   }
@@ -223,7 +224,7 @@ class Engine3D {
     this.resetDirectionalLight();
 
     this.directionalLight = new THREE.DirectionalLight(
-        color, intensity);
+        color, intensity * lightScalingFactor);
 
     this.directionalLight.position.copy(position);
 
