@@ -11,8 +11,10 @@ const inputCooldown = 100; // In Milliseconds
 const defaultMaxCastingDistance = 2000; // In meters
 const defaultMoveLength = 0.5; // Half a meter
 const defaultRotationAngle = Math.PI / 12.0; // One clock-hour
-const smallMoveLength = 0.01; // One centimeter
-const smallRotationAngle = Math.PI / 1800.0; // Tenth of a degree
+const smallMoveLength = 0.05; // Five centimeters
+const smallRotationAngle = Math.PI / 120;
+const verySmallMoveLength = 0.01; // One centimeter
+const verySmallRotationAngle = Math.PI / 1800.0; // Tenth of a degree
 
 /** Handle props selection */
 class PropsSelector {
@@ -774,9 +776,15 @@ class PropsBehavior extends SubjectBehavior {
       return;
     }
 
-    if (this.strafe()) {
+    // Small units
+    if (this.strafe() && !this.run()) {
       moveLength = smallMoveLength;
       rotationAngle = smallRotationAngle;
+    }
+    // Very small units
+    if (this.strafe() && this.run()) {
+      moveLength = verySmallMoveLength;
+      rotationAngle = verySmallRotationAngle;
     }
 
     this.lastInput = now;
@@ -834,4 +842,5 @@ class PropsBehavior extends SubjectBehavior {
 
 export default PropsBehavior;
 export {PropsSelector, defaultMoveLength, defaultRotationAngle,
-  smallMoveLength, smallRotationAngle};
+  smallMoveLength, smallRotationAngle,
+  verySmallMoveLength, verySmallRotationAngle};
