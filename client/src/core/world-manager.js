@@ -13,9 +13,9 @@ const defaultChunkLoadingPattern = [[-1, 1], [0, 1], [1, 1],
   [-1, 0], [0, 0], [1, 0],
   [-1, -1], [0, -1], [1, -1]];
 
-const pageLoadingPattern = [[-1, 1], [0, 1], [1, 1],
+const pageLoadingPattern = [[-1, -1], [0, -1], [1, -1],
   [-1, 0], [0, 0], [1, 0],
-  [-1, -1], [0, -1], [1, -1]];
+  [-1, 1], [0, 1], [1, 1]];
 
 /** Central world-management class, handles chunk loading */
 class WorldManager {
@@ -259,6 +259,7 @@ class WorldManager {
     this.terrainEnabled = false;
     this.terrainElevationOffset = 0.0;
     this.previousCX = this.previousCZ = null;
+    this.loadingPages = false;
   }
 
   /**
@@ -349,8 +350,9 @@ class WorldManager {
       this.loadChunk(cX + x, cZ + z);
     }
 
-    if (!this.terrainEnabled) return;
+    if (!this.terrainEnabled || this.loadingPages) return;
 
+    this.loadingPages = true;
     // Unlike chunks, pages cannot be loaded independently so trivially,
     // for the simple reason there are borders to sync up, so it's easier to do
     // them one at a time to adjust the heights of points at the edges
@@ -358,6 +360,8 @@ class WorldManager {
       for (const [x, z] of pageLoadingPattern) {
         await this.loadPage(pX + x, pZ + z);
       }
+
+      this.loadingPages = false;
     })();
   }
 
@@ -500,7 +504,7 @@ class WorldManager {
 
     const pagePlane = makePagePlane(elevationData, textureData,
         defaultPageDiameter * 10, defaultPageDiameter,
-        this.currentTerrainMaterials, 'page');
+        this.currentTerrainMaterials);
     pagePlane.position.setY(this.terrainElevationOffset);
 
     // Get surrounding planes, falsy if not ready yet

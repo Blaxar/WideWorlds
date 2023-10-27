@@ -10,6 +10,9 @@ const localEndiannessCue = 0x1144;
 const otherEndiannessCue = 0x4411;
 
 const pageAssetName = 'page';
+const pointsAssetName = 'points';
+const wireframeAssetName = 'wireframe';
+const actualAssetName = 'actual';
 
 /**
   * Get page name for given coordinates
@@ -136,4 +139,5 @@ function packElevationData(elevationData) {
 
 export {zeroElevationValue, getPageName, isPointEnabled, getPointTexture,
   getPointRotation, pointDisabledValue, defaultPageDiameter,
-  unpackElevationData, packElevationData, pageAssetName};
+  unpackElevationData, packElevationData, pageAssetName,
+  pointsAssetName, wireframeAssetName, actualAssetName};
