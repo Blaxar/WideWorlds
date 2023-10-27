@@ -105,7 +105,8 @@ class PropsSelector {
         );
 
     for (const intersect of intersects) {
-      if (intersect.object.name == pageAssetName) {
+      if (intersect.object.parent &&
+          intersect.object.parent.name == pageAssetName) {
         // Some terrain page has been selected, which is the equivalent
         // of clicking into the void as far as the props-selector
         // is concerned
