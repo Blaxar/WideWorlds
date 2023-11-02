@@ -27,7 +27,9 @@ class WorldManager {
    * @param {HttpClient} httpClient - HTTP client managing API requests to
    *                                  the server.
    * @param {WsClient} wsClient - WS client for listening to world update
-   *                                events coming from the server.
+   *                              events coming from the server.
+   * @param {userCollider} userCollider - Instance of the local user collider
+   *                                      for collision detection.
    * @param {UserConfigNode} propsLoadingNode - Configuration node for the
    *                                            props loading distance.
    * @param {integer} chunkSide - Chunk side length (in meters).
@@ -35,13 +37,16 @@ class WorldManager {
    *                                       before moving animated textures to
    *                                       their next frame.
    */
-  constructor(engine3d, worldPathRegistry, httpClient, wsClient,
+  constructor(engine3d, worldPathRegistry, httpClient, wsClient, userCollider,
       propsLoadingNode = null, chunkSide = 20, textureUpdatePeriod = 0.20) {
     this.chunkLoadingPattern = defaultChunkLoadingPattern;
+    this.chunkCollisionPattern = defaultChunkLoadingPattern;
+    this.pageCollisionPattern = defaultChunkLoadingPattern;
     this.engine3d = engine3d;
     this.worldPathRegistry = worldPathRegistry;
     this.httpClient = httpClient;
     this.wsClient = wsClient;
+    this.userCollider = userCollider;
     this.textureUpdatePeriod = textureUpdatePeriod; // In seconds
     this.currentWorld = null;
     this.currentModelRegistry = null;
@@ -350,6 +355,19 @@ class WorldManager {
       this.loadChunk(cX + x, cZ + z);
     }
 
+    // Test props collision with user
+    this.userCollider.update(this.engine3d, this.chunkCollisionPattern.map(
+        ([x, z]) => {
+          const chunkId = `${cX + x}_${cZ + z}`;
+          return this.chunks.get(chunkId);
+        },
+    ).concat(this.terrainEnabled ? this.pageCollisionPattern.map(
+        ([x, z]) => {
+          const pageId = `${pX + x}_${pZ + z}`;
+          return this.pages.get(pageId);
+        },
+    ) : []));
+
     if (!this.terrainEnabled || this.loadingPages) return;
 
     this.loadingPages = true;
@@ -470,6 +488,8 @@ class WorldManager {
 
       this.updateAssetFromProp(obj3d, prop, chunkAnchor);
     }
+
+    this.engine3d.updateNodeBoundsTree(chunkAnchor.chunkNodeHandle);
   }
 
   /**
@@ -532,6 +552,7 @@ class WorldManager {
         bottomRight, bottom, defaultPageDiameter);
 
     this.engine3d.appendToNode(pageNodeHandle, pagePlane);
+    this.engine3d.updateNodeBoundsTree(pageNodeHandle);
   }
 
   /**

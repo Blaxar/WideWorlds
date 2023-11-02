@@ -4,6 +4,8 @@
 
 import * as THREE from 'three';
 import * as utils3D from './utils-3d.js';
+import {MeshBVH} from 'three-mesh-bvh';
+import {flattenGroup} from 'three-rwx-loader';
 
 const defaultUserHeight = 1.80; // In meters
 const defaultLightIntensity = 0.6;
@@ -237,6 +239,55 @@ class Engine3D {
       this.scene.remove(this.directionalLight);
       this.directionalLight = null;
     }
+  }
+
+  /**
+   * Update the bounds tree (for collision detection) on a node
+   * @param {integer} id - ID of the node de generate a bounds tree for.
+   * @return {boolean} True if the node exists, false otherwise.
+   */
+  updateNodeBoundsTree(id) {
+    if (!this.nodes.has(id)) return false;
+
+    const node = this.nodes.get(id);
+    let obj3d = node;
+
+    if (node.isLOD) {
+      obj3d = node.levels[0].object;
+    }
+
+    // Make one single mesh
+    const flat = flattenGroup(obj3d);
+
+    // Compute bounds tree
+    node.boundsTree = new MeshBVH(flat.geometry);
+
+    return true;
+  }
+
+  /**
+   * Get the bounds tree (for collision detection) from a node
+   * @param {integer} id - ID of the node to get the bounds tree from.
+   * @return {MeshBVH} The .boundsTree property of the node, undefined if
+   *                   it has not been generated yet, null if the node does
+   *                   not exist.
+   */
+  getNodeBoundsTree(id) {
+    if (!this.nodes.has(id)) return null;
+
+    return this.nodes.get(id).boundsTree;
+  }
+
+  /**
+   * Get the bounds tree (for collision detection) from a node
+   * @param {integer} id - ID of the node to get the bounds tree from.
+   * @return {Matrix4} Global transformation matrix of this node, null
+   *                   if the node does not exist.
+   */
+  getNodeMatrixWorld(id) {
+    if (!this.nodes.has(id)) return null;
+
+    return this.nodes.get(id).matrixWorld;
   }
 
   /**

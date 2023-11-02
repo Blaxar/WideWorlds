@@ -156,6 +156,10 @@ class UserBehavior extends SubjectBehavior {
       this.tmpVec3.applyEuler(this.tmpEul);
       this.subject.user.position.add(this.tmpVec3);
     }
+
+    const {x, y, z} = this.subject.user.position;
+
+    this.subject.collider.putColliderBox(x, y, z);
   }
 }
 

@@ -16,6 +16,7 @@ import WorldPathRegistry from './core/world-path-registry.js';
 import WorldManager from './core/world-manager.js';
 import HttpClient from './core/http-client.js';
 import EntityManager from './core/entity-manager.js';
+import UserCollider from './core/user-collider.js';
 import UserConfig from './core/user-config.js';
 import WsClient from './core/ws-client.js';
 import Engine3D from './core/engine-3d.js';
@@ -90,6 +91,8 @@ if (localStorage.getItem('defaultWorldId')) {
 const httpClient = new HttpClient(import.meta.env.VITE_SERVER_URL + '/api',
     true, localStorage.getItem('token'));
 
+const userCollider = new UserCollider(userConfig.at('graphics'));
+
 const entranceHook = (state) => {
   console.log('Entering "' + state + '" state.');
   main.state = state;
@@ -152,6 +155,7 @@ const appState = new AppState(hooks, main.state);
 
 const resetBehavior = () => {
   inputListener.setSubject('user', {user: engine3d.user, tilt: engine3d.tilt,
+    collider: userCollider,
     runByDefaultNode: userConfig.at('controls').at('runByDefault')});
   main.displayPropSettings = false;
   someInputFocused = false;
@@ -233,6 +237,7 @@ const handleWorldSelection = (id) => {
         entityManager.update(data);
       });
     });
+    userCollider.registerDebugBox(engine3d);
     appState.readyWorld();
   });
 };
@@ -256,6 +261,7 @@ const handleLeave = () => {
   worldState = null;
   appState.unloadWorld();
   main.worldId = null;
+  userCollider.unregisterDebugBox(engine3d);
 };
 
 const handleSendChat = (msg) => {
@@ -272,6 +278,7 @@ const handleAvatar = (avatarId) => {
   // Load avatar
   worldManager.getAvatar(worldAvatars[avatarId].geometry).then((obj3d) => {
     engine3d.setUserAvatar(obj3d, avatarId);
+    userCollider.adjustToObject(obj3d);
   });
 };
 
@@ -330,7 +337,8 @@ onMounted(() => {
 
   // Ready world path registry for object caching
   worldManager = new WorldManager(engine3d, worldPathRegistry, httpClient,
-      wsClient, userConfig.at('graphics').at('propsLoadingDistance'));
+      wsClient, userCollider,
+      userConfig.at('graphics').at('propsLoadingDistance'));
   propsSelector = new PropsSelector(engine3d, worldManager,
       onPropsSelectionChange, userConfig.at('graphics')
           .at('renderingDistance'));

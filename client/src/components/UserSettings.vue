@@ -76,6 +76,10 @@ const props = defineProps({
     type: String,
     default: 'Use HTML rendering for signs',
   },
+  debugUserColliderText: {
+    type: String,
+    default: 'Display user collider box',
+  },
   userInputs: {
     type: Array,
     default: UserInput,
@@ -172,6 +176,11 @@ const setUseHtmlSignRendering = (event) => {
       .at('useHtmlSignRendering').set(event.target.checked);
 };
 
+const setDebugUserCollider = (event) => {
+  props.userConfig.at('graphics')
+      .at('debugUserCollider').set(event.target.checked);
+};
+
 const localRenderingDistance = ref(getRenderingDistance());
 const localPropsLoadingDistance = ref(getPropsLoadingDistance());
 
@@ -257,6 +266,15 @@ onUnmounted(() => {
     @change="setUseHtmlSignRendering" />
     <label for="useHtmlSignRendering">
       {{useHtmlSignRenderingText}}
+    </label>
+  </td></tr>
+  <tr><td colspan="2">
+  <input type="checkbox" id="debugUserCollider"
+    :checked=
+    "props.userConfig.at('graphics').at('debugUserCollider').value()"
+    @change="setDebugUserCollider" />
+    <label for="debugUserCollider">
+      {{debugUserColliderText}}
     </label>
   </td></tr>
 </table>

@@ -32,6 +32,7 @@ const defaultConfig = {
     renderingDistance: renderingDistance.default,
     propsLoadingDistance: propsLoadingDistance.default,
     useHtmlSignRendering: false,
+    debugUserCollider: false,
   },
   interface: {},
 };
