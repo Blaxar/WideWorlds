@@ -4,7 +4,8 @@
  */
 
 import {defaultMoveLength, defaultRotationAngle, smallMoveLength,
-  smallRotationAngle} from '../core/props-behavior.js';
+  verySmallMoveLength, smallRotationAngle, verySmallRotationAngle}
+  from '../core/props-behavior.js';
 
 const props = defineProps({
   propsSelector: {
@@ -51,6 +52,11 @@ const keyupCb = (event) => {
 
 const onButtonClick = (event) => {
   const name = event.target.name;
+  const moveLength = props.strafe ? props.run ? verySmallMoveLength :
+    smallMoveLength : defaultMoveLength;
+  const rotationAngle = props.strafe ? props.run ?
+    verySmallRotationAngle : smallRotationAngle :
+    defaultRotationAngle;
 
   if (name === 'prop-undo') {
     props.propsSelector.undo();
@@ -61,58 +67,40 @@ const onButtonClick = (event) => {
     props.propsSelector.duplicate(props.run);
     emit('defocus');
   } else if (name === 'prop-up') {
-    props.propsSelector
-        .moveUp(props.strafe ? smallMoveLength :
-        defaultMoveLength);
+    props.propsSelector.moveUp(moveLength);
     emit('defocus');
   } else if (name === 'prop-down') {
-    props.propsSelector
-        .moveDown(props.strafe ? smallMoveLength :
-        defaultMoveLength);
+    props.propsSelector.moveDown(moveLength);
     emit('defocus');
   } else if (name === 'prop-left') {
-    props.propsSelector
-        .moveLeft(props.strafe ? smallMoveLength :
-        defaultMoveLength);
+    props.propsSelector.moveLeft(moveLength);
     emit('defocus');
   } else if (name === 'prop-right') {
-    props.propsSelector
-        .moveRight(props.strafe ? smallMoveLength :
-        defaultMoveLength);
+    props.propsSelector.moveRight(moveLength);
     emit('defocus');
   } else if (name === 'prop-forward') {
-    props.propsSelector
-        .moveForward(props.strafe ? smallMoveLength :
-        defaultMoveLength);
+    props.propsSelector.moveForward(moveLength);
     emit('defocus');
   } else if (name === 'prop-backward') {
-    props.propsSelector
-        .moveBackward(props.strafe ? smallMoveLength :
-        defaultMoveLength);
+    props.propsSelector.moveBackward(moveLength);
     emit('defocus');
   } else if (name === 'prop-rot-x-ccw') {
-    props.propsSelector.rotateXccw(props.strafe ?
-        smallRotationAngle : defaultRotationAngle);
+    props.propsSelector.rotateXccw(rotationAngle);
     emit('defocus');
   } else if (name === 'prop-rot-x-cw') {
-    props.propsSelector.rotateXcw(props.strafe ?
-        smallRotationAngle : defaultRotationAngle);
+    props.propsSelector.rotateXcw(rotationAngle);
     emit('defocus');
   } else if (name === 'prop-rot-y-ccw') {
-    props.propsSelector.rotateYccw(props.strafe ?
-        smallRotationAngle : defaultRotationAngle);
+    props.propsSelector.rotateYccw(rotationAngle);
     emit('defocus');
   } else if (name === 'prop-rot-y-cw') {
-    props.propsSelector.rotateYcw(props.strafe ?
-        smallRotationAngle : defaultRotationAngle);
+    props.propsSelector.rotateYcw(rotationAngle);
     emit('defocus');
   } else if (name === 'prop-rot-z-ccw') {
-    props.propsSelector.rotateZccw(props.strafe ?
-        smallRotationAngle : defaultRotationAngle);
+    props.propsSelector.rotateZccw(rotationAngle);
     emit('defocus');
   } else if (name === 'prop-rot-z-cw') {
-    props.propsSelector.rotateZcw(props.strafe ?
-        smallRotationAngle : defaultRotationAngle);
+    props.propsSelector.rotateZcw(rotationAngle);
     emit('defocus');
   }
 };
