@@ -244,9 +244,14 @@ class Engine3D {
   /**
    * Update the bounds tree (for collision detection) on a node
    * @param {integer} id - ID of the node de generate a bounds tree for.
-   * @return {boolean} True if the node exists, false otherwise.
+   * @param {function} filter - Filter function to use when flattening
+   *                            group, gets fed every mesh and group
+   *                            and returns true to accept them in the
+   *                            final mesh.
+   * @return {boolean} True if the node exists and the bounds tree was
+   *                   successfully updated, false otherwise.
    */
-  updateNodeBoundsTree(id) {
+  updateNodeBoundsTree(id, filter = () => true) {
     if (!this.nodes.has(id)) return false;
 
     const node = this.nodes.get(id);
@@ -257,10 +262,15 @@ class Engine3D {
     }
 
     // Make one single mesh
-    const flat = flattenGroup(obj3d);
+    const flat = flattenGroup(obj3d, filter);
 
     // Compute bounds tree
-    node.boundsTree = new MeshBVH(flat.geometry);
+    try {
+      node.boundsTree = new MeshBVH(flat.geometry);
+    } catch (e) {
+      // Something went wrong
+      return false;
+    }
 
     return true;
   }

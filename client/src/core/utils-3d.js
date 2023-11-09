@@ -45,6 +45,12 @@ const pointMaterial = new THREE.PointsMaterial(
     {color: 0xff0000, size: 0.2},
 );
 
+// Filter to use when computing bounds tree on the terrain page:
+// only the actual page geometry should be used, not the wireframe
+// and points cloud overlays
+const pageCollisionMergeFilter = (obj3d) =>
+  (obj3d.isGroup || (obj3d.isMesh && obj3d.name === actualAssetName));
+
 /**
  * Make a reversed (inward-facing faces) 3D octahedron
  * @param {array} colors - Array of colors, 18 elements
@@ -754,4 +760,4 @@ function makeHelperArrows() {
 }
 
 export {makeReversedOctahedron, defaultSkyColors, generateTerrainMaterials,
-  makePagePlane, adjustPageEdges, makeHelperArrows};
+  makePagePlane, adjustPageEdges, pageCollisionMergeFilter, makeHelperArrows};

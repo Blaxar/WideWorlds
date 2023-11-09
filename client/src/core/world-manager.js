@@ -5,7 +5,7 @@
 import {loadAvatarsZip} from '../../../common/avatars-dat-parser.js';
 import {getPageName, defaultPageDiameter}
   from '../../../common/terrain-utils.js';
-import {makePagePlane, adjustPageEdges}
+import {makePagePlane, adjustPageEdges, pageCollisionMergeFilter}
   from './utils-3d.js';
 import {Vector3, Color} from 'three';
 
@@ -552,7 +552,8 @@ class WorldManager {
         bottomRight, bottom, defaultPageDiameter);
 
     this.engine3d.appendToNode(pageNodeHandle, pagePlane);
-    this.engine3d.updateNodeBoundsTree(pageNodeHandle);
+    this.engine3d.updateNodeBoundsTree(pageNodeHandle,
+        pageCollisionMergeFilter);
   }
 
   /**
