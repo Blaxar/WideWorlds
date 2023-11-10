@@ -6,7 +6,8 @@ import RWXLoader, {
   RWXMaterialManager, pictureTag, signTag,
 } from 'three-rwx-loader';
 import {Mesh, Group, BufferGeometry, BufferAttribute, MeshBasicMaterial,
-  SRGBColorSpace, TextureLoader, Color, CanvasTexture, BoxHelper} from 'three';
+  SRGBColorSpace, TextureLoader, Color, CanvasTexture, BoxHelper,
+  LineBasicMaterial} from 'three';
 import * as fflate from 'fflate';
 import {AWActionParser} from 'aw-action-parser';
 import formatSignLines, {makeSignHTML, makeSignCanvas} from './sign-utils.js';
@@ -17,7 +18,13 @@ const maxCanvasWidth = 512;
 const maxCanvasHeight = 512;
 
 const boundingBoxName = 'rwx-bounding-box';
-const boundingBoxColor = 0xffff00;
+
+const defaultBoundingBoxColor = 0xffff00; // yellow
+const scaledBoundingBoxColor = 0xff7f00; // orange
+
+const scaledBoundingBoxMaterial =
+    new LineBasicMaterial({color: scaledBoundingBoxColor, toneMapped: false});
+const defaultBoxHelper = new BoxHelper(new Group(), defaultBoundingBoxColor);
 
 /* Assume .rwx file extension if none is provided */
 const normalizePropName = (name) =>
@@ -29,13 +36,16 @@ const normalizePropName = (name) =>
  */
 function setBoundingBox(rwx) {
   // Add bounding box
-  const boxHelper = new BoxHelper(rwx, boundingBoxColor);
+  const boxHelper = defaultBoxHelper.clone();
+  boxHelper.geometry = boxHelper.geometry.clone();
+  boxHelper.setFromObject(rwx);
   boxHelper.name = boundingBoxName;
   boxHelper.visible = false;
   boxHelper.matrixAutoUpdate = false;
   rwx.add(boxHelper);
   boxHelper.updateMatrix();
   boxHelper.geometry.computeBoundingBox();
+  boxHelper.geometry.attributes.position.needsUpdate = true;
 }
 
 /** Model registry for a given world catalogue path */
@@ -279,7 +289,7 @@ class ModelRegistry {
       if (scale.factor) {
         obj3d.scale.copy(scale.factor);
         boundingBox.scale.copy(scale.factor);
-        boundingBox.material.color = new Color(0xff7F00);
+        boundingBox.material = scaledBoundingBoxMaterial;
       }
       obj3d.userData.rwx.solid = solid;
       obj3d.visible = visible;
