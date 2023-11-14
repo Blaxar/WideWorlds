@@ -41,7 +41,11 @@ const keyupCb = (event) => {
   } else if (event.keyCode === props.duplicateKey) {
     props.propsSelector.commitAndCopy();
     emit('defocus');
-  } else if (event.target.name == 'name') {
+  }
+};
+
+const changeCb = (event) => {
+  if (event.target.name == 'name') {
     props.propsSelector.setSinglePropName(event.target.value);
   } else if (event.target.name == 'description') {
     props.propsSelector.setSinglePropDescription(event.target.value);
@@ -141,7 +145,9 @@ const setAbsoluteMove = (event) => {
   <td><input type="text"
     :disabled="props.propsSelector.getSinglePropName() === null"
     :defaultValue="props.propsSelector.getSinglePropName()"
-  name="name" @keyup="keyupCb" class="text-input" /></td>
+    name="name" @keyup="keyupCb"
+    @change="changeCb" @textInput="changeCb" @input="changeCb"
+    class="text-input" /></td>
   <td><input type="checkbox" id="absoluteMove"
     :checked="props.propsSelector.usingWorldDirection()"
     @change="setAbsoluteMove" />
@@ -151,12 +157,16 @@ const setAbsoluteMove = (event) => {
   <td colspan="2"><textarea
     :disabled="props.propsSelector.getSinglePropDescription() === null"
     :defaultValue="props.propsSelector.getSinglePropDescription()"
-    name="description" @keyup="keyupCb" class="text-input" /></td></tr>
+    name="description" @keyup="keyupCb"
+    @change="changeCb" @textInput="changeCb" @input="changeCb"
+    class="text-input" /></td></tr>
   <tr class="prop-action"><th scope="row">Action:</th>
   <td colspan="2"><textarea
     :disabled="props.propsSelector.getSinglePropAction() === null"
     :defaultValue="props.propsSelector.getSinglePropAction()"
-  name="action" @keyup="keyupCb" class="text-input" /></td></tr>
+    name="action" @keyup="keyupCb"
+    @change="changeCb" @textInput="changeCb" @input="changeCb"
+    class="text-input" /></td></tr>
   <tr class="prop-owner-id"><th scope="row">Owner:</th>
   <td colspan="2">#{{props.propsSelector.getSinglePropUserId()}}</td></tr>
 </table>
