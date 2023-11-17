@@ -264,11 +264,17 @@ class Engine3D {
     // Make one single mesh
     const flat = flattenGroup(obj3d, filter);
 
+    if (!flat.geometry.getIndex().count) {
+      // No face in geometry, so no bounds to compute, return right away
+      node.boundsTree = null;
+      return true;
+    }
+
     // Compute bounds tree
     try {
       node.boundsTree = new MeshBVH(flat.geometry);
     } catch (e) {
-      // Something went wrong
+      console.error(e); // Something went wrong
       return false;
     }
 
