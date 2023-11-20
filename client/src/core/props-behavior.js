@@ -126,10 +126,17 @@ class PropsSelector {
           intersect.object.visible &&
           intersect.object.userData.prop &&
           intersect.object.parent.visible) {
-        // If the object was already selected: nothing to be done
-        if (!this.props.every(({stagingProp}) => {
-          return intersect.object.id !== stagingProp.id;
-        })) {
+        // If the object was already selected: nothing to be done...
+        const foundPropId = this.props.findIndex(({stagingProp}) => {
+          return intersect.object.id === stagingProp.id;
+        });
+
+        if (foundPropId >= 0) {
+          if (add) {
+            // ... unless multiprop selection is on, then we deselect this
+            // single object and commit the changes for it.
+            this.commitAndClearSingle(foundPropId);
+          }
           done = true;
           break;
         }
@@ -261,6 +268,41 @@ class PropsSelector {
   commitAndClear() {
     this.commit();
     this.clear();
+    this.notifyChange(this.props.length);
+  }
+
+  /**
+   * Commit changes for a single prop to server and remove it from selected
+   * props list
+   * @param {integer} id - Index at which the prop sits in the selected prop
+   *                       list.
+   */
+  commitAndClearSingle(id) {
+    if (this.props[id] === undefined) return;
+
+    const {prop, stagingProp, boundingBox} = this.props[id];
+
+    if (this.hasChanged) {
+      if (stagingProp.userData.prop.id === null) {
+        this.worldManager
+            .createProps([stagingProp]);
+      } else {
+        this.worldManager
+            .updateProps([stagingProp])
+            .then((propsToBeReset) => {
+              propsToBeReset.forEach((prop) => {
+                prop.visible = true;
+              });
+            });
+      }
+    } else {
+      prop.visible = true;
+    }
+
+    this.engine3d.removeHelperObject(boundingBox);
+    stagingProp.removeFromParent();
+
+    this.props.splice(id, 1); // Remove this entry from the list
     this.notifyChange(this.props.length);
   }
 
@@ -462,7 +504,7 @@ class PropsSelector {
       obj3d.userData.prop.y = this.absPropPos.y;
       obj3d.userData.prop.z = this.absPropPos.z;
 
-      obj3d.rotateOnAxis(axis, angle);
+      obj3d.rotateOnWorldAxis(axis, angle);
 
       if (obj3d.userData.rwx.axisAlignment === 'none') {
         obj3d.userData.prop.pitch = obj3d.rotation.x;
