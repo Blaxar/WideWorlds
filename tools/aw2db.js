@@ -13,6 +13,7 @@ import yargs from 'yargs';
 import {hideBin} from 'yargs/helpers';
 import iconvlite from 'iconv-lite';
 import fs from 'fs';
+import * as awcoordinates from 'awcoordinates';
 
 const cmToMRatio = 0.01;
 const tenthDegToRadRatio = Math.PI / 180.0 * 0.1;
@@ -249,6 +250,17 @@ function parseAttrFile(path) {
       } else {
         worldData[key] = value === 'Y' ? true : false;
       }
+    } else if (key === 'entryPoint') {
+      const normalizedCoordinates = JSON.parse(
+          awcoordinates.normalize('WW ' + value),
+      ).sdkParts;
+      const coordinates = {
+        x: normalizedCoordinates.x / 10,
+        y: normalizedCoordinates.y / 10,
+        z: normalizedCoordinates.z / 10,
+        yaw: normalizedCoordinates.yaw / 10,
+      };
+      worldData[key] = coordinates;
     } else if (key === 'enableFog') {
       worldData[key] = value === 'Y' ? true : false;
     } else if (key === 'path') {

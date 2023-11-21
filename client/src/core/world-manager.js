@@ -7,7 +7,7 @@ import {getPageName, defaultPageDiameter}
   from '../../../common/terrain-utils.js';
 import {makePagePlane, adjustPageEdges, pageCollisionMergeFilter}
   from './utils-3d.js';
-import {Vector3, Color} from 'three';
+import {Vector3, Color, MathUtils} from 'three';
 
 const defaultChunkLoadingPattern = [[-1, 1], [0, 1], [1, 1],
   [-1, 0], [0, 0], [1, 0],
@@ -158,6 +158,15 @@ class WorldManager {
             -data.dirLightPos[2],
         ),
     );
+    const entry = data?.entryPoint;
+    const yaw = entry?.yaw || 0;
+    if (entry !== undefined) {
+      this.engine3d.user.position.set(entry.x, entry.y, entry.z);
+    }
+    // Face GL South (Renderware North) by default (industry standard)
+    // For legacy worlds, we should modify the entry point's angle.
+    this.engine3d.user.rotation.set(
+        0, MathUtils.degToRad((yaw + 180) % 360), 0, 'YXZ');
 
     this.terrainEnabled = data.enableTerrain;
     this.terrainElevationOffset = data.terrainElevationOffset ?

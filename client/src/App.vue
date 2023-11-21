@@ -28,6 +28,7 @@ import PropsBehavior, {PropsSelector} from './core/props-behavior.js';
 import {entityType, updateType} from '../../common/ws-data-format.js';
 import {LoadingManager, Vector2} from 'three';
 import rasterizeHTML from 'rasterizehtml';
+import {parseCommand} from './core/command-utils.js';
 
 // Three.js context-related settings
 let engine3d = null;
@@ -119,6 +120,7 @@ const fetchWorldList = () => {
         }
       });
 };
+
 
 const plugWorldChat = async () => {
   worldChat = await wsClient.worldChatConnect(main.worldId);
@@ -265,7 +267,20 @@ const handleLeave = () => {
 };
 
 const handleSendChat = (msg) => {
-  worldChat?.send(msg);
+  if (msg.startsWith('/')) {
+    const cmd = parseCommand(msg);
+
+    if (cmd) {
+      engine3d.user.position.x = cmd.x;
+      engine3d.user.position.y = cmd.y;
+      engine3d.user.position.z = cmd.z;
+
+      userFeed.publish('You have been teleported to ' +
+        `${cmd.x}X, ${cmd.y}Y, ${cmd.z}Z`);
+    }
+  } else {
+    worldChat?.send(msg);
+  }
 };
 
 const handleAvatar = (avatarId) => {
