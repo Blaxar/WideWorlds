@@ -91,6 +91,25 @@ function makeReversedOctahedron(
 }
 
 /**
+ * Flips the radians to the opposite angle
+ * @param {number} yaw - The Yaw in Radians
+ * @return {number} - Returns the opposite radian angle
+ */
+function flipYawRadians(yaw) {
+  return (2 * Math.PI - yaw) % (2 * Math.PI);
+}
+
+/**
+ * Flips the degrees to the opposite angle
+ * @param {number} yaw - The Yaw in Degrees
+ * @return {number} - Returns the opposite degree angle
+ */
+function flipYawDegrees(yaw) {
+  const result = (180 - yaw) % 360;
+  return result < 0 ? result + 360 : result;
+}
+
+/**
  * Generate all possible terrain tile textures
  * @param {string} path - Path to the folder holding terrain textures
  * @return {Array<Array<Material>>} Array of arrays: 4 rotation
@@ -760,4 +779,5 @@ function makeHelperArrows() {
 }
 
 export {makeReversedOctahedron, defaultSkyColors, generateTerrainMaterials,
-  makePagePlane, adjustPageEdges, pageCollisionMergeFilter, makeHelperArrows};
+  makePagePlane, adjustPageEdges, pageCollisionMergeFilter, makeHelperArrows,
+  flipYawRadians, flipYawDegrees};

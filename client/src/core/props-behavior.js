@@ -174,12 +174,9 @@ class PropsSelector {
         this.engine3d.addHelperObject(boundingBox);
         this.props.push({prop, stagingProp, boundingBox});
 
-        // TODO: Remove when prop selection UI is implemented,
-        //       left there in the meantime for debug purposes.
+        // Outputting the object's data to the browser console
         console.log(prop);
-        console.log('Avatar Pos: ' +
-            [this.engine3d.user.position.x, this.engine3d.user.position.y,
-              this.engine3d.user.position.z]);
+
         done = true;
         break;
       }

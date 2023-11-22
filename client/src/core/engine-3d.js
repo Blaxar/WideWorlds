@@ -3,6 +3,7 @@
  */
 
 import * as THREE from 'three';
+import {MathUtils} from 'three';
 import * as utils3D from './utils-3d.js';
 import {MeshBVH} from 'three-mesh-bvh';
 import {flattenGroup} from 'three-rwx-loader';
@@ -12,6 +13,7 @@ const defaultLightIntensity = 0.6;
 const defaultRenderingDistance = 100.0; // In meters
 const defaultHidingDistance = 60.0; // In meters
 const lightScalingFactor = Math.PI; // Since version 155 of three.js
+const isNumber = (value) => !isNaN(value);
 
 /**
  * Core 3D management class, meant to abstract several three.js
@@ -717,7 +719,29 @@ class Engine3D {
       });
     });
   }
+  /**
+   * Teleports the user to the specified position and sets the yaw.
+   * @param {object} position - The target position (x, y, z).
+   * @param {number} [yaw] - The yaw angle in degrees (optional).
+   * @return {object|false} Returns an object with the new position and yaw if
+   *                        successful, or false if teleportation fails.
+   */
+  teleportUser(position, yaw) {
+    const y = position.y ?? this.user.position.y;
 
+    this.user.position.set(position.x, y, position.z);
+    if (isNumber(yaw)) {
+      const radianYaw = MathUtils.degToRad((yaw + 180) % 360);
+
+      this.user.rotation.set(
+          0, radianYaw, 0, 'YXZ');
+
+      return {x: position.x, y: position.y, z: position.z, yaw: yaw};
+    } else {
+      return {x: position.x, y: position.y, z: position.z};
+    }
+    return false;
+  }
   /**
    * Rendering method to be called by the upper context
    * each time we need a new frame

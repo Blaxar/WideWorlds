@@ -28,9 +28,10 @@ import PropsBehavior, {PropsSelector} from './core/props-behavior.js';
 import {entityType, updateType} from '../../common/ws-data-format.js';
 import {LoadingManager, Vector2} from 'three';
 import rasterizeHTML from 'rasterizehtml';
-import {parseCommand} from './core/command-utils.js';
+import CommandParser from './core/command-parser.js';
 
 // Three.js context-related settings
+let commands = null;
 let engine3d = null;
 let propsSelector = null;
 let someInputFocused = false;
@@ -266,23 +267,6 @@ const handleLeave = () => {
   userCollider.unregisterDebugBox(engine3d);
 };
 
-const handleSendChat = (msg) => {
-  if (msg.startsWith('/')) {
-    const cmd = parseCommand(msg);
-
-    if (cmd) {
-      engine3d.user.position.x = cmd.x;
-      engine3d.user.position.y = cmd.y;
-      engine3d.user.position.z = cmd.z;
-
-      userFeed.publish('You have been teleported to ' +
-        `${cmd.x}X, ${cmd.y}Y, ${cmd.z}Z`);
-    }
-  } else {
-    worldChat?.send(msg);
-  }
-};
-
 const handleAvatar = (avatarId) => {
   // Remove focus from the selection menu
   document.activeElement.blur();
@@ -343,6 +327,7 @@ onMounted(() => {
 
   const canvas = document.querySelector('#main-3d-canvas');
   engine3d = new Engine3D(canvas, userConfig.at('graphics'));
+  commands = new CommandParser(engine3d, userFeed);
 
   // Update user position based on controls
   // Note: we could be passing the whole engine3d object, this would work
@@ -384,6 +369,16 @@ const displayWorldSelection =
       computed(() => main.state === AppStates.WORLD_UNLOADED &&
                Object.values(main.worlds).length > 0);
 const displayEdgebars = computed(() => main.state === AppStates.WORLD_LOADED);
+
+const handleSendChat = (msg) => {
+  if (commands.isCommand(msg)) {
+    commands.handleCommand(msg);
+  } else {
+    // IRC-style double slash sends the command to chat.
+    if (msg.startsWith('//')) msg = msg.replace(/^\//, '');
+    worldChat?.send(msg);
+  }
+};
 
 // Do not forward key events to the input listener if some html element is being
 // focused
