@@ -5,7 +5,8 @@
 import {loadAvatarsZip} from '../../../common/avatars-dat-parser.js';
 import {getPageName, defaultPageDiameter}
   from '../../../common/terrain-utils.js';
-import {makePagePlane, adjustPageEdges, pageCollisionMergeFilter}
+import {makePagePlane, adjustPageEdges, pageCollisionMergeFilter,
+  flipYawDegrees}
   from './utils-3d.js';
 import {Vector3, Color, MathUtils} from 'three';
 
@@ -166,7 +167,7 @@ class WorldManager {
     // Face GL South (Renderware North) by default (industry standard)
     // For legacy worlds, we should modify the entry point's angle.
     this.engine3d.user.rotation.set(
-        0, MathUtils.degToRad((yaw + 180) % 360), 0, 'YXZ');
+        0, MathUtils.degToRad(flipYawDegrees(yaw)), 0, 'YXZ');
 
     this.terrainEnabled = data.enableTerrain;
     this.terrainElevationOffset = data.terrainElevationOffset ?
