@@ -340,7 +340,7 @@ class WorldManager {
     }
 
     const {cX, cZ} = this.getChunkCoordinates(pos.x, pos.z);
-    const {pX, pZ} = this.getPageCoordinates(pos.x, pos.y);
+    const {pX, pZ} = this.getPageCoordinates(pos.x, pos.z);
 
     if (this.previousCX !== cX || this.previousCZ !== cZ) {
       const lodCamera = this.engine3d.camera.clone();
