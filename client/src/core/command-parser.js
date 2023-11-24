@@ -64,11 +64,15 @@ class CommandParser {
     const validateAndTeleport = (teleportData, message) => {
       if (Object.values(teleportData).every(isNumber)) {
         if (isNumber(four)) {
-          const result = this.engine3d.teleportUser(teleportData, four);
-          this.userFeed.publish(message(result));
+          if (four >= 0) {
+            const result = this.engine3d.teleportUser(teleportData, four);
+            this.userFeed.publish(message(result), null, userFeedPriority.info);
+          } else {
+            return {error: 'ERR_NEGATIVE_YAW'};
+          }
         } else {
           const result = this.engine3d.teleportUser(teleportData);
-          this.userFeed.publish(message(result));
+          this.userFeed.publish(message(result), null, userFeedPriority.info);
         }
       } else {
         return {error: 'ERR_INVALID_VALUES'};
@@ -98,10 +102,11 @@ class CommandParser {
   showUserPosition() {
     const {position, rotation} = this.engine3d.user;
     const {x, y, z} = position;
-    const yaw = Math.ceil(
-        utils3D.flipYawDegrees(MathUtils.radToDeg(rotation.y)));
+    const degreeYaw = utils3D.flipYawDegrees(MathUtils.radToDeg(rotation.y));
+    const yaw = Math.ceil(degreeYaw);
     this.userFeed.publish(
-        `You are at: ${toFixed(x)}X, ${toFixed(y)}Y, ${toFixed(z)}Z, ${yaw}°`);
+        `You are at: ${toFixed(x)}X, ${toFixed(y)}Y, ${toFixed(z)}Z, ${yaw}°`,
+        null, userFeedPriority.info);
   }
 
   /**

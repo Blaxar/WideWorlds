@@ -719,6 +719,7 @@ class Engine3D {
       });
     });
   }
+
   /**
    * Teleports the user to the specified position and sets the yaw.
    * @param {object} position - The target position (x, y, z).
@@ -731,7 +732,7 @@ class Engine3D {
 
     this.user.position.set(position.x, y, position.z);
     if (isNumber(yaw)) {
-      const radianYaw = MathUtils.degToRad((yaw + 180) % 360);
+      const radianYaw = -MathUtils.degToRad((yaw + 180) % 360);
 
       this.user.rotation.set(
           0, radianYaw, 0, 'YXZ');
@@ -742,6 +743,7 @@ class Engine3D {
     }
     return false;
   }
+
   /**
    * Rendering method to be called by the upper context
    * each time we need a new frame
