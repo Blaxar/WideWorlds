@@ -41,6 +41,10 @@ let entityManager = null;
 
 // Ready key bindings with default values
 const storedKeyBindings = JSON.parse(JSON.stringify(qwertyBindings));
+const isTextSelected = () => !!window.getSelection()?.toString();
+const unselectText = () => window.getSelection()?.removeAllRanges();
+const isOverlay3D = (target) => !['button-bar', 'chat-entry']
+    .some((className) => target.classList.contains(className));
 
 let defaultWorldId = null;
 let worldAvatars = [];
@@ -319,12 +323,6 @@ const render = () => {
 // As soon as the component is mounted: initialize Three.js 3D context and
 // spool up the rendering cycle
 onMounted(() => {
-  document.addEventListener('keydown', (event) => {
-    if (event.ctrlKey && !someInputFocused) {
-      event.preventDefault();
-    }
-  });
-
   const canvas = document.querySelector('#main-3d-canvas');
   engine3d = new Engine3D(canvas, userConfig.at('graphics'));
   commands = new CommandParser(engine3d, userFeed);
@@ -396,6 +394,7 @@ document.addEventListener('keyup', (event) => {
   if (someInputFocused) return;
   inputListener.releaseKey(event.keyCode);
 }, false);
+
 document.addEventListener('keydown', (event) => {
   if (inputListener.getRunKey() === event.keyCode) {
     main.propSettings.run = true;
@@ -404,6 +403,13 @@ document.addEventListener('keydown', (event) => {
   } else if (inputListener.getStrafeKey() === event.keyCode) {
     main.propSettings.strafe = true;
     inputListener.pressKey(event.keyCode);
+    return;
+  } else if (event.keyCode === 27) {
+    // Escape unselects any selected text.
+    unselectText();
+  } else if (event.ctrlKey && event.keyCode == 67 && isTextSelected()) {
+    // When text is selected, prevent CTRL+C from being forwarded to the
+    //  inputListener, so that we can prevent actions as we copy text.
     return;
   }
 
@@ -420,18 +426,18 @@ document.addEventListener('focusout', (event) => {
 
 document.addEventListener('contextmenu', (event) => {
   if (someInputFocused) return true;
-  event.preventDefault();
 
-  // Note: here we're assuming that the 3D rendering canvas will always
-  // perfectly match the whole HTML window itself (it should anyway...)
-  const x = ( event.clientX / window.innerWidth ) * 2 - 1;
-  const y = - ( event.clientY / window.innerHeight ) * 2 + 1;
-
-  propsSelector.select(new Vector2(x, y), main.propSettings.strafe);
+  if (isOverlay3D(event.target)) {
+    // Note: here we're assuming that the 3D rendering canvas will always
+    // perfectly match the whole HTML window itself (it should anyway...)
+    const x = ( event.clientX / window.innerWidth ) * 2 - 1;
+    const y = - ( event.clientY / window.innerHeight ) * 2 + 1;
+    propsSelector.select(new Vector2(x, y), main.propSettings.strafe);
+    event.preventDefault();
+  }
 
   return false;
 }, false);
-
 </script>
 
 <template>
