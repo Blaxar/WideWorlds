@@ -247,50 +247,76 @@ class ModelRegistry {
       const originalSignature = material.name;
 
       let texture = null;
-      let mask = null;
       let color = null;
       let solid = true;
       let visible = true;
       let picture = null;
-      const sign = {};
-      const scale = {};
+      let sign = null;
+      let scale = null;
+      let opacity = null;
 
       for (const action of createActions) {
-        if (action.commandType === 'color') {
-          color = [action.color.r / 255.0,
-            action.color.g / 255.0,
-            action.color.b / 255.0];
-        } else if (action.commandType === 'texture') {
-          texture = action.texture;
-          mask = action.mask;
-        } else if (action.commandType === 'visible') {
-          visible = action.value;
-        } else if (action.commandType === 'solid') {
-          solid = action.value;
-        } else if (action.commandType === 'picture') {
-          picture = action.resource;
-        } else if (action.commandType === 'sign') {
-          sign.text = action.text || obj3d.userData.prop?.description;
-          sign.bcolor = action.bcolor;
-          sign.color = action.color;
-        } else if (action.commandType === 'scale') {
-          scale.factor = action.factor;
+        switch (action.commandType) {
+          case 'color':
+            color = [action.color.r / 255.0,
+              action.color.g / 255.0,
+              action.color.b / 255.0];
+            break;
+
+          case 'texture':
+            texture = action;
+            break;
+
+          case 'visible':
+            visible = action.value;
+            break;
+
+          case 'solid':
+            solid = action.value;
+            break;
+
+          case 'picture':
+            picture = action;
+            break;
+
+          case 'sign':
+            sign = action;
+            sign.text = action.text || obj3d.userData.prop?.description;
+            break;
+
+          case 'scale':
+            scale = action;
+            break;
+
+          case 'opacity':
+            opacity = action;
+            break;
+
+          default:
+            // No action, we do nothing.
+            break;
         }
       }
 
       if (texture) {
-        rwxMaterial.texture = texture;
-        rwxMaterial.mask = mask;
+        rwxMaterial.texture = texture.texture;
+        rwxMaterial.mask = texture.mask;
       } else if (color) {
         rwxMaterial.color = color;
         rwxMaterial.texture = null;
         rwxMaterial.mask = null;
+      } else {
+        // Nothing.
       }
-      if (scale.factor) {
+
+      if (scale) {
         obj3d.scale.copy(scale.factor);
         boundingBox.scale.copy(scale.factor);
         boundingBox.material = scaledBoundingBoxMaterial;
       }
+
+      if (opacity) rwxMaterial.opacity = opacity.opacity;
+
       obj3d.userData.rwx.solid = solid;
       obj3d.visible = visible;
       obj3d.userData.invisible = !visible;
@@ -310,10 +336,9 @@ class ModelRegistry {
 
       // Check if we need to apply a picture
       // and if said picture can be applied here to begin with...
-      if (picture && obj3d.userData.taggedMaterials[pictureTag]
+      if (picture?.resource && obj3d.userData.taggedMaterials[pictureTag]
           ?.includes(lastMatId)) {
-        const url = this.imageService + picture;
-
+        const url = this.imageService + picture.resource;
         // Doing the above ensures us the new array of materials
         // will be updated, so if a picture is applied:
         // it will actually be visible

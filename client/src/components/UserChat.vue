@@ -60,7 +60,8 @@ const onSubmit = (event) => {
 <div class="bottom-bar">
 <pre id="chat-box">
 <!-- eslint-disable no-tabs -->
-<span :key="id" :class="{info: entry.priority == userFeedPriority.info,
+<span class="chat-entry" :key="id"
+  :class="{info: entry.priority == userFeedPriority.info,
 	warning: entry.priority == userFeedPriority.warning,
 	error: entry.priority == userFeedPriority.error}"
 v-for="(entry, id) in messages.slice(-props.maxMessageAmount).reverse()"
