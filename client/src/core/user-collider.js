@@ -21,13 +21,16 @@ class UserCollider {
     this.colliderBox.min.set(-0.5, 0, -0.5);
     this.colliderBox.max.set(0.5, 0.5, 0.5);
     this.tmpColliderBox = this.colliderBox.clone();
-    this.tmpVec3 = [new Vector3(), new Vector3(), new Vector3()];
+    this.tmpVec3 = new Vector3();
     this.tmpMat4 = new Matrix4();
 
     this.debugBox = new Group();
     this.boxMaterial = new MeshBasicMaterial({color: offCollideColor,
       wireframe: true});
     this.topBox = new Mesh(new BoxGeometry(1, 1, 1), this.boxMaterial);
+    this.colliderCenter = new Vector3(0.5, 0.5, 0.5);
+    this.colliderHalfSide = 0.5;
+    this.colliderHalfHeight = 0.5;
     this.topBox.position.setY(0.5);
     this.debugBox.add(this.topBox);
 
@@ -108,18 +111,18 @@ class UserCollider {
     const depth = this.colliderBox.max.z - this.colliderBox.min.z;
     const side = width > depth ? width : depth;
 
-    this.colliderBox.getCenter(this.tmpVec3[0]);
-    const halfHeight = height / 2;
+    this.colliderHalfSide = side / 2;
+    this.colliderHalfHeight = height / 2;
 
-    this.colliderBox.max.x = side / 2;
+    this.colliderBox.max.x = this.colliderHalfSide;
     this.colliderBox.min.x = -this.colliderBox.max.x;
-    this.colliderBox.max.y += halfHeight;
-    this.colliderBox.min.y += halfHeight;
-    this.colliderBox.max.z = side / 2;
+    this.colliderBox.max.y += this.colliderHalfHeight;
+    this.colliderBox.min.y += this.colliderHalfHeight;
+    this.colliderBox.max.z = this.colliderHalfSide;
     this.colliderBox.min.z = -this.colliderBox.max.z;
 
-    this.colliderBox.getCenter(this.tmpVec3[0]);
-    this.adjustDebugBox(side, height, side, this.tmpVec3[0]);
+    this.colliderBox.getCenter(this.colliderCenter);
+    this.adjustDebugBox(side, height, side, this.colliderCenter);
   }
 
   /**
@@ -131,17 +134,14 @@ class UserCollider {
   putColliderBox(x, y, z) {
     this.debugBox.position.set(x, y, z);
     this.debugBox.updateMatrix();
-    this.colliderBox.getCenter(this.tmpVec3[1]);
-    const center = this.tmpVec3[1];
     const {min, max} = this.colliderBox;
-    const halfHeight = (max.y - min.y) / 2;
 
-    min.x = min.x - center.x + x;
-    min.y = min.y + halfHeight - center.y + y;
-    min.z = min.z - center.z + z;
-    max.x = max.x - center.x + x;
-    max.y = max.y + halfHeight - center.y + y;
-    max.z = max.z - center.z + z;
+    min.x = this.colliderCenter.x + x - this.colliderHalfSide;
+    min.y = this.colliderCenter.y + y - this.colliderHalfHeight;
+    min.z = this.colliderCenter.z + z - this.colliderHalfSide;
+    max.x = this.colliderCenter.x + x + this.colliderHalfSide;
+    max.y = this.colliderCenter.y + y + this.colliderHalfHeight;
+    max.z = this.colliderCenter.z + z + this.colliderHalfSide;
   }
 
   /**
@@ -158,8 +158,8 @@ class UserCollider {
    */
   collidesWithBoundsTree(boundsTree, worldMat, offset = new Vector3()) {
     this.tmpColliderBox.copy(this.colliderBox);
-    this.tmpVec3[2].set(0, 0, 0);
-    this.tmpColliderBox.translate(this.tmpVec3[2].sub(offset));
+    this.tmpVec3.set(0, 0, 0);
+    this.tmpColliderBox.translate(this.tmpVec3.sub(offset));
     this.tmpMat4.copy(worldMat).invert();
     return boundsTree.intersectsBox(this.tmpColliderBox, this.tmpMat4);
   }
