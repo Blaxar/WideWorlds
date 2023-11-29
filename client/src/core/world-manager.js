@@ -9,6 +9,7 @@ import {makePagePlane, adjustPageEdges, pageCollisionMergeFilter,
   flipYawDegrees}
   from './utils-3d.js';
 import {Vector3, Color, MathUtils} from 'three';
+import {userFeedPriority} from './user-feed.js';
 
 const defaultChunkLoadingPattern = [[-1, 1], [0, 1], [1, 1],
   [-1, 0], [0, 0], [1, 0],
@@ -29,6 +30,7 @@ class WorldManager {
    *                                  the server.
    * @param {WsClient} wsClient - WS client for listening to world update
    *                              events coming from the server.
+   * @param {UserFeed} userFeed - The user feed for publishing messages.
    * @param {userCollider} userCollider - Instance of the local user collider
    *                                      for collision detection.
    * @param {UserConfigNode} propsLoadingNode - Configuration node for the
@@ -38,8 +40,9 @@ class WorldManager {
    *                                       before moving animated textures to
    *                                       their next frame.
    */
-  constructor(engine3d, worldPathRegistry, httpClient, wsClient, userCollider,
-      propsLoadingNode = null, chunkSide = 20, textureUpdatePeriod = 0.20) {
+  constructor(engine3d, worldPathRegistry, httpClient, wsClient, userFeed,
+      userCollider, propsLoadingNode = null, chunkSide = 20,
+      textureUpdatePeriod = 0.20) {
     this.chunkLoadingPattern = defaultChunkLoadingPattern;
     this.chunkCollisionPattern = defaultChunkLoadingPattern;
     this.pageCollisionPattern = defaultChunkLoadingPattern;
@@ -53,6 +56,7 @@ class WorldManager {
     this.currentModelRegistry = null;
     this.currentWorldUpdateClient = null;
     this.currentTerrainMaterials = [];
+    this.userFeed = userFeed;
 
     // Props handling
     this.chunkSide = chunkSide; // In meters
@@ -573,6 +577,7 @@ class WorldManager {
    */
   async createProps(props) {
     const propsNotCreated = [];
+    let unauthorizedCreate = false;
 
     if (!props.length) return propsNotCreated;
 
@@ -584,10 +589,17 @@ class WorldManager {
 
     for (const [key, value] of Object.entries(results)) {
       const id = parseInt(key);
+      if (value === false) unauthorizedCreate = true;
 
       if (value !== true) {
         propsNotCreated.push(props[id]);
       }
+    }
+    if (unauthorizedCreate) {
+      // TODO: This will never trigger, since building is enabled for everyone.
+      this.userFeed.publish(
+          'You may not build in this world.', 'Building Inspector',
+          userFeedPriority.warning);
     }
 
     return propsNotCreated;
@@ -601,6 +613,7 @@ class WorldManager {
    */
   async updateProps(props) {
     const propsToBeReset = [];
+    let unauthorizedUpdate = false;
 
     if (!props.length) return propsToBeReset;
 
@@ -616,10 +629,16 @@ class WorldManager {
 
     for (const [key, value] of Object.entries(results)) {
       const id = parseInt(key);
+      if (value === false) unauthorizedUpdate = true;
 
       if (value !== true && this.props.has(id)) {
         propsToBeReset.push(this.props.get(id));
       }
+    }
+    if (unauthorizedUpdate) {
+      this.userFeed.publish(
+          'You may only change your own property.', 'Building Inspector',
+          userFeedPriority.warning);
     }
 
     return propsToBeReset;
@@ -633,6 +652,7 @@ class WorldManager {
    */
   async removeProps(props) {
     const propsToBeReset = [];
+    let unauthorizedDelete = false;
 
     if (!props.length) return propsToBeReset;
 
@@ -644,10 +664,16 @@ class WorldManager {
 
     for (const [key, value] of Object.entries(results)) {
       const id = parseInt(key);
+      if (value === false) unauthorizedDelete = true;
 
       if (value !== true && this.props.has(propsData[id])) {
         propsToBeReset.push(this.props.get(propsData[id]));
       }
+    }
+    if (unauthorizedDelete) {
+      this.userFeed.publish(
+          'You may only demolish your own property.', 'Building Inspector',
+          userFeedPriority.warning);
     }
 
     return propsToBeReset;

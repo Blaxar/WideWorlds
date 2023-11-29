@@ -163,7 +163,8 @@ const appState = new AppState(hooks, main.state);
 const resetBehavior = () => {
   inputListener.setSubject('user', {user: engine3d.user, tilt: engine3d.tilt,
     collider: userCollider,
-    runByDefaultNode: userConfig.at('controls').at('runByDefault')});
+    configsNode: userConfig.at('controls'),
+  });
   main.displayPropSettings = false;
   someInputFocused = false;
 };
@@ -224,6 +225,8 @@ const handleWorldSelection = (id) => {
       null, userFeedPriority.info);
 
   worldManager.load(world).then(async (avatars) => {
+    commands = new CommandParser(engine3d, world.data, userFeed,
+        userConfig.at('controls'));
     // Mark this world as default choice for the world selection
     // screen
     defaultWorldId = id;
@@ -232,7 +235,7 @@ const handleWorldSelection = (id) => {
     const motd = JSON.parse(world.data).welcome;
     if (motd) {
       userFeed.publish(`${motd}`,
-          null, userFeedPriority.info);
+          'World', userFeedPriority.info);
     }
     await unplugWorldChat();
     await plugWorldChat();
@@ -325,7 +328,6 @@ const render = () => {
 onMounted(() => {
   const canvas = document.querySelector('#main-3d-canvas');
   engine3d = new Engine3D(canvas, userConfig.at('graphics'));
-  commands = new CommandParser(engine3d, userFeed);
 
   // Update user position based on controls
   // Note: we could be passing the whole engine3d object, this would work
@@ -335,7 +337,7 @@ onMounted(() => {
 
   // Ready world path registry for object caching
   worldManager = new WorldManager(engine3d, worldPathRegistry, httpClient,
-      wsClient, userCollider,
+      wsClient, userFeed, userCollider,
       userConfig.at('graphics').at('propsLoadingDistance'));
   propsSelector = new PropsSelector(engine3d, worldManager,
       onPropsSelectionChange, userConfig.at('graphics')

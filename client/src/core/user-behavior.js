@@ -4,12 +4,7 @@
 
 import {SubjectBehavior} from './user-input.js';
 import {Vector3, Euler} from 'three';
-
-// Speeds are in metres/s
-const groundSpeed = [5.0, 10.0];
-// const flySpeed = [5.0, 24.0];
-const lookSpeed = [2, 3.5];
-const turnSpeed = [2.0, 3.0];
+import {speeds} from './user-config.js';
 
 const absTiltLimit = Math.PI / 2 * 0.95; // radians
 const twicePi = Math.PI * 2;
@@ -22,23 +17,40 @@ class UserBehavior extends SubjectBehavior {
    */
   constructor(subject) {
     super(subject);
-    this.speed = groundSpeed[0]; // m/s
-    // this.fSpeed = flySpeed[0];
-    this.lSpeed = lookSpeed[0];
-    this.tSpeed = turnSpeed[0];
 
     this.yAxis = new Vector3(0, 1, 0);
 
     this.direction = new Vector3();
     this.tmpVec3 = new Vector3();
     this.tmpEul = new Euler();
-    this.runByDefault = subject.runByDefaultNode ?
-      subject.runByDefaultNode.value() : false;
 
-    if (subject.runByDefaultNode) {
-      subject.runByDefaultNode.onUpdate((value) => {
+    this.runByDefault = subject.configsNode ?
+      subject.configsNode.at('runByDefault').value() : false;
+
+    this.walkSpeed = subject.configsNode ?
+      subject.configsNode.at('walkSpeed').value() : speeds.walk;
+    this.runSpeed = subject.configsNode ?
+      subject.configsNode.at('runSpeed').value() : speeds.run;
+
+    if (subject.configsNode) {
+      subject.configsNode.at('runByDefault').onUpdate((value) => {
         this.runByDefault = value;
       });
+      subject.configsNode.at('walkSpeed').onUpdate((value) => {
+        this.walkSpeed = value;
+      });
+      subject.configsNode.at('runSpeed').onUpdate((value) => {
+        this.runSpeed = value;
+      });
+    }
+    if (this.runByDefault) {
+      this.speed = this.runSpeed;
+      this.lSpeed = speeds.lookFast;
+      this.tSpeed = speeds.turnFast;
+    } else {
+      this.speed = this.walkSpeed;
+      this.lSpeed = speeds.look;
+      this.tSpeed = speeds.turn;
     }
   }
 
@@ -49,15 +61,20 @@ class UserBehavior extends SubjectBehavior {
    * @param {number} delta - Elapsed number of seconds since last call.
    */
   step(delta) {
-    const doRun = this.runByDefault && !this.run() ||
+    const isRunning = this.runByDefault && !this.run() ||
         !this.runByDefault && this.run();
     const isMovingLeftRight = this.left() && this.right();
     const isTurningBoth = this.turnLeft() && this.turnRight();
+    if (isRunning) {
+      this.speed = this.runSpeed;
+      this.lSpeed = speeds.lookFast;
+      this.tSpeed = speeds.turnFast;
+    } else {
+      this.speed = this.walkSpeed;
+      this.lSpeed = speeds.look;
+      this.tSpeed = speeds.turn;
+    }
 
-    this.speed = groundSpeed[+doRun];
-    // this.fSpeed = flySpeed[+doRun];
-    this.lSpeed = lookSpeed[+doRun];
-    this.tSpeed = turnSpeed[+doRun];
     this.subject.tilt.getWorldDirection(this.direction);
     this.tmpVec3.copy(this.direction);
 

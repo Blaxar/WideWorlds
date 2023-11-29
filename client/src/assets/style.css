@@ -241,7 +241,13 @@ pre#chat-box span.info {
 }
 
 pre#chat-box span strong {
+    tab-size: 12;
     color: #55ff55;
+}
+
+pre#chat-box span strong::after {
+  color: white;
+  content: ":\0009";
 }
 
 .button-bar {

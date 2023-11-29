@@ -20,10 +20,22 @@ const propsLoadingDistance = {
   step: 20,
 };
 
+// In meters
+const speeds = {
+  walk: 5.0,
+  run: 10.0,
+  look: 2.0,
+  lookFast: 3.5,
+  turn: 2.0,
+  turnFast: 3.0,
+};
+
 const defaultConfig = {
   controls: {
     keyBindings: qwertyBindings,
     runByDefault: false,
+    walkSpeed: speeds.walk,
+    runSpeed: speeds.run,
   },
   network: {
     imageService: 'https://images.weserv.nl/?url=',
@@ -394,4 +406,4 @@ class UserConfig {
 }
 
 export default UserConfig;
-export {defaultConfig, renderingDistance, propsLoadingDistance};
+export {defaultConfig, renderingDistance, propsLoadingDistance, speeds};
