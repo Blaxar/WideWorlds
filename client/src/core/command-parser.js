@@ -5,6 +5,7 @@
 import {MathUtils} from 'three';
 import {userFeedPriority} from './user-feed.js';
 import * as utils3D from './utils-3d.js';
+import {speeds} from './user-config.js';
 
 const isNumber = (value) => !isNaN(value);
 const toFixed = (value) => Number(value.toFixed(3));
@@ -16,11 +17,15 @@ class CommandParser {
   /**
    * @constructor
    * @param {Engine3D} engine3d - The 3D engine
+   * @param {String} worldData - The current world's attributes
    * @param {UserFeed} userFeed - The user feed for publishing messages.
+   * @param {object} configsNode - the 'controls' node in the user configs
    */
-  constructor(engine3d, userFeed) {
+  constructor(engine3d, worldData, userFeed, configsNode) {
     this.engine3d = engine3d;
+    this.worldData = worldData;
     this.userFeed = userFeed;
+    this.configsNode = configsNode;
   }
 
   /**
@@ -31,15 +36,48 @@ class CommandParser {
    */
   handleCommand(msg) {
     const cmdArray = msg.replace(/^\//, '').split(' ');
-    const [cmd] = cmdArray;
+    const [cmd, ...args] = cmdArray;
     let result = [];
+    if (typeof this.worldData === 'string') {
+      this.worldData = JSON.parse(this.worldData);
+    }
 
-    if (cmd === 'tp') {
-      result = this.handleTPCommand(cmdArray);
-    } else if (cmd === 'getpos') {
-      this.showUserPosition();
-    } else {
-      result.error = 'ERR_INVALID_COMMAND';
+    switch (cmd.toLowerCase()) {
+      case 'lz':
+        const entryPoint = this.worldData.entryPoint;
+        const {x, y, z, yaw} = this.engine3d.teleportUser(
+            entryPoint, entryPoint.yaw);
+        this.userFeed.publish(`You have been teleported to the Landing Zone ` +
+          `(at ${x}X, ${y}Y, ${z}Z, ${yaw}°).`, null, userFeedPriority.info);
+        break;
+      case 'gz':
+        result = this.engine3d.teleportUser({x: 0, y: 0, z: 0}, 0);
+        this.userFeed.publish(`You have been teleported to Ground Zero ` +
+          `(at 0X, 0Y, 0Z, 0°).`, null, userFeedPriority.info);
+        break;
+      case 'tp':
+        result = this.handleTPCommand(cmdArray);
+        break;
+      case 'getpos':
+        this.showUserPosition();
+        break;
+      case 'worlddata':
+        console.log(this.worldData);
+        break;
+      case 'walk':
+      case 'run':
+        const [speed] = args.map(parseFloat);
+        result.error = isNaN(speed) ? 'ERR_INVALID_VALUE' :
+          (this.configsNode.at(`${cmd}Speed`).set(speed), null);
+        break;
+      case 'resetwalk':
+      case 'resetrun':
+        const speedType = `${cmd.slice(5)}Speed`;
+        this.configsNode.at(speedType).set(speeds[`${cmd.slice(5)}`]);
+        break;
+      default:
+        result.error = 'ERR_INVALID_COMMAND';
+        break;
     }
 
     if (result?.error) {
