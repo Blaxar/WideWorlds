@@ -7,7 +7,7 @@ import RWXLoader, {
 } from 'three-rwx-loader';
 import {Mesh, Group, BufferGeometry, BufferAttribute, MeshBasicMaterial,
   SRGBColorSpace, TextureLoader, Color, CanvasTexture, BoxHelper,
-  LineBasicMaterial} from 'three';
+  LineBasicMaterial, RepeatWrapping} from 'three';
 import * as fflate from 'fflate';
 import {AWActionParser} from 'aw-action-parser';
 import formatSignLines, {makeSignHTML, makeSignCanvas} from './sign-utils.js';
@@ -346,6 +346,8 @@ class ModelRegistry {
 
         this.pictureLoader.load(url, (image) => {
           image.colorSpace = SRGBColorSpace;
+          image.wrapS = RepeatWrapping;
+          image.wrapT = RepeatWrapping;
 
           materials[lastMatId] = materials[lastMatId].clone();
           materials[lastMatId].color = new Color(1.0, 1.0, 1.0);
@@ -419,7 +421,10 @@ class ModelRegistry {
           makeSignHTML(lines, fontSize, canvasWidth, canvasHeight, r, g, b),
           canvas).then(
           (res) => {
-            material.map = new CanvasTexture(canvas);
+            const texture = new CanvasTexture(canvas);
+            texture.wrapS = RepeatWrapping;
+            texture.wrapT = RepeatWrapping;
+            material.map = texture;
             material.map.colorSpace = SRGBColorSpace;
             material.needsUpdate = true;
           },
@@ -432,7 +437,10 @@ class ModelRegistry {
       const {r, g, b} = textColor;
 
       makeSignCanvas(ctx, lines, fontSize, maxLineWidth, r, g, b);
-      material.map = new CanvasTexture(canvas);
+      const texture = new CanvasTexture(canvas);
+      texture.wrapS = RepeatWrapping;
+      texture.wrapT = RepeatWrapping;
+      material.map = texture;
       material.map.colorSpace = SRGBColorSpace;
       material.needsUpdate = true;
     }
