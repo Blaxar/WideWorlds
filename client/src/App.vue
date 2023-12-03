@@ -406,15 +406,14 @@ document.addEventListener('keydown', (event) => {
     main.propSettings.strafe = true;
     inputListener.pressKey(event.keyCode);
     return;
-  } else if (event.keyCode === 27) {
+  } else if (event.code === 'Escape') {
     // Escape unselects any selected text.
     unselectText();
-  } else if (event.ctrlKey && event.keyCode == 67 && isTextSelected()) {
+  } else if (event.ctrlKey && event.code === 'KeyC' && isTextSelected()) {
     // When text is selected, prevent CTRL+C from being forwarded to the
     //  inputListener, so that we can prevent actions as we copy text.
     return;
   }
-
   if (someInputFocused) return;
   inputListener.pressKey(event.keyCode);
 }, false);
