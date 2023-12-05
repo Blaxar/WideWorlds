@@ -383,28 +383,28 @@ const handleSendChat = (msg) => {
 // Do not forward key events to the input listener if some html element is being
 // focused
 document.addEventListener('keyup', (event) => {
-  if (inputListener.getRunKey() === event.keyCode) {
+  if (inputListener.getRunKey() === event.code) {
     main.propSettings.run = false;
-    inputListener.releaseKey(event.keyCode);
+    inputListener.releaseKey(event.code);
     return;
-  } else if (inputListener.getStrafeKey() === event.keyCode) {
+  } else if (inputListener.getStrafeKey() === event.code) {
     main.propSettings.strafe = false;
-    inputListener.releaseKey(event.keyCode);
+    inputListener.releaseKey(event.code);
     return;
   }
 
   if (someInputFocused) return;
-  inputListener.releaseKey(event.keyCode);
+  inputListener.releaseKey(event.code);
 }, false);
 
 document.addEventListener('keydown', (event) => {
-  if (inputListener.getRunKey() === event.keyCode) {
+  if (inputListener.getRunKey() === event.code) {
     main.propSettings.run = true;
-    inputListener.pressKey(event.keyCode);
+    inputListener.pressKey(event.code);
     return;
-  } else if (inputListener.getStrafeKey() === event.keyCode) {
+  } else if (inputListener.getStrafeKey() === event.code) {
     main.propSettings.strafe = true;
-    inputListener.pressKey(event.keyCode);
+    inputListener.pressKey(event.code);
     return;
   } else if (event.code === 'Escape') {
     // Escape unselects any selected text.
@@ -415,7 +415,7 @@ document.addEventListener('keydown', (event) => {
     return;
   }
   if (someInputFocused) return;
-  inputListener.pressKey(event.keyCode);
+  inputListener.pressKey(event.code);
 }, false);
 
 document.addEventListener('focusin', (event) => {

@@ -62,10 +62,10 @@ function makeReversedOctahedron(
 
   // 6 vertices to make an octahedron
   const positions = [
-    0.0, 0.0, 1.0, // north vertice (0)
-    -1.0, 0.0, 0.0, // east vertice (1)
-    0.0, 0.0, -1.0, // south vertice (2)
-    1.0, 0.0, 0.0, // west vertice (3)
+    0.0, 0.0, -1.0, // north vertice (0)
+    1.0, 0.0, 0.0, // east vertice (1)
+    0.0, 0.0, 1.0, // south vertice (2)
+    -1.0, 0.0, 0.0, // west vertice (3)
     0.0, 1.0, 0.0, // top vertice (4)
     0.0, -1.0, 0.0, // bottom vertice (5)
   ];

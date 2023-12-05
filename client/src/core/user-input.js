@@ -23,23 +23,23 @@ const UserInput = [
 ];
 
 const qwertyBindings = {
-  forward: 87, // W
-  backward: 83, // S
-  left: 65, // A
-  right: 68, // D
-  turnLeft: 81, // Q
-  turnRight: 69, // E
-  moveUp: 107, // Numpad +
-  moveDown: 109, // Numpad -
-  lookUp: 33, // Page Up
-  lookDown: 34, // Page Down
-  jump: 32, // Space
-  strafe: 16, // Shift
-  run: 17, // Ctrl
-  crouch: 67, // C
-  exit: 27, // Escape
-  duplicate: 45, // Insert
-  delete: 46, // Delete
+  forward: 'KeyW',
+  backward: 'KeyS',
+  left: 'KeyA',
+  right: 'KeyD',
+  turnLeft: 'KeyQ',
+  turnRight: 'KeyE',
+  moveUp: 'NumpadAdd',
+  moveDown: 'NumpadSubtract',
+  lookUp: 'PageUp',
+  lookDown: 'PageDown',
+  jump: 'Space',
+  strafe: 'ShiftLeft',
+  run: 'ControlLeft',
+  crouch: 'KeyC',
+  exit: 'Escape',
+  duplicate: 'Insert',
+  delete: 'Delete',
 };
 
 /** Factory for subject behaviors on user input */

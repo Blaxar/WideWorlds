@@ -20,12 +20,12 @@ const props = defineProps({
     default: false,
   },
   exitKey: {
-    type: Number,
-    default: 27,
+    type: String,
+    default: 'Escape',
   },
   duplicateKey: {
-    type: Number,
-    default: 45,
+    type: String,
+    default: 'Insert',
   },
   absoluteMoveText: {
     type: String,
@@ -36,9 +36,9 @@ const props = defineProps({
 const emit = defineEmits(['defocus']);
 
 const keyupCb = (event) => {
-  if (event.keyCode === props.exitKey) {
+  if (event.code === props.exitKey) {
     props.propsSelector.commitAndClear();
-  } else if (event.keyCode === props.duplicateKey) {
+  } else if (event.code === props.duplicateKey) {
     props.propsSelector.commitAndCopy();
     emit('defocus');
   }
