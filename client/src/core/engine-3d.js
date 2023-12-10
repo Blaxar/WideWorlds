@@ -250,10 +250,16 @@ class Engine3D {
    *                            group, gets fed every mesh and group
    *                            and returns true to accept them in the
    *                            final mesh.
+   * @param {function} preSelector - Function in charge of selecting a
+   *                                 specific asset within the node group
+   *                                 as the actual geometry, this happens
+   *                                 before the filtering and merging
+   *                                 for bounds tree computation.
    * @return {boolean} True if the node exists and the bounds tree was
    *                   successfully updated, false otherwise.
    */
-  updateNodeBoundsTree(id, filter = () => true) {
+  updateNodeBoundsTree(id, filter = () => true,
+      preSelector = (obj3d) => obj3d) {
     if (!this.nodes.has(id)) return false;
 
     const node = this.nodes.get(id);
@@ -263,8 +269,11 @@ class Engine3D {
       obj3d = node.levels[0].object;
     }
 
+    // Preselect geometry
+    obj3d = preSelector(obj3d);
+
     // Make one single mesh
-    const flat = flattenGroup(obj3d, filter);
+    const flat = obj3d.isMesh ? obj3d : flattenGroup(obj3d, filter);
 
     if (!flat.geometry.getIndex().count) {
       // No face in geometry, so no bounds to compute, return right away

@@ -48,8 +48,9 @@ const pointMaterial = new THREE.PointsMaterial(
 // Filter to use when computing bounds tree on the terrain page:
 // only the actual page geometry should be used, not the wireframe
 // and points cloud overlays
-const pageCollisionMergeFilter = (obj3d) =>
-  (obj3d.isGroup || (obj3d.isMesh && obj3d.name === actualAssetName));
+const pageNodeCollisionPreSelector = (obj3d) =>
+  obj3d.getObjectByName(pageAssetName)
+      .userData.lookup.actual;
 
 /**
  * Make a reversed (inward-facing faces) 3D octahedron
@@ -788,5 +789,5 @@ function makeHelperArrows() {
 }
 
 export {makeReversedOctahedron, defaultSkyColors, generateTerrainMaterials,
-  makePagePlane, adjustPageEdges, pageCollisionMergeFilter, makeHelperArrows,
-  flipYawRadians, flipYawDegrees};
+  makePagePlane, adjustPageEdges, pageNodeCollisionPreSelector,
+  makeHelperArrows, flipYawRadians, flipYawDegrees};
