@@ -540,6 +540,7 @@ class WorldManager {
         defaultPageDiameter * 10, defaultPageDiameter,
         this.currentTerrainMaterials);
     pagePlane.position.setY(this.terrainElevationOffset);
+    pagePlane.updateMatrix();
 
     // Get surrounding planes, falsy if not ready yet
     const left = this.engine3d.getFromNodeByName(

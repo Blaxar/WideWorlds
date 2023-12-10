@@ -328,7 +328,10 @@ class Engine3D {
       // 3D objects
       node.autoUpdate = false;
       for (const distance of this.lods) {
-        node.addLevel(new THREE.Group(), distance);
+        const g = new THREE.Group();
+        g.matrixAutoUpdate = false;
+        node.addLevel(g, distance);
+        g.updateMatrix();
       }
 
       this.lodNodeIDs.add(id);
@@ -338,6 +341,8 @@ class Engine3D {
     node.position.set(x, y, z);
     this.scene.add(node);
     node.userData['dynamic'] = new Map();
+    node.matrixAutoUpdate = false;
+    node.updateMatrix();
     return id;
   }
 

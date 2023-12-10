@@ -554,6 +554,15 @@ function makePagePlane(elevationData, textureData, sideSize, nbSegments,
     actual: actualPage,
   };
 
+  wireframePoints.matrixAutoUpdate = false;
+  wireframePage.matrixAutoUpdate = false;
+  actualPage.matrixAutoUpdate = false;
+
+  wireframePoints.updateMatrix();
+  wireframePage.updateMatrix();
+  actualPage.updateMatrix();
+
+  page.matrixAutoUpdate = false;
   page.name = pageAssetName;
 
   return page;
