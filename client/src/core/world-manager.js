@@ -19,6 +19,11 @@ const pageLoadingPattern = [[-1, -1], [0, -1], [1, -1],
   [-1, 0], [0, 0], [1, 0],
   [-1, 1], [0, 1], [1, 1]];
 
+// Ignore non-solid props when computing bounds tree for collision detection
+const chunkNodeColliderFilter =
+    (obj3d) => obj3d.userData.rwx?.solid === undefined ||
+        obj3d.userData.rwx.solid === true;
+
 /** Central world-management class, handles chunk loading */
 class WorldManager {
   /**
@@ -370,7 +375,7 @@ class WorldManager {
     }
 
     // Test props collision with user
-    this.userCollider.update(this.engine3d, this.chunkCollisionPattern.map(
+    this.userCollider.update(this.chunkCollisionPattern.map(
         ([x, z]) => {
           const chunkId = `${cX + x}_${cZ + z}`;
           return this.chunks.get(chunkId);
@@ -503,7 +508,8 @@ class WorldManager {
       this.updateAssetFromProp(obj3d, prop, chunkAnchor);
     }
 
-    this.engine3d.updateNodeBoundsTree(chunkAnchor.chunkNodeHandle);
+    this.engine3d.updateNodeBoundsTree(chunkAnchor.chunkNodeHandle,
+        chunkNodeColliderFilter);
   }
 
   /**
@@ -568,7 +574,8 @@ class WorldManager {
 
     this.engine3d.appendToNode(pageNodeHandle, pagePlane);
     this.engine3d.updateNodeBoundsTree(pageNodeHandle,
-        () => true, pageNodeCollisionPreSelector);
+        () => true, pageNodeCollisionPreSelector,
+        pagePlane.position);
   }
 
   /**
