@@ -370,7 +370,7 @@ class WorldManager {
     }
 
     // Test props collision with user
-    this.userCollider.update(this.engine3d, this.chunkCollisionPattern.map(
+    this.userCollider.update(this.chunkCollisionPattern.map(
         ([x, z]) => {
           const chunkId = `${cX + x}_${cZ + z}`;
           return this.chunks.get(chunkId);
@@ -568,7 +568,8 @@ class WorldManager {
 
     this.engine3d.appendToNode(pageNodeHandle, pagePlane);
     this.engine3d.updateNodeBoundsTree(pageNodeHandle,
-        () => true, pageNodeCollisionPreSelector);
+        () => true, pageNodeCollisionPreSelector,
+        pagePlane.position);
   }
 
   /**

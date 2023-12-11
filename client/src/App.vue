@@ -26,13 +26,14 @@ import {SubjectBehaviorFactory, UserInputListener, qwertyBindings}
 import UserBehavior from './core/user-behavior.js';
 import PropsBehavior, {PropsSelector} from './core/props-behavior.js';
 import {entityType, updateType} from '../../common/ws-data-format.js';
-import {LoadingManager, Vector2} from 'three';
+import {LoadingManager, Vector2, Vector3} from 'three';
 import rasterizeHTML from 'rasterizehtml';
 import CommandParser from './core/command-parser.js';
 
 // Three.js context-related settings
 let commands = null;
 let engine3d = null;
+let userCollider = null;
 let propsSelector = null;
 let someInputFocused = false;
 let worldManager = null;
@@ -96,8 +97,6 @@ if (localStorage.getItem('defaultWorldId')) {
 // Ready http client for REST API usage
 const httpClient = new HttpClient(import.meta.env.VITE_SERVER_URL + '/api',
     true, localStorage.getItem('token'));
-
-const userCollider = new UserCollider(userConfig.at('graphics'));
 
 const entranceHook = (state) => {
   console.log('Entering "' + state + '" state.');
@@ -163,6 +162,9 @@ const appState = new AppState(hooks, main.state);
 const resetBehavior = () => {
   inputListener.setSubject('user', {user: engine3d.user, tilt: engine3d.tilt,
     collider: userCollider,
+    velocity: new Vector3(),
+    flying: true,
+    onGround: false,
     configsNode: userConfig.at('controls'),
   });
   main.displayPropSettings = false;
@@ -247,7 +249,7 @@ const handleWorldSelection = (id) => {
         entityManager.update(data);
       });
     });
-    userCollider.registerDebugBox(engine3d);
+    userCollider.registerDebugBox();
     appState.readyWorld();
   });
 };
@@ -271,7 +273,7 @@ const handleLeave = () => {
   worldState = null;
   appState.unloadWorld();
   main.worldId = null;
-  userCollider.unregisterDebugBox(engine3d);
+  userCollider.unregisterDebugBox();
 };
 
 const handleAvatar = (avatarId) => {
@@ -328,6 +330,7 @@ const render = () => {
 onMounted(() => {
   const canvas = document.querySelector('#main-3d-canvas');
   engine3d = new Engine3D(canvas, userConfig.at('graphics'));
+  userCollider = new UserCollider(engine3d, userConfig.at('graphics'));
 
   // Update user position based on controls
   // Note: we could be passing the whole engine3d object, this would work

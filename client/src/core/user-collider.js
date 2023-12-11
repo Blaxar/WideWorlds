@@ -7,21 +7,24 @@ import {Group, Mesh, BoxGeometry, MeshBasicMaterial, Box3, Vector3,
 
 const offCollideColor = 0x00ff00;
 const onCollideColor = 0xff0000;
-const stepHeight = 0.60; // in meters
+const stepHeight = 0.65; // in meters
 
 /** Class to handle local user collisions with the world geometry */
 class UserCollider {
   /**
    * @constructor
+   * @param {Engine3D} engine3d - Instance of the 3D engine.
    * @param {UserConfigNode} graphicsNode - Configuration node for the
    *                                        graphics.
    */
-  constructor(graphicsNode = null) {
-    this.side = 1.0;
+  constructor(engine3d, graphicsNode = null) {
+    this.engine3d = engine3d;
+    this.nodeIDs = [];
     this.colliderBox = new Box3();
     this.colliderBox.min.set(-0.5, 0, -0.5);
     this.colliderBox.max.set(0.5, 0.5, 0.5);
     this.tmpColliderBox = this.colliderBox.clone();
+    this.tmpVec3 = new Vector3();
     this.tmpMat4 = new Matrix4();
 
     this.tmpOrigin = new Vector3();
@@ -68,30 +71,28 @@ class UserCollider {
 
   /**
    * Register the debug collision box to the 3D engine
-   * @param {Engine3D} engine3d - Instance of the 3D engine.
    * @return {boolean} True if the registration went well, false
    *                   false otherwise.
    */
-  registerDebugBox(engine3d) {
+  registerDebugBox() {
     if (this.nodeHandle !== null) return false;
 
-    this.nodeHandle = engine3d.spawnNode();
-    engine3d.appendToNode(this.nodeHandle, this.debugBox);
+    this.nodeHandle = this.engine3d.spawnNode();
+    this.engine3d.appendToNode(this.nodeHandle, this.debugBox);
 
     return true;
   }
 
   /**
    * Unregister the debug collision box from the 3D engine
-   * @param {Engine3D} engine3d - Instance of the 3D engine.
    * @return {boolean} True if the unregistration went well, false
    *                   false otherwise.
    */
-  unregisterDebugBox(engine3d) {
+  unregisterDebugBox() {
     if (this.nodeHandle === null) return false;
 
-    engine3d.wipeNode(this.nodeHandle);
-    engine3d.removeNode(this.nodeHandle);
+    this.engine3d.wipeNode(this.nodeHandle);
+    this.engine3d.removeNode(this.nodeHandle);
 
     this.nodeHandle = null;
 
@@ -170,14 +171,14 @@ class UserCollider {
   }
 
   /**
-   * Set the position of the collider box in the scene
+   * Set the position of the collider box in the scene and compute
+   * collision state given this ne position
    * @param {number} x - X coordinate, in meters.
    * @param {number} y - Y coordinate, in meters.
    * @param {number} z - Z coordinate, in meters.
+   * @return {Object} topCollision and heightCorrection values.
    */
   putColliderBox(x, y, z) {
-    this.debugBox.position.set(x, y, z);
-    this.debugBox.updateMatrix();
     const {min, max} = this.colliderBox;
 
     min.x = this.colliderCenter.x + x - this.colliderHalfSide;
@@ -190,21 +191,63 @@ class UserCollider {
     if (max.y < min.y) min.y = max.y - 0.01;
 
     this.adjustRays();
+
+    const topCollision = this.collidesWithNodes(this.nodeIDs);
+
+    if (topCollision) {
+      this.topBoxMaterial.color.set(onCollideColor);
+    } else {
+      this.topBoxMaterial.color.set(offCollideColor);
+    }
+
+    const bottomStep = this.raycastAgainstNodes(this.nodeIDs);
+
+    if (bottomStep) {
+      this.bottomBoxMaterial.color.set(onCollideColor);
+    } else {
+      this.bottomBoxMaterial.color.set(offCollideColor);
+    }
+
+    this.topBoxMaterial.needsUpdate = true;
+    this.bottomBoxMaterial.needsUpdate = true;
+
+    return {
+      topCollision,
+      heightCorrection:
+          bottomStep === null ? null : stepHeight - bottomStep,
+    };
+  }
+
+  /**
+   * Render the collider box for debugging
+   * @param {Vector3} position - Position on the collider box
+   */
+  renderColliderBox(position) {
+    this.debugBox.position.copy(position);
+    this.debugBox.updateMatrix();
   }
 
   /**
    * Detect collision given the provided bounds tree geometry
    * @param {MeshBVH} boundsTree - Bounds tree to use for collision
    *                               detection.
+   * @param {Vector3} offset - bounds tree 3D position offset.
    * @param {Matrix4} worldMat - Transformation matrix associated to the
    *                             bounds tree geometry.
    * @return {boolean} True if there is collision happening given the
    *                   provided geometry and the shape of the collider,
    *                   false otherwise.
    */
-  collidesWithBoundsTree(boundsTree, worldMat) {
+  collidesWithBoundsTree(boundsTree, offset, worldMat) {
     this.tmpColliderBox.copy(this.colliderBox);
-    this.tmpMat4.copy(worldMat).invert();
+    if (offset.lengthSq() === 0) {
+      // No offset to apply
+      this.tmpMat4.copy(worldMat).invert();
+    } else {
+      this.tmpVec3.setFromMatrixPosition(worldMat);
+      this.tmpVec3.add(offset);
+      this.tmpMat4.copy(worldMat).setPosition(this.tmpVec3).invert();
+    }
     return boundsTree.intersectsBox(this.tmpColliderBox, this.tmpMat4);
   }
 
@@ -213,14 +256,22 @@ class UserCollider {
    * geometry
    * @param {MeshBVH} boundsTree - Bounds tree to use for collision
    *                               detection.
+   * @param {Vector3} offset - bounds tree 3D position offset.
    * @param {Matrix4} worldMat - Transformation matrix associated to the
    *                             bounds tree geometry.
    * @return {number|null} Distance of the hit (in meters) if any, given the
    *                       provided geometry and the shape of the collider,
    *                       null otherwise.
    */
-  raycastAgainstBoundsTree(boundsTree, worldMat) {
-    this.tmpMat4.copy(worldMat).invert();
+  raycastAgainstBoundsTree(boundsTree, offset, worldMat) {
+    if (offset.lengthSq() === 0) {
+      // No offset to apply
+      this.tmpMat4.copy(worldMat).invert();
+    } else {
+      this.tmpVec3.setFromMatrixPosition(worldMat);
+      this.tmpVec3.add(offset);
+      this.tmpMat4.copy(worldMat).setPosition(this.tmpVec3).invert();
+    }
     let distance = stepHeight;
 
     for (const ray of this.rays) {
@@ -243,19 +294,20 @@ class UserCollider {
 
   /**
    * Detect collision given the provided 3D engine node IDs
-   * @param {Engine3D} engine3d - Instance of the 3D engine.
    * @param {Array<integer>} nodeIDs - Array of IDs for nodes to be
    *                                   fetched from the 3D engine.
    * @return {boolean} True if there is collision happening given the
    *                   provided nodes and the shape of the collider,
    *                   false otherwise.
    */
-  collidesWithNodes(engine3d, nodeIDs) {
+  collidesWithNodes(nodeIDs) {
     for (const nodeID of nodeIDs) {
-      const boundsTree = engine3d.getNodeBoundsTree(nodeID);
-      const worldMat = engine3d.getNodeMatrixWorld(nodeID);
-      if (boundsTree && worldMat) {
-        if (this.collidesWithBoundsTree(boundsTree, worldMat)) return true;
+      const boundsTree = this.engine3d.getNodeBoundsTree(nodeID);
+      const offset = this.engine3d.getNodeBoundsTreeOffset(nodeID);
+      const worldMat = this.engine3d.getNodeMatrixWorld(nodeID);
+      if (boundsTree && worldMat && offset &&
+        this.collidesWithBoundsTree(boundsTree, offset, worldMat)) {
+        return true;
       }
     }
 
@@ -264,21 +316,22 @@ class UserCollider {
 
   /**
    * Raycast bottom part of the collider given the provided 3D engine node IDs
-   * @param {Engine3D} engine3d - Instance of the 3D engine.
    * @param {Array<integer>} nodeIDs - Array of IDs for nodes to be
    *                                   fetched from the 3D engine.
    * @return {number|null} Distance of the hit (in meters) if any, given
    *                       the provided nodes and the shape of the collider,
    *                       null otherwise.
    */
-  raycastAgainstNodes(engine3d, nodeIDs) {
+  raycastAgainstNodes(nodeIDs) {
     let shortestDistance = stepHeight;
 
     for (const nodeID of nodeIDs) {
-      const boundsTree = engine3d.getNodeBoundsTree(nodeID);
-      const worldMat = engine3d.getNodeMatrixWorld(nodeID);
-      if (boundsTree && worldMat) {
-        const distance = this.raycastAgainstBoundsTree(boundsTree, worldMat);
+      const boundsTree = this.engine3d.getNodeBoundsTree(nodeID);
+      const offset = this.engine3d.getNodeBoundsTreeOffset(nodeID);
+      const worldMat = this.engine3d.getNodeMatrixWorld(nodeID);
+      if (boundsTree && worldMat && offset) {
+        const distance =
+            this.raycastAgainstBoundsTree(boundsTree, offset, worldMat);
         if (distance && distance < shortestDistance) {
           shortestDistance = distance; // The shortest distance of the hit
         }
@@ -289,27 +342,13 @@ class UserCollider {
   }
 
   /**
-   * Update the collider state based on collision given the provided
+   * Update the collider state based on the provided
    * 3D engine node IDs
-   * @param {Engine3D} engine3d - Instance of the 3D engine.
    * @param {Array<integer>} nodeIDs - Array of IDs for nodes to be
    *                                   fetched from the 3D engine.
    */
-  update(engine3d, nodeIDs) {
-    if (this.collidesWithNodes(engine3d, nodeIDs)) {
-      this.topBoxMaterial.color.set(onCollideColor);
-    } else {
-      this.topBoxMaterial.color.set(offCollideColor);
-    }
-
-    if (this.raycastAgainstNodes(engine3d, nodeIDs)) {
-      this.bottomBoxMaterial.color.set(onCollideColor);
-    } else {
-      this.bottomBoxMaterial.color.set(offCollideColor);
-    }
-
-    this.topBoxMaterial.needsUpdate = true;
-    this.bottomBoxMaterial.needsUpdate = true;
+  update(nodeIDs) {
+    this.nodeIDs = nodeIDs;
   }
 }
 

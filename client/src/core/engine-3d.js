@@ -255,11 +255,14 @@ class Engine3D {
    *                                 as the actual geometry, this happens
    *                                 before the filtering and merging
    *                                 for bounds tree computation.
+   * @param {Vector3} offset - 3D Position offset to apply to the actual
+   *                           bounds tree when computing collisions.
    * @return {boolean} True if the node exists and the bounds tree was
    *                   successfully updated, false otherwise.
    */
   updateNodeBoundsTree(id, filter = () => true,
-      preSelector = (obj3d) => obj3d) {
+      preSelector = (obj3d) => obj3d,
+      offset = new THREE.Vector3()) {
     if (!this.nodes.has(id)) return false;
 
     const node = this.nodes.get(id);
@@ -273,7 +276,7 @@ class Engine3D {
     obj3d = preSelector(obj3d);
 
     // Make one single mesh
-    const flat = obj3d.isMesh ? obj3d : flattenGroup(obj3d, filter);
+    const flat = obj3d.isMesh ? obj3d.clone() : flattenGroup(obj3d, filter);
 
     if (!flat.geometry.getIndex().count) {
       // No face in geometry, so no bounds to compute, return right away
@@ -284,6 +287,7 @@ class Engine3D {
     // Compute bounds tree
     try {
       node.boundsTree = new MeshBVH(flat.geometry);
+      node.boundsTreeOffset = offset;
     } catch (e) {
       console.error(e); // Something went wrong
       return false;
@@ -306,7 +310,20 @@ class Engine3D {
   }
 
   /**
-   * Get the bounds tree (for collision detection) from a node
+   * Get the bounds tree 3D position offset from a node
+   * @param {integer} id - ID of the node to get the bounds tree from.
+   * @return {Vector3} The .boundsTreeOffset property of the node, undefined if
+   *                   it has not been generated yet, null if the node does
+   *                   not exist.
+   */
+  getNodeBoundsTreeOffset(id) {
+    if (!this.nodes.has(id)) return null;
+
+    return this.nodes.get(id).boundsTreeOffset;
+  }
+
+  /**
+   * Get the world transformation matrix
    * @param {integer} id - ID of the node to get the bounds tree from.
    * @return {Matrix4} Global transformation matrix of this node, null
    *                   if the node does not exist.

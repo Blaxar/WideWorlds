@@ -8,6 +8,10 @@ import {speeds} from './user-config.js';
 
 const absTiltLimit = Math.PI / 2 * 0.95; // radians
 const twicePi = Math.PI * 2;
+const gravity = new Vector3(0, -9.8, 0); // m/s
+
+const heightCorrectionThreshold = 0.01;
+const interpolationDistance = 0.20;
 
 /** Define the behavior of the local user in the 3D space based on key inputs */
 class UserBehavior extends SubjectBehavior {
@@ -21,6 +25,7 @@ class UserBehavior extends SubjectBehavior {
     this.yAxis = new Vector3(0, 1, 0);
 
     this.direction = new Vector3();
+    this.tmpPos = new Vector3();
     this.tmpVec3 = new Vector3();
     this.tmpEul = new Euler();
 
@@ -75,6 +80,15 @@ class UserBehavior extends SubjectBehavior {
       this.tSpeed = speeds.turn;
     }
 
+    if (this.subject.flying || this.subject.onGround || this.strafe()) {
+      this.subject.velocity.setY(0);
+    } else {
+      this.subject.velocity.add(gravity.clone().multiplyScalar(delta));
+    }
+
+    this.subject.velocity.setX(0);
+    this.subject.velocity.setZ(0);
+
     this.subject.tilt.getWorldDirection(this.direction);
     this.tmpVec3.copy(this.direction);
 
@@ -88,7 +102,7 @@ class UserBehavior extends SubjectBehavior {
               this.direction.angleTo(this.tmpVec3) :
               - this.direction.angleTo(this.tmpVec3);
 
-    this.direction.multiplyScalar(this.speed * delta);
+    this.direction.multiplyScalar(this.speed);
 
     if (this.lookDown()) {
       const deltaRotX = delta * this.lSpeed;
@@ -127,21 +141,23 @@ class UserBehavior extends SubjectBehavior {
     }
 
     if (this.moveUp() || this.jump()) {
-      const d = new Vector3(0, delta * this.speed, 0);
-      this.subject.user.position.add(d);
+      this.tmpVec3.set(0, this.speed, 0);
+      this.subject.velocity.setY(0);
+      this.subject.velocity.add(this.tmpVec3);
+      this.subject.flying = true;
     }
 
     if (this.moveDown() || this.crouch()) {
-      const d = new Vector3(0, - delta * this.speed, 0);
-      this.subject.user.position.add(d);
+      this.tmpVec3.set(0, -this.speed, 0);
+      this.subject.velocity.add(this.tmpVec3);
     }
 
     if (this.forward()) {
-      this.subject.user.position.add(this.direction);
+      this.subject.velocity.add(this.direction);
     }
 
     if (this.backward()) {
-      this.subject.user.position.sub(this.direction);
+      this.subject.velocity.sub(this.direction);
     }
 
     this.tmpVec3.copy(this.direction);
@@ -165,18 +181,61 @@ class UserBehavior extends SubjectBehavior {
     if (this.left() || (this.turnLeft() && this.strafe())) {
       this.tmpEul.set(0, Math.PI / 2, 0, 'YXZ');
       this.tmpVec3.applyEuler(this.tmpEul);
-      this.subject.user.position.add(this.tmpVec3);
+      this.subject.velocity.add(this.tmpVec3);
     }
 
     if (this.right() || (this.turnRight() && this.strafe())) {
       this.tmpEul.set(0, - Math.PI / 2, 0, 'YXZ');
       this.tmpVec3.applyEuler(this.tmpEul);
-      this.subject.user.position.add(this.tmpVec3);
+      this.subject.velocity.add(this.tmpVec3);
     }
 
-    const {x, y, z} = this.subject.user.position;
+    const movement = this.subject.velocity.clone()
+        .multiplyScalar(delta);
+    const interpolationSteps = [];
 
-    this.subject.collider.putColliderBox(x, y, z);
+    if (movement.lengthSq() > interpolationDistance * interpolationDistance) {
+      const nbSteps = parseInt(movement.length() / interpolationDistance);
+
+      for (let i = 1; i <= nbSteps; i++) {
+        interpolationSteps.push(
+            movement.clone().multiplyScalar(i / parseFloat(nbSteps)),
+        );
+      }
+    }
+
+    interpolationSteps.push(movement);
+    this.tmpPos.copy(this.subject.user.position);
+
+    for (const mov of interpolationSteps) {
+      this.tmpVec3.copy(this.tmpPos);
+      this.tmpVec3.add(mov);
+
+      const {x, y, z} = this.tmpVec3;
+
+      const {topCollision, heightCorrection} =
+          this.subject.collider.putColliderBox(x, y, z);
+
+      if (topCollision && !this.strafe()) {
+        // Colliding, can't move in that direction
+        this.tmpVec3.copy(this.subject.user.position);
+        this.subject.velocity.set(0, 0, 0);
+        break;
+      } else if (heightCorrection !== null && !this.strafe()) {
+        if (heightCorrection > heightCorrectionThreshold) {
+          this.tmpVec3.set(x, y + heightCorrection, z);
+        }
+        this.subject.flying = false;
+        this.subject.onGround = true;
+        this.subject.velocity.setY(0);
+      } else {
+        this.subject.onGround = false;
+      }
+
+      this.subject.user.position.copy(this.tmpVec3);
+    }
+
+    this.subject.collider.renderColliderBox(this.tmpVec3);
   }
 }
 
