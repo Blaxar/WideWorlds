@@ -46,6 +46,9 @@ const defaultConfig = {
     useHtmlSignRendering: false,
     debugUserCollider: false,
   },
+  physics: {
+    colliderInterpolation: true,
+  },
   interface: {},
 };
 

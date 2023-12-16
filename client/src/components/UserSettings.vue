@@ -40,6 +40,10 @@ const props = defineProps({
     type: String,
     default: 'Display user collider box',
   },
+  colliderInterpolationText: {
+    type: String,
+    default: 'Enable collider interpolation',
+  },
   userInputs: {
     type: Array,
     default: UserInput,
@@ -129,6 +133,11 @@ const setUseHtmlSignRendering = (event) => {
 const setDebugUserCollider = (event) => {
   props.userConfig.at('graphics')
       .at('debugUserCollider').set(event.target.checked);
+};
+
+const setColliderInterpolation = (event) => {
+  props.userConfig.at('physics')
+      .at('colliderInterpolation').set(event.target.checked);
 };
 
 const localRenderingDistance = ref(getRenderingDistance());
@@ -225,6 +234,15 @@ onUnmounted(() => {
     @change="setDebugUserCollider" />
     <label for="debugUserCollider">
       {{debugUserColliderText}}
+    </label>
+  </td></tr>
+  <tr><td colspan="2">
+  <input type="checkbox" id="colliderInterpolation"
+    :checked=
+    "props.userConfig.at('physics').at('colliderInterpolation').value()"
+    @change="setColliderInterpolation" />
+    <label for="colliderInterpolation">
+      {{colliderInterpolationText}}
     </label>
   </td></tr>
 </table>

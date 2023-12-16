@@ -166,6 +166,7 @@ const resetBehavior = () => {
     flying: true,
     onGround: false,
     configsNode: userConfig.at('controls'),
+    physicsNode: userConfig.at('physics'),
   });
   main.displayPropSettings = false;
   someInputFocused = false;

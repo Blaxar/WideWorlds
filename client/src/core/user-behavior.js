@@ -12,7 +12,7 @@ const gravity = new Vector3(0, -9.8, 0); // m/s/s
 const jumpVelocity = 4.0; // m/s
 
 const heightCorrectionThreshold = 0.01;
-const interpolationDistance = 0.20;
+const interpolationDistance = 0.30;
 
 /** Define the behavior of the local user in the 3D space based on key inputs */
 class UserBehavior extends SubjectBehavior {
@@ -37,6 +37,8 @@ class UserBehavior extends SubjectBehavior {
       subject.configsNode.at('walkSpeed').value() : speeds.walk;
     this.runSpeed = subject.configsNode ?
       subject.configsNode.at('runSpeed').value() : speeds.run;
+    this.colliderInterpolation = subject.physicsNode ?
+      subject.physicsNode.at('colliderInterpolation').value() : true;
 
     if (subject.configsNode) {
       subject.configsNode.at('runByDefault').onUpdate((value) => {
@@ -49,6 +51,13 @@ class UserBehavior extends SubjectBehavior {
         this.runSpeed = value;
       });
     }
+
+    if (subject.physicsNode) {
+      subject.physicsNode.at('colliderInterpolation').onUpdate((value) => {
+        this.colliderInterpolation = value;
+      });
+    }
+
     if (this.runByDefault) {
       this.speed = this.runSpeed;
       this.lSpeed = speeds.lookFast;
@@ -199,7 +208,8 @@ class UserBehavior extends SubjectBehavior {
         .multiplyScalar(delta);
     const interpolationSteps = [];
 
-    if (movement.lengthSq() > interpolationDistance * interpolationDistance) {
+    if (this.colliderInterpolation && !this.strafe() &&
+        movement.lengthSq() > interpolationDistance * interpolationDistance) {
       const nbSteps = parseInt(movement.length() / interpolationDistance);
 
       for (let i = 1; i <= nbSteps; i++) {
