@@ -312,7 +312,25 @@ function unpackEntityStates(entityStatePack) {
   return entityStates;
 }
 
+/**
+ * Get the hash of a string
+ * @param {string} str - String to get the hash from.
+ * @param {integer} mask - Mask to determine the length of the hash,
+ *                         16 bits by default.
+ * @return {integer} Hash of the string.
+ */
+function simpleStringHash(str, mask = 0xffff) {
+  let hash = 0;
+
+  for (let i = 0; i < str.length; i++) {
+    hash = (hash << 5) - hash + str.charCodeAt(i);
+    hash = hash & hash; // Prevent overflow
+  }
+
+  return hash & mask;
+}
+
 export {formatUserMessage, serializeEntityState, deserializeEntityState,
   forwardEntityState, packEntityStates, unpackEntityStates, entityType,
   updateType, entityStateSize, localEndiannessCue, otherEndiannessCue,
-  validateEntityState, validateEntityStatePack};
+  validateEntityState, validateEntityStatePack, simpleStringHash};

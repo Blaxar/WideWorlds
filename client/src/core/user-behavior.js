@@ -5,6 +5,7 @@
 import {SubjectBehavior} from './user-input.js';
 import {Vector3, Euler} from 'three';
 import {speeds} from './user-config.js';
+import {userStateToImplicit} from './animation-manager.js';
 
 const absTiltLimit = Math.PI / 2 * 0.95; // radians
 const twicePi = Math.PI * 2;
@@ -29,6 +30,8 @@ class UserBehavior extends SubjectBehavior {
     this.tmpPos = new Vector3();
     this.tmpVec3 = new Vector3();
     this.tmpEul = new Euler();
+
+    this.elapsed = 0; // Elapsed time in seconds, for animations
 
     this.runByDefault = subject.configsNode ?
       subject.configsNode.at('runByDefault').value() : false;
@@ -76,21 +79,27 @@ class UserBehavior extends SubjectBehavior {
    * @param {number} delta - Elapsed number of seconds since last call.
    */
   step(delta) {
+    this.elapsed += delta;
+    this.subject.state.idle = true;
+
     const isRunning = this.runByDefault && !this.run() ||
         !this.runByDefault && this.run();
     const isMovingLeftRight = this.left() && this.right();
     const isTurningBoth = this.turnLeft() && this.turnRight();
     if (isRunning) {
+      this.subject.state.running = true;
       this.speed = this.runSpeed;
       this.lSpeed = speeds.lookFast;
       this.tSpeed = speeds.turnFast;
     } else {
+      this.subject.state.running = false;
       this.speed = this.walkSpeed;
       this.lSpeed = speeds.look;
       this.tSpeed = speeds.turn;
     }
 
-    if (this.subject.flying || this.subject.onGround || this.strafe()) {
+    if (this.subject.state.flying || this.subject.state.onGround ||
+        this.strafe()) {
       this.subject.velocity.setY(0);
     } else {
       this.subject.velocity.add(gravity.clone().multiplyScalar(delta));
@@ -150,27 +159,34 @@ class UserBehavior extends SubjectBehavior {
       this.subject.user.rotation.set(rot.x, rotY, rot.z, 'YXZ');
     }
 
-    if (this.moveUp() || (this.jump() && this.subject.flying)) {
+    if (this.moveUp() ||
+        (this.jump() && this.subject.state.flying)) {
+      this.subject.state.idle = false;
       this.tmpVec3.set(0, this.speed, 0);
       this.subject.velocity.setY(0);
       this.subject.velocity.add(this.tmpVec3);
-      this.subject.flying = true;
+      this.subject.state.flying = true;
     }
 
     if (this.moveDown() || this.crouch()) {
+      this.subject.state.idle = false;
       this.tmpVec3.set(0, -this.speed, 0);
       this.subject.velocity.add(this.tmpVec3);
     }
 
-    if (this.jump() && !this.subject.flying && this.subject.onGround) {
+    if (this.jump() && !this.subject.state.flying &&
+        this.subject.state.onGround) {
+      this.subject.state.idle = false;
       this.subject.velocity.setY(jumpVelocity);
     }
 
     if (this.forward()) {
+      this.subject.state.idle = false;
       this.subject.velocity.add(this.direction);
     }
 
     if (this.backward()) {
+      this.subject.state.idle = false;
       this.subject.velocity.sub(this.direction);
     }
 
@@ -193,12 +209,14 @@ class UserBehavior extends SubjectBehavior {
     }
 
     if (this.left() || (this.turnLeft() && this.strafe())) {
+      this.subject.state.idle = false;
       this.tmpEul.set(0, Math.PI / 2, 0, 'YXZ');
       this.tmpVec3.applyEuler(this.tmpEul);
       this.subject.velocity.add(this.tmpVec3);
     }
 
     if (this.right() || (this.turnRight() && this.strafe())) {
+      this.subject.state.idle = false;
       this.tmpEul.set(0, - Math.PI / 2, 0, 'YXZ');
       this.tmpVec3.applyEuler(this.tmpEul);
       this.subject.velocity.add(this.tmpVec3);
@@ -240,17 +258,20 @@ class UserBehavior extends SubjectBehavior {
         if (heightCorrection > heightCorrectionThreshold) {
           this.tmpVec3.set(x, y + heightCorrection, z);
         }
-        this.subject.flying = false;
-        this.subject.onGround = true;
+        this.subject.state.flying = false;
+        this.subject.state.onGround = true;
         this.subject.velocity.setY(0);
       } else {
-        this.subject.onGround = false;
+        this.subject.state.onGround = false;
       }
 
       this.subject.user.position.copy(this.tmpVec3);
     }
 
     this.subject.collider.renderColliderBox(this.tmpVec3);
+    this.subject.animation.animateImplicit(this.subject.getAvatar(),
+        this.subject.getAvatarName(),
+        userStateToImplicit(this.subject.state), this.elapsed);
   }
 }
 

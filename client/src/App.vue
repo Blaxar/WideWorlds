@@ -29,6 +29,7 @@ import {entityType, updateType} from '../../common/ws-data-format.js';
 import {LoadingManager, Vector2, Vector3} from 'three';
 import rasterizeHTML from 'rasterizehtml';
 import CommandParser from './core/command-parser.js';
+import AnimationManager from './core/animation-manager.js';
 
 // Three.js context-related settings
 let commands = null;
@@ -39,6 +40,9 @@ let someInputFocused = false;
 let worldManager = null;
 let worldState = null;
 let entityManager = null;
+const animationManager = new AnimationManager();
+
+const userState = {flying: true, onGround: false, running: false, idle: true};
 
 // Ready key bindings with default values
 const storedKeyBindings = JSON.parse(JSON.stringify(qwertyBindings));
@@ -160,11 +164,19 @@ const hooks = {
 const appState = new AppState(hooks, main.state);
 
 const resetBehavior = () => {
-  inputListener.setSubject('user', {user: engine3d.user, tilt: engine3d.tilt,
+  inputListener.setSubject('user', {
+    user: engine3d.user,
+    getAvatar: (() => engine3d.userAvatar),
+    getAvatarName: (() => {
+      return engine3d.userAvatar.userData.avatarId === undefined ?
+          '' :
+          worldAvatars[engine3d.userAvatar.userData.avatarId].name;
+    }),
+    tilt: engine3d.tilt,
     collider: userCollider,
     velocity: new Vector3(),
-    flying: true,
-    onGround: false,
+    state: userState,
+    animation: animationManager,
     configsNode: userConfig.at('controls'),
     physicsNode: userConfig.at('physics'),
   });
@@ -227,7 +239,7 @@ const handleWorldSelection = (id) => {
   userFeed.publish(`Joining ${world.name}...`,
       null, userFeedPriority.info);
 
-  worldManager.load(world).then(async (avatars) => {
+  worldManager.load(world).then(async ({avatars, path}) => {
     commands = new CommandParser(engine3d, world.data, userFeed,
         userConfig.at('controls'));
     // Mark this world as default choice for the world selection
@@ -243,6 +255,7 @@ const handleWorldSelection = (id) => {
     await unplugWorldChat();
     await plugWorldChat();
     worldAvatars = avatars;
+    animationManager.setPath(path);
     updateCamera();
     worldState = wsClient.worldStateConnect(id);
     worldState.then((state) => {
@@ -288,6 +301,10 @@ const handleAvatar = (avatarId) => {
   worldManager.getAvatar(worldAvatars[avatarId].geometry).then((obj3d) => {
     engine3d.setUserAvatar(obj3d, avatarId);
     userCollider.adjustToObject(obj3d);
+    obj3d.userData.avatarId = avatarId;
+
+    const {name, imp, exp} = worldAvatars[avatarId];
+    animationManager.loadAvatarSequences(name, imp, exp);
   });
 };
 
@@ -355,7 +372,7 @@ onMounted(() => {
             .then((obj3d) => {
               engine3d.setEntityAvatar(node, obj3d, avatarId);
             });
-      });
+      }, userState);
 
   engine3d.start();
 

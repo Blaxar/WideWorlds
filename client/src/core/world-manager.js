@@ -250,14 +250,17 @@ class WorldManager {
 
     try {
       // TODO: customizable avatars.zip subpath and CORS disabling?
-      const res =
-          await loadAvatarsZip(`${data.path}/avatars/avatars.zip`, true);
-      return res.avatars;
+      return {
+        avatars: (
+          await loadAvatarsZip(`${data.path}/avatars/avatars.zip`, true)
+        ).avatars,
+        path: data.path,
+      };
     } catch (e) {
       console.error(e);
     }
 
-    return [];
+    return {avatars: [], path: data.path};
   }
 
   /** Clear current world data, reset engine3d state and chunks */
