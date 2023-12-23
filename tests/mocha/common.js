@@ -5,7 +5,8 @@
 import parseAvatarsDat from '../../common/avatars-dat-parser.js';
 import {serializeEntityState, deserializeEntityState, forwardEntityState,
   packEntityStates, unpackEntityStates, entityStateSize, localEndiannessCue,
-  otherEndiannessCue, validateEntityState, validateEntityStatePack}
+  otherEndiannessCue, validateEntityState, validateEntityStatePack,
+  simpleStringHash}
   from '../../common/ws-data-format.js';
 import {epsEqual} from '../utils.js';
 import * as assert from 'assert';
@@ -333,5 +334,16 @@ describe('common', () => {
     assert.notEqual(nbEntityStates, 3);
     nbEntityStates = validateEntityStatePack(pack);
     assert.strictEqual(nbEntityStates, 3);
+  });
+
+  it('simpleStringHash', () => {
+    assert.strictEqual(simpleStringHash(''), 0); // Empty string
+    assert.strictEqual(simpleStringHash('idle', 0x0), 0); // Zeroed mask
+
+    assert.strictEqual(simpleStringHash('run'), simpleStringHash('run')); // Consistent hash
+    assert.notEqual(simpleStringHash('fly'), simpleStringHash('run')); // No collision
+
+    // Different masks
+    assert.notEqual(simpleStringHash('walk', 0xffff), simpleStringHash('walk', 0xff));
   });
 });
