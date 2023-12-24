@@ -8,6 +8,7 @@ import parseSequence, {getJointTag} from 'aw-sequence-parser';
 import * as fflate from 'fflate';
 
 const seqsSubpath = 'seqs';
+const transitionDuration = 150; // in milliseconds
 
 const seqOpts = {fflate, cors: true};
 
@@ -100,6 +101,7 @@ function resetAvatarView(avatarView) {
  *                            be interpolated.
  * @param {boolean} translate - Whether or not to apply translation to the root
  *                              joint (as dictated by the provided frames).
+ * @return {Object} The interpolated frame.
  */
 function animateAvatar(avatarView, startFrame, endFrame, rootJointName,
     progress, translate = true) {
@@ -107,6 +109,7 @@ function animateAvatar(avatarView, startFrame, endFrame, rootJointName,
   const startPosition = new Vector3();
 
   const rootJointTag = getJointTag(rootJointName);
+  const interpolatedFrame = {location: new Vector3(), joints: {}};
 
   for (const [tag, q] of Object.entries(startFrame.joints)) {
     if (avatarView[tag] === undefined) {
@@ -122,10 +125,12 @@ function animateAvatar(avatarView, startFrame, endFrame, rootJointName,
 
     avatarView[tag].setRotationFromQuaternion(startQuaternion);
     avatarView[tag].needsUpdate = true;
+
+    interpolatedFrame.joints[tag] = (new Quaternion()).copy(startQuaternion);
   }
 
   if (avatarView[rootJointTag] === undefined || !translate) {
-    return;
+    return interpolatedFrame;
   }
 
   startPosition.copy(startFrame.location);
@@ -134,6 +139,9 @@ function animateAvatar(avatarView, startFrame, endFrame, rootJointName,
       .copy(startPosition.lerp(endFrame.position));
 
   avatarView[rootJointTag].needsUpdate = true;
+  interpolatedFrame.location.copy(startPosition);
+
+  return interpolatedFrame;
 }
 
 /**
@@ -347,24 +355,41 @@ class AnimationManager {
       }
     }
 
-    // Normalize the progress value to match
-    // the bounding frames as a reference
-    let sProgress = startFrameId / (nbFrames - 1.0);
-    let eProgress = endFrameId / (nbFrames - 1.0);
-    let progress = (elapsed % duration) / duration;
+    const now = Date.now();
+    if (group.userData.lastFrame &&
+        group.userData.lastFrame.hash !== hash &&
+        group.userData.lastFrame.time > now - transitionDuration) {
+      // Transitionning from last animation to a new one
+      const progress =
+          (now - group.userData.lastFrame.time) / transitionDuration;
 
-    if (sProgress > eProgress) {
-      // Looping around
-      sProgress = (sProgress + 0.5) % 1.0;
-      eProgress = (sProgress + 0.5) % 1.0;
-      progress = (progress + 0.5) % 1.0;
+      animateAvatar(avatarView, group.userData.lastFrame,
+          frames[endFramePos][1].formatted, parsedSeq.rootJointName,
+          progress, translate);
+    } else {
+      // Normalize the progress value to match
+      // the bounding frames as a reference
+      let sProgress = startFrameId / (nbFrames - 1.0);
+      let eProgress = endFrameId / (nbFrames - 1.0);
+      let progress = (elapsed % duration) / duration;
+
+      if (sProgress > eProgress) {
+        // Looping around
+        sProgress = (sProgress + 0.5) % 1.0;
+        eProgress = (sProgress + 0.5) % 1.0;
+        progress = (progress + 0.5) % 1.0;
+      }
+
+      progress = (progress - sProgress) / (eProgress - sProgress);
+
+      const lastFrame =
+          animateAvatar(avatarView, frames[startFramePos][1].formatted,
+              frames[endFramePos][1].formatted, parsedSeq.rootJointName,
+              progress, translate);
+      lastFrame.time = now;
+      lastFrame.hash = hash;
+      group.userData.lastFrame = lastFrame;
     }
-
-    progress = (progress - sProgress) / (eProgress - sProgress);
-
-    animateAvatar(avatarView, frames[startFramePos][1].formatted,
-        frames[endFramePos][1].formatted, parsedSeq.rootJointName,
-        progress, translate);
   }
 }
 
