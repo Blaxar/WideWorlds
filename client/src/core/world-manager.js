@@ -190,12 +190,15 @@ class WorldManager {
 
     this.currentWorldUpdateClient.onMessage(async (entries) => {
       const modelRegistry = this.currentModelRegistry;
+      const boundTreesToUpdate = new Set();
 
       if (entries.op === 'create') {
         for (const prop of entries.data) {
           const {cX, cZ} = this.getChunkCoordinates(prop.x, prop.z);
           if (!modelRegistry || !this.isChunkLoaded(cX, cZ)) continue;
           const chunkAnchor = this.getChunkAnchor(cX, cZ);
+
+          boundTreesToUpdate.add(this.chunks.get(`${cX}_${cZ}`));
 
           const obj3d = await modelRegistry.get(prop.name);
 
@@ -209,6 +212,8 @@ class WorldManager {
           if (!this.isChunkLoaded(cX, cZ) || !this.props.has(value.id)) {
             continue;
           }
+
+          boundTreesToUpdate.add(this.chunks.get(`${cX}_${cZ}`));
 
           // Remove original object
           const oldObj3d = this.props.get(value.id);
@@ -228,7 +233,9 @@ class WorldManager {
         for (const id of entries.data) {
           const obj3d = this.props.get(id);
 
-          if (!obj3d) return;
+          if (!obj3d) continue;
+
+          boundTreesToUpdate.add(obj3d.userData.chunkNodeHandle);
 
           // Remove the object from the dynamic object list (when applicable)
           this.engine3d.unsetDynamicOnNode(obj3d.userData.chunkNodeHandle,
@@ -237,6 +244,11 @@ class WorldManager {
           this.props.delete(id);
         }
       }
+
+      boundTreesToUpdate.forEach((chunkNodeHandle) => {
+        this.engine3d.updateNodeBoundsTree(chunkNodeHandle,
+            chunkNodeColliderFilter);
+      });
     });
 
     this.currentTerrainMaterials =
