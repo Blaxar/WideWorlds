@@ -15,7 +15,7 @@ const updateType = {
   teleporting: 4,
 };
 
-const entityStateSize = 0x2c;
+const entityStateSize = 0x34;
 const localEndiannessCue = 0x11223344;
 const otherEndiannessCue = 0x44332211;
 
@@ -37,6 +37,10 @@ const otherEndiannessCue = 0x44332211;
  * 0x26 | Data block 1, 2 bytes |
  * 0x28 | Data block 2, 2 bytes |
  * 0x2a | Data block 3, 2 bytes |
+ * 0x2c | Data block 4, 2 bytes |
+ * 0x2e | Data block 5, 2 bytes |
+ * 0x30 | Data block 6, 2 bytes |
+ * 0x32 | Data block 7, 2 bytes |
  */
 
 const entityStateSchema = {
@@ -54,6 +58,10 @@ const entityStateSchema = {
   dataBlock1: [0x26, 0x02],
   dataBlock2: [0x28, 0x02],
   dataBlock3: [0x2a, 0x02],
+  dataBlock4: [0x2c, 0x02],
+  dataBlock5: [0x2e, 0x02],
+  dataBlock6: [0x30, 0x02],
+  dataBlock7: [0x32, 0x02],
 };
 
 /**
@@ -85,11 +93,16 @@ function formatUserMessage(delivered, id, name, role, msg) {
  * @param {short} dataBlock1 - Second data block.
  * @param {short} dataBlock2 - Third data block.
  * @param {short} dataBlock3 - Fourth data block.
+ * @param {short} dataBlock4 - Fifth data block.
+ * @param {short} dataBlock5 - Sixth data block.
+ * @param {short} dataBlock6 - Seventh data block.
+ * @param {short} dataBlock7 - Eighth data block.
  * @return {Uint8Array} Entity state binary payload
  */
 function serializeEntityState({entityType, updateType, entityId, x, y, z,
   yaw, pitch, roll, dataBlock0 = 0, dataBlock1 = 0, dataBlock2 = 0,
-  dataBlock3 = 0}) {
+  dataBlock3 = 0, dataBlock4 = 0, dataBlock5 = 0, dataBlock6 = 0,
+  dataBlock7 = 0}) {
   const state = new Uint8Array(entityStateSize);
   const uShortArray = new Uint16Array(state.buffer);
   const uIntArray = new Uint32Array(state.buffer);
@@ -109,6 +122,10 @@ function serializeEntityState({entityType, updateType, entityId, x, y, z,
   uShortArray[19] = dataBlock1;
   uShortArray[20] = dataBlock2;
   uShortArray[21] = dataBlock3;
+  uShortArray[22] = dataBlock4;
+  uShortArray[23] = dataBlock5;
+  uShortArray[24] = dataBlock6;
+  uShortArray[25] = dataBlock7;
 
   return state;
 }
@@ -198,9 +215,14 @@ function deserializeEntityState(state) {
   const dataBlock1 = uShortArray[19];
   const dataBlock2 = uShortArray[20];
   const dataBlock3 = uShortArray[21];
+  const dataBlock4 = uShortArray[22];
+  const dataBlock5 = uShortArray[23];
+  const dataBlock6 = uShortArray[24];
+  const dataBlock7 = uShortArray[25];
 
   return {entityType, updateType, entityId, x, y, z, yaw, pitch, roll,
-    dataBlock0, dataBlock1, dataBlock2, dataBlock3};
+    dataBlock0, dataBlock1, dataBlock2, dataBlock3, dataBlock4,
+    dataBlock5, dataBlock6, dataBlock7};
 }
 
 /**

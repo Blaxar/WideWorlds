@@ -21,13 +21,16 @@ class EntityManager {
    *                                 (in seconds) between each update.
    * @param {function} setEntityAvatar - Callback function to set avatars on
    *                                     entities (to be called each frame).
+   * @param {function} animateEntityImp - Callback function to animate avatars
+   *                                      on entities (to be called each frame).
    */
   constructor(group, localUserId = null, avgUpdateTime = 0.05,
-      setEntityAvatar = () => {}) {
+      setEntityAvatar = () => {}, animateEntityImp = () => {}) {
     this.group = group;
     this.setLocalUserId(localUserId);
     this.avgUpdateTime = avgUpdateTime;
     this.setEntityAvatar = setEntityAvatar;
+    this.animateEntityImp = animateEntityImp;
     this.entityData = new Map();
     this.entityData.set('users', {buffers: [new Map(), new Map()], id: 0});
     this.updateTimeSamples = [];
@@ -164,6 +167,7 @@ class EntityManager {
         'YXZ');
 
     obj3d.userData.progress = 0.;
+    obj3d.userData.startTime = Date.now();
     obj3d.updateMatrix();
   }
 
@@ -185,6 +189,10 @@ class EntityManager {
           // Update scenario
           const user = userBuffer.get(parseInt(userMatch[1]));
           this.setEntityAvatar(node, user.dataBlock0);
+
+          // Get the sign back and convert speed to expected unit
+          const speed = ((user.dataBlock2 << 16) >> 16) * 0.001;
+          this.animateEntityImp(node, user.dataBlock1, speed);
           node.userData.progress =
             this.resetProgress ? 0. : node.userData.progress;
           this.interpolateEntity(node, user, deltaTime);

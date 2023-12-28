@@ -250,8 +250,10 @@ class AnimationManager {
    * @param {string} avatarName - Name of the avatar to animate.
    * @param {string} animationName - Name of the implicit animation.
    * @param {number} elapsed - Elapsed time for this animation (in seconds).
+   * @param {number} speed - Playing speed for the animation, use negative
+   *                         value to go backwards.
    */
-  animateImplicit(group, avatarName, animationName, elapsed) {
+  animateImplicit(group, avatarName, animationName, elapsed, speed = 1.0) {
     let hash = this.paths.get(this.path)?.avatars
         .get(avatarName)?.imp.get(animationName);
 
@@ -275,7 +277,7 @@ class AnimationManager {
       }
     }
 
-    this.animate(group, hash, elapsed, false);
+    this.animate(group, hash, elapsed, speed, false);
   }
 
   /**
@@ -285,11 +287,13 @@ class AnimationManager {
    * @param {string} avatarName - Name of the avatar to animate.
    * @param {string} animationName - Name of the explicit animation.
    * @param {number} elapsed - Elapsed time for this animation (in seconds).
+   * @param {number} speed - Playing speed for the animation, use negative
+   *                         value to go backwards.
    */
-  animateExplicit(group, avatarName, animationName, elapsed) {
+  animateExplicit(group, avatarName, animationName, elapsed, speed = 1.0) {
     const hash = this.paths.get(this.path)?.avatars
         .get(avatarName)?.exp.get(animationName);
-    this.animate(group, hash, elapsed, true);
+    this.animate(group, hash, elapsed, speed, true);
   }
 
   /**
@@ -297,19 +301,30 @@ class AnimationManager {
    * @param {Group} group - three.js 3D group for the target avatar model.
    * @param {integer} hash - 16-bits hash of the target sequence name.
    * @param {number} elapsed - Elapsed time for this animation (in seconds).
+   * @param {number} speed - Playing speed for the animation, use negative
+   *                         value to go backwards.
    * @param {boolean} translate - Whether or not to apply translation to the
    *                              root joint.
    */
-  animate(group, hash, elapsed, translate = true) {
+  animate(group, hash, elapsed, speed = 1.0, translate = true) {
     if (!group.userData.avatarView) {
       group.userData.avatarView = {};
       populateAvatarViewRecursive(group, group.userData.avatarView);
     }
 
+    const now = Date.now();
     const parsedSeq =
         this.paths.get(this.path)?.sequences.get(hash)?.parsedSeq;
     if (!parsedSeq) {
       resetAvatarView(group.userData.avatarView);
+      if (group.userData.lastFrame) {
+        Object.assign(group.userData.lastFrame,
+            {
+              time: now,
+              hash,
+              speed,
+            });
+      }
       return;
     }
 
@@ -320,7 +335,10 @@ class AnimationManager {
     const frames = parsedSeq.formatted;
 
     const duration = nbFrames / fps;
-    const targetFrameId = fps * (elapsed % duration);
+    let targetTime = (elapsed * speed) % duration;
+    while (targetTime < 0) targetTime += duration;
+
+    const targetFrameId = fps * targetTime;
 
     let startFramePos = 0;
     let endFramePos = frames.length - 1;
@@ -355,7 +373,6 @@ class AnimationManager {
       }
     }
 
-    const now = Date.now();
     if (group.userData.lastFrame &&
         group.userData.lastFrame.hash !== hash &&
         group.userData.lastFrame.time > now - transitionDuration) {
@@ -371,7 +388,7 @@ class AnimationManager {
       // the bounding frames as a reference
       let sProgress = startFrameId / (nbFrames - 1.0);
       let eProgress = endFrameId / (nbFrames - 1.0);
-      let progress = (elapsed % duration) / duration;
+      let progress = targetTime / duration;
 
       if (sProgress > eProgress) {
         // Looping around
@@ -388,6 +405,7 @@ class AnimationManager {
               progress, translate);
       lastFrame.time = now;
       lastFrame.hash = hash;
+      lastFrame.speed = speed;
       group.userData.lastFrame = lastFrame;
     }
   }

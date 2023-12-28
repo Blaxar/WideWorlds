@@ -316,6 +316,15 @@ const render = () => {
 
   if (main.userId !== null && worldState && entityManager &&
       lastAvatarUpdate < Date.now() - entityManager.getAvgUpdateTimeMs() / 2) {
+    let speed = 1000.0;
+
+    if (engine3d.userAvatar.userData.lastFrame?.speed !== undefined) {
+      speed = engine3d.userAvatar.userData.lastFrame.speed * 1000;
+    }
+
+    // Converting to integer then masking to get unsigned short value;
+    speed = ((speed << 16) >> 16) & 0xffff;
+
     const localUserState = {
       entityType: entityType.user,
       updateType: updateType.moving,
@@ -327,6 +336,8 @@ const render = () => {
       pitch: engine3d.user.rotation.x,
       roll: engine3d.user.rotation.z,
       dataBlock0: engine3d.user.userData.avatarId,
+      dataBlock1: engine3d.userAvatar.userData.lastFrame?.hash,
+      dataBlock2: speed,
     };
 
     worldState.then((state) => state.send(localUserState));
@@ -367,12 +378,24 @@ onMounted(() => {
       0.05,
       (node, avatarId) => { // Set callback for entity avatar update
         if (avatarId >= worldAvatars.length) return;
+        if (node.userData.avatarId === avatarId) return;
+
+        const {name, imp, exp} = worldAvatars[avatarId];
+        animationManager.loadAvatarSequences(name, imp, exp);
 
         worldManager.getAvatar(worldAvatars[avatarId].geometry)
             .then((obj3d) => {
               engine3d.setEntityAvatar(node, obj3d, avatarId);
+              node.userData.avatarView = null;
             });
-      }, userState);
+      },
+      (node, hash, speed) => { // Update implicit animation for entities
+        const now = Date.now();
+        const startTime = node.userData.startTime ?
+            node.userData.startTime : now;
+        animationManager.animate(node, hash,
+            (now - startTime) * 0.001, speed, false);
+      });
 
   engine3d.start();
 

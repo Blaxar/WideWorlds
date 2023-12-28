@@ -104,10 +104,14 @@ const dummySerializeEntityState = (offset = 0) => {
   const dataBlock1 = offset + 1;
   const dataBlock2 = offset + 2;
   const dataBlock3 = offset + 3;
+  const dataBlock4 = offset + 4;
+  const dataBlock5 = offset + 5;
+  const dataBlock6 = offset + 6;
+  const dataBlock7 = offset + 7;
 
   return serializeEntityState({entityType, updateType, entityId, x,
       y, z, yaw, pitch, roll, dataBlock0, dataBlock1, dataBlock2,
-      dataBlock3});
+      dataBlock3, dataBlock4, dataBlock5, dataBlock6, dataBlock7});
 };
 
 // Testing common utils
@@ -228,9 +232,18 @@ describe('common', () => {
     const yaw = 3.1415;
     const pitch = 1.2;
     const roll = 2.5;
+    const dataBlock0 = 11;
+    const dataBlock1 = 12;
+    const dataBlock2 = 13;
+    const dataBlock3 = 14;
+    const dataBlock4 = 15;
+    const dataBlock5 = 16;
+    const dataBlock6 = 17;
+    const dataBlock7 = 18;
 
     const state = serializeEntityState({entityType, updateType, entityId,
-        x, y, z, yaw, pitch, roll});
+        x, y, z, yaw, pitch, roll, dataBlock0, dataBlock1, dataBlock2,
+        dataBlock3, dataBlock4, dataBlock5, dataBlock6, dataBlock7});
 
     const fwrdState = forwardEntityState(entityType, entityId, state);
 
@@ -248,6 +261,16 @@ describe('common', () => {
     assert.ok(epsEqual(floatArray[6], yaw));
     assert.ok(epsEqual(floatArray[7], pitch));
     assert.ok(epsEqual(floatArray[8], roll));
+
+    // Checking data blocks
+    assert.strictEqual(uShortArray[18], 11);
+    assert.strictEqual(uShortArray[19], 12);
+    assert.strictEqual(uShortArray[20], 13);
+    assert.strictEqual(uShortArray[21], 14);
+    assert.strictEqual(uShortArray[22], 15);
+    assert.strictEqual(uShortArray[23], 16);
+    assert.strictEqual(uShortArray[24], 17);
+    assert.strictEqual(uShortArray[25], 18);
 
     assert.throws(() => forwardEntityState(entityType + 1, entityId, state), Error);
     assert.throws(() => forwardEntityState(entityType, entityId + 1, state), Error);

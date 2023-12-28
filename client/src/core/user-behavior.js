@@ -271,7 +271,8 @@ class UserBehavior extends SubjectBehavior {
     this.subject.collider.renderColliderBox(this.tmpVec3);
     this.subject.animation.animateImplicit(this.subject.getAvatar(),
         this.subject.getAvatarName(),
-        userStateToImplicit(this.subject.state), this.elapsed);
+        userStateToImplicit(this.subject.state), this.elapsed,
+        this.backward() ? -1 : 1);
   }
 }
 
