@@ -134,9 +134,8 @@ function animateAvatar(avatarView, startFrame, endFrame, rootJointName,
   }
 
   startPosition.copy(startFrame.location);
-
   avatarView[rootJointTag].position
-      .copy(startPosition.lerp(endFrame.position));
+      .copy(startPosition.lerp(endFrame.location, progress));
 
   avatarView[rootJointTag].needsUpdate = true;
   interpolatedFrame.location.copy(startPosition);
@@ -294,6 +293,50 @@ class AnimationManager {
     const hash = this.paths.get(this.path)?.avatars
         .get(avatarName)?.exp.get(animationName);
     this.animate(group, hash, elapsed, speed, true);
+  }
+
+  /**
+   * Get the duration of an implicit animation sequence.
+   * @param {string} avatarName - Name of the avatar to animate.
+   * @param {string} animationName - Name of the implicit animation.
+   * @return {number} Duration of the animation in seconds, 0 if not found.
+   */
+  probeImplicitAnimationDuration(avatarName, animationName) {
+    const hash = this.paths.get(this.path)?.avatars
+        .get(avatarName)?.imp.get(animationName);
+
+    return this.probeSequenceDuration(hash);
+  }
+
+  /**
+   * Get the duration of an explicit animation sequence.
+   * @param {string} avatarName - Name of the avatar to animate.
+   * @param {string} animationName - Name of the explicit animation.
+   * @return {number} Duration of the animation in seconds, 0 if not found.
+   */
+  probeExplicitAnimationDuration(avatarName, animationName) {
+    const hash = this.paths.get(this.path)?.avatars
+        .get(avatarName)?.exp.get(animationName);
+
+    return this.probeSequenceDuration(hash);
+  }
+
+  /**
+   * Get the duration of a specific animation sequence.
+   * @param {integer} hash - 16-bits hash of the target sequence name.
+   * @return {number} Duration of the animation in seconds, 0 if not found.
+   */
+  probeSequenceDuration(hash) {
+    const parsedSeq =
+          this.paths.get(this.path)?.sequences.get(hash)?.parsedSeq;
+
+    if (!parsedSeq) return 0;
+
+    const fps = parsedSeq.fileType === 'binary' ? 30. : 1000.;
+    const nbFrames = parsedSeq.totalNFrames;
+    const duration = nbFrames / fps;
+
+    return duration;
   }
 
   /**

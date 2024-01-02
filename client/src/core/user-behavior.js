@@ -269,10 +269,21 @@ class UserBehavior extends SubjectBehavior {
     }
 
     this.subject.collider.renderColliderBox(this.tmpVec3);
-    this.subject.animation.animateImplicit(this.subject.getAvatar(),
-        this.subject.getAvatarName(),
-        userStateToImplicit(this.subject.state), this.elapsed,
-        this.backward() ? -1 : 1);
+
+    // Check if any explicit animation should be running
+    const {name, start, duration} = this.subject.state.implicit;
+
+    const now = Date.now() * 0.001;
+    if (name && duration && now < start + duration) {
+      this.subject.animation.animateExplicit(this.subject.getAvatar(),
+          this.subject.getAvatarName(), name, now - start);
+    } else {
+      // Run implicit animation otherwise
+      this.subject.animation.animateImplicit(this.subject.getAvatar(),
+          this.subject.getAvatarName(),
+          userStateToImplicit(this.subject.state), this.elapsed,
+          this.backward() ? -1 : 1);
+    }
   }
 }
 

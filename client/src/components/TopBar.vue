@@ -69,6 +69,7 @@ onMounted(() => {
         {{ a.name }}
       </option>
     </select>
+    <slot name="animations" />
     </div>
     </div>
     </div>

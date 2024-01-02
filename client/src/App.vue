@@ -11,6 +11,7 @@ import CentralOverlay from './components/CentralOverlay.vue';
 import UserChat from './components/UserChat.vue';
 import UserSettings from './components/UserSettings.vue';
 import PropSettings from './components/PropSettings.vue';
+import AnimationPicker from './components/AnimationPicker.vue';
 import AppState, {AppStates} from './core/app-state.js';
 import WorldPathRegistry from './core/world-path-registry.js';
 import WorldManager from './core/world-manager.js';
@@ -42,7 +43,8 @@ let worldState = null;
 let entityManager = null;
 const animationManager = new AnimationManager();
 
-const userState = {flying: true, onGround: false, running: false, idle: true};
+const userState = {flying: true, onGround: false, running: false, idle: true,
+  implicit: {name: '', start: 0, duration: 0}};
 
 // Ready key bindings with default values
 const storedKeyBindings = JSON.parse(JSON.stringify(qwertyBindings));
@@ -53,6 +55,7 @@ const isOverlay3D = (target) => !['button-bar', 'chat-entry']
 
 let defaultWorldId = null;
 let worldAvatars = [];
+let animations = [];
 const thirdPersonCameraDistance = 8;
 let cameraMode = 0; // 0 is first person view, 1 is rear view, 2 is front view
 let lastAvatarUpdate = 0;
@@ -68,6 +71,7 @@ const main = reactive({
   displayUserSettings: false,
   displayPropSettings: false,
   propSettingsTrigger: 0,
+  animationListTrigger: 0,
   propSettings: {run: false, strafe: false},
 });
 
@@ -305,7 +309,18 @@ const handleAvatar = (avatarId) => {
 
     const {name, imp, exp} = worldAvatars[avatarId];
     animationManager.loadAvatarSequences(name, imp, exp);
+    animations = Object.entries(exp).map(([name]) => name);
+    main.animationListTrigger = (main.animationListTrigger + 1) % 2;
   });
+};
+
+const handleAnimation = (name) => {
+  const avatarName = engine3d.userAvatar.userData.avatarId === undefined ?
+      '' : worldAvatars[engine3d.userAvatar.userData.avatarId].name;
+  userState.implicit.name = name;
+  userState.implicit.start = Date.now() * 0.001;
+  userState.implicit.duration =
+      animationManager.probeExplicitAnimationDuration(avatarName, name);
 };
 
 const render = () => {
@@ -490,7 +505,12 @@ document.addEventListener('contextmenu', (event) => {
   <div id="overlay">
     <TopBar v-if="displayEdgebars" :avatars="worldAvatars" @leave="handleLeave"
     @camera="updateCamera(true)" @avatar="handleAvatar"
-    @settings="main.displayUserSettings = !main.displayUserSettings" />
+    @settings="main.displayUserSettings = !main.displayUserSettings" >
+    <template v-slot:animations>
+      <AnimationPicker :key="main.animationListTrigger"
+      :animations="animations" @animation="handleAnimation" />
+    </template>
+    </TopBar>
     <CentralOverlay v-if="displayEdgebars">
     <template v-slot:left v-if="main.displayUserSettings">
     <UserSettings :listener="inputListener"
