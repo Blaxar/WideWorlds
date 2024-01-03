@@ -30,7 +30,8 @@ import {entityType, updateType} from '../../common/ws-data-format.js';
 import {LoadingManager, Vector2, Vector3} from 'three';
 import rasterizeHTML from 'rasterizehtml';
 import CommandParser from './core/command-parser.js';
-import AnimationManager from './core/animation-manager.js';
+import AnimationManager, {animateEntityImp, animateEntityExp}
+  from './core/animation-manager.js';
 
 // Three.js context-related settings
 let commands = null;
@@ -44,7 +45,7 @@ let entityManager = null;
 const animationManager = new AnimationManager();
 
 const userState = {flying: true, onGround: false, running: false, idle: true,
-  implicit: {name: '', start: 0, duration: 0}};
+  explicit: {name: '', start: 0, duration: 0}};
 
 // Ready key bindings with default values
 const storedKeyBindings = JSON.parse(JSON.stringify(qwertyBindings));
@@ -317,9 +318,9 @@ const handleAvatar = (avatarId) => {
 const handleAnimation = (name) => {
   const avatarName = engine3d.userAvatar.userData.avatarId === undefined ?
       '' : worldAvatars[engine3d.userAvatar.userData.avatarId].name;
-  userState.implicit.name = name;
-  userState.implicit.start = Date.now() * 0.001;
-  userState.implicit.duration =
+  userState.explicit.name = name;
+  userState.explicit.start = Date.now() * 0.001;
+  userState.explicit.duration =
       animationManager.probeExplicitAnimationDuration(avatarName, name);
 };
 
@@ -339,6 +340,19 @@ const render = () => {
 
     // Converting to integer then masking to get unsigned short value;
     speed = ((speed << 16) >> 16) & 0xffff;
+    let explicitProgress = 0;
+
+    const {start, duration} = userState.explicit;
+
+    const now = Date.now() * 0.001;
+    if (start && duration && now < start + duration) {
+      // Explicit animation progression is expressed as
+      // a ratio encoded on a 16-bit data block (unsigned),
+      // where 0x0000 is 0.0 and 0xffff is 1.0
+      explicitProgress = (now - start) / duration * 0xffff;
+    }
+
+    explicitProgress = explicitProgress > 0xffff ? 0xffff : explicitProgress;
 
     const localUserState = {
       entityType: entityType.user,
@@ -350,9 +364,14 @@ const render = () => {
       yaw: engine3d.user.rotation.y,
       pitch: engine3d.user.rotation.x,
       roll: engine3d.user.rotation.z,
-      dataBlock0: engine3d.user.userData.avatarId,
-      dataBlock1: engine3d.userAvatar.userData.lastFrame?.hash,
-      dataBlock2: speed,
+      dataBlock0: engine3d.user.userData.avatarId, // ID of the avatar
+      dataBlock1: explicitProgress ? // Animation sequence hash to play
+        engine3d.userAvatar.userData.lastExplicitHash :
+        engine3d.userAvatar.userData.lastImplicitHash,
+      dataBlock2: speed, // Speed for implicit animations (ignored otherwise)
+      dataBlock3: explicitProgress & 0xffff, // If not null, the sequence
+      //                                        is to be played as an explicit
+      //                                        animation
     };
 
     worldState.then((state) => state.send(localUserState));
@@ -404,12 +423,11 @@ onMounted(() => {
               node.userData.avatarView = null;
             });
       },
-      (node, hash, speed) => { // Update implicit animation for entities
-        const now = Date.now();
-        const startTime = node.userData.startTime ?
-            node.userData.startTime : now;
-        animationManager.animate(node, hash,
-            (now - startTime) * 0.001, speed, false);
+      (node, hash, speed) => {
+        animateEntityImp(node, hash, speed, animationManager);
+      },
+      (node, hash, progress) => {
+        animateEntityExp(node, hash, progress, animationManager);
       });
 
   engine3d.start();

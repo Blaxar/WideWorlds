@@ -271,7 +271,7 @@ class UserBehavior extends SubjectBehavior {
     this.subject.collider.renderColliderBox(this.tmpVec3);
 
     // Check if any explicit animation should be running
-    const {name, start, duration} = this.subject.state.implicit;
+    const {name, start, duration} = this.subject.state.explicit;
 
     const now = Date.now() * 0.001;
     if (name && duration && now < start + duration) {

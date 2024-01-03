@@ -21,16 +21,20 @@ class EntityManager {
    *                                 (in seconds) between each update.
    * @param {function} setEntityAvatar - Callback function to set avatars on
    *                                     entities (to be called each frame).
-   * @param {function} animateEntityImp - Callback function to animate avatars
-   *                                      on entities (to be called each frame).
+   * @param {function} animateEntityImp - Callback function to update implicit
+   *                                      animations on entities (each frame).
+   * @param {function} animateEntityExp - Callback function to update explicit
+   *                                      animations on entities (each frame).
    */
   constructor(group, localUserId = null, avgUpdateTime = 0.05,
-      setEntityAvatar = () => {}, animateEntityImp = () => {}) {
+      setEntityAvatar = () => {}, animateEntityImp = () => {},
+      animateEntityExp = () => {}) {
     this.group = group;
     this.setLocalUserId(localUserId);
     this.avgUpdateTime = avgUpdateTime;
     this.setEntityAvatar = setEntityAvatar;
     this.animateEntityImp = animateEntityImp;
+    this.animateEntityExp = animateEntityExp;
     this.entityData = new Map();
     this.entityData.set('users', {buffers: [new Map(), new Map()], id: 0});
     this.updateTimeSamples = [];
@@ -190,9 +194,16 @@ class EntityManager {
           const user = userBuffer.get(parseInt(userMatch[1]));
           this.setEntityAvatar(node, user.dataBlock0);
 
-          // Get the sign back and convert speed to expected unit
+          // Get the sign back and convert speed and progress to expected units
           const speed = ((user.dataBlock2 << 16) >> 16) * 0.001;
-          this.animateEntityImp(node, user.dataBlock1, speed);
+          const explicitProgress =
+              ((user.dataBlock3 << 16) >> 16) / (0xffff * 1.);
+
+          if (explicitProgress) {
+            this.animateEntityExp(node, user.dataBlock1, explicitProgress);
+          } else {
+            this.animateEntityImp(node, user.dataBlock1, speed);
+          }
           node.userData.progress =
             this.resetProgress ? 0. : node.userData.progress;
           this.interpolateEntity(node, user, deltaTime);

@@ -9,6 +9,7 @@ import * as fflate from 'fflate';
 
 const seqsSubpath = 'seqs';
 const transitionDuration = 150; // in milliseconds
+const rollbackTolerance = 0.25; // in seconds
 
 const seqOpts = {fflate, cors: true};
 
@@ -162,6 +163,70 @@ function userStateToImplicit(userState) {
 }
 
 /**
+ * Update implicit animation for entities
+ * @param {Group} node - three.js 3D group for the target avatar model.
+ * @param {integer} hash - 16-bit hash of the target sequence name.
+ * @param {number} speed - Playing speed for the animation, use negative
+ *                         value to go backwards.
+ * @param {AnimationManager} animationManager - Instance of AnimationManager.
+ */
+function animateEntityImp(node, hash, speed, animationManager) {
+  const now = Date.now();
+  const startTime = node.userData.startTime ?
+      node.userData.startTime : now;
+  animationManager.animate(node, hash,
+      (now - startTime) * 0.001, speed, false);
+}
+
+/**
+ * Update explicit animation for entities
+ * @param {Group} node - three.js 3D group for the target avatar model.
+ * @param {integer} hash - 16-bit hash of the target sequence name.
+ * @param {number} progress - Progress ratio for this animation, 0 means
+ *                            first frame and 1 means last frame.
+ * @param {AnimationManager} animationManager - Instance of AnimationManager.
+ */
+function animateEntityExp(node, hash, progress, animationManager) {
+  const duration = animationManager.probeSequenceDuration(hash);
+  let explicitElapsed = duration * progress; // in seconds
+  const now = Date.now(); // in milliseconds
+
+  // Note: the rollback tolerance sets a timestamp limit below which
+  //       we consider the current explicit animation to have actually
+  //       changed, as opposed to a rollback scenario where the local
+  //       playback of the animation is just a bit ahead of what we've
+  //       last received from the server
+  if (!node.userData.explicit ||
+      node.userData.explicit.elapsed - rollbackTolerance > explicitElapsed) {
+    node.userData.explicit = {
+      elapsed: explicitElapsed,
+      time: now,
+    };
+  }
+
+  if (node.userData.explicit.elapsed >= explicitElapsed) {
+    // This explicit animation is still running, but we've
+    // not received any progress update since last time or
+    // we're experiencing some rollback, so we go ahead and
+    // keep playing it for ourselves for the sake of keeping
+    // things smooth
+    explicitElapsed += (now - node.userData.explicit.time) * 0.001;
+  } else {
+    node.userData.explicit.elapsed = explicitElapsed;
+  }
+
+  // Stop right away if we've outlived the animation already
+  if (explicitElapsed >= duration) {
+    node.userData.explicit.elapsed = duration;
+    return;
+  }
+
+  node.userData.explicit.time = now;
+  animationManager.animate(node, hash,
+      explicitElapsed, 1.0, true);
+}
+
+/**
  * Manage animation of avatars
  */
 class AnimationManager {
@@ -276,6 +341,7 @@ class AnimationManager {
       }
     }
 
+    group.userData.lastImplicitHash = hash;
     this.animate(group, hash, elapsed, speed, false);
   }
 
@@ -292,6 +358,7 @@ class AnimationManager {
   animateExplicit(group, avatarName, animationName, elapsed, speed = 1.0) {
     const hash = this.paths.get(this.path)?.avatars
         .get(avatarName)?.exp.get(animationName);
+    group.userData.lastExplicitHash = hash;
     this.animate(group, hash, elapsed, speed, true);
   }
 
@@ -323,7 +390,7 @@ class AnimationManager {
 
   /**
    * Get the duration of a specific animation sequence.
-   * @param {integer} hash - 16-bits hash of the target sequence name.
+   * @param {integer} hash - 16-bit hash of the target sequence name.
    * @return {number} Duration of the animation in seconds, 0 if not found.
    */
   probeSequenceDuration(hash) {
@@ -342,7 +409,7 @@ class AnimationManager {
   /**
    * Update the joints of an avatar to match a specific sequence time
    * @param {Group} group - three.js 3D group for the target avatar model.
-   * @param {integer} hash - 16-bits hash of the target sequence name.
+   * @param {integer} hash - 16-bit hash of the target sequence name.
    * @param {number} elapsed - Elapsed time for this animation (in seconds).
    * @param {number} speed - Playing speed for the animation, use negative
    *                         value to go backwards.
@@ -455,4 +522,4 @@ class AnimationManager {
 }
 
 export default AnimationManager;
-export {userStateToImplicit};
+export {userStateToImplicit, animateEntityImp, animateEntityExp};
