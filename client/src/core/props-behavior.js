@@ -16,6 +16,25 @@ const smallRotationAngle = Math.PI / 120;
 const verySmallMoveLength = 0.01; // One centimeter
 const verySmallRotationAngle = Math.PI / 1800.0; // Tenth of a degree
 
+/**
+ * Validate a raycast intersection candidate as being
+ * a valid prop or not
+ * @param {Object3D} intersect - Intersection candidate.
+ * @param {number} maxDistance - Maximum casting distance (in meters)
+ *                               beyond which the candidate will be
+ *                               dismissed.
+ * @return {boolean} True if the candidate is a valid prop for
+ *                   selection, false otherwise.
+ */
+function validateIntersect(intersect, maxDistance) {
+  return intersect.distance < maxDistance &&
+    intersect.object.name.length > 0 &&
+    intersect.object.name != boundingBoxName &&
+    intersect.object.visible &&
+    intersect.object.userData.prop &&
+    intersect.object.parent.visible;
+};
+
 /** Handle props selection */
 class PropsSelector {
   /**
@@ -86,6 +105,33 @@ class PropsSelector {
   }
 
   /**
+   * Point at a prop to get contextual information
+   * @param {Vector2} pointer - 2D Pointer for the raycaster.
+   * @return {string|null} Contextual text to display for the prop
+   *                       (if any).
+   */
+  point(pointer) {
+    this.clickRaycaster.setFromCamera(
+        pointer, this.engine3d.camera,
+    );
+
+    const intersects =
+        this.clickRaycaster.intersectObjects(
+            this.engine3d.scene.children, true,
+        );
+
+    for (const intersect of intersects) {
+      if (validateIntersect(intersect, this.maxCastingDistance)) {
+        // Fetch prop description (if any) to return it as alt text to
+        // display
+        return intersect.object.userData.prop.description;
+      }
+    }
+
+    return null;
+  }
+
+  /**
    * Select a prop for building mode
    * @param {Vector2} pointer - 2D Pointer for the raycaster.
    * @param {boolean} add - True to add the newfound prop to the existing
@@ -120,12 +166,7 @@ class PropsSelector {
         break;
       }
 
-      if (intersect.distance < this.maxCastingDistance &&
-          intersect.object.name.length > 0 &&
-          intersect.object.name != boundingBoxName &&
-          intersect.object.visible &&
-          intersect.object.userData.prop &&
-          intersect.object.parent.visible) {
+      if (validateIntersect(intersect, this.maxCastingDistance)) {
         // If the object was already selected: nothing to be done...
         const foundPropId = this.props.findIndex(({stagingProp}) => {
           return intersect.object.id === stagingProp.id;

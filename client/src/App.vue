@@ -42,6 +42,7 @@ let someInputFocused = false;
 let worldManager = null;
 let worldState = null;
 let entityManager = null;
+const tmpVec2 = new Vector2;
 const animationManager = new AnimationManager();
 
 const userState = {flying: true, onGround: false, running: false, idle: true,
@@ -457,6 +458,14 @@ const handleSendChat = (msg) => {
   }
 };
 
+const getViewCoordinates = (event, vec2) => {
+  // Note: here we're assuming that the 3D rendering canvas will always
+  // perfectly match the whole HTML window itself (it should anyway...)
+  const x = ( event.clientX / window.innerWidth ) * 2 - 1;
+  const y = - ( event.clientY / window.innerHeight ) * 2 + 1;
+  vec2.set(x, y);
+};
+
 // Do not forward key events to the input listener if some html element is being
 // focused
 document.addEventListener('keyup', (event) => {
@@ -506,12 +515,20 @@ document.addEventListener('contextmenu', (event) => {
   if (someInputFocused) return true;
 
   if (isOverlay3D(event.target)) {
-    // Note: here we're assuming that the 3D rendering canvas will always
-    // perfectly match the whole HTML window itself (it should anyway...)
-    const x = ( event.clientX / window.innerWidth ) * 2 - 1;
-    const y = - ( event.clientY / window.innerHeight ) * 2 + 1;
-    propsSelector.select(new Vector2(x, y), main.propSettings.strafe);
+    getViewCoordinates(event, tmpVec2);
+    propsSelector.select(tmpVec2, main.propSettings.strafe);
     event.preventDefault();
+  }
+
+  return false;
+}, false);
+
+document.addEventListener('mousemove', (event) => {
+  if (someInputFocused) return true;
+
+  if (isOverlay3D(event.target)) {
+    getViewCoordinates(event, tmpVec2);
+    event.target.title = propsSelector.point(tmpVec2);
   }
 
   return false;
