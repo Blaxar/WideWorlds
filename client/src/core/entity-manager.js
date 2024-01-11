@@ -8,6 +8,8 @@ import {Group, Vector3, Quaternion, Euler} from 'three';
 const userNodeNameRegex = /^user#([0-9]+)$/i;
 const nbUpdateTimeSamples = 5;
 
+const getUserEntityName = (id) => `user#${id}`;
+
 /**
  * Core Entity class, takes entity states as input to integrate
  * and 3D scene.
@@ -231,7 +233,7 @@ class EntityManager {
       //       with the server state?
       if (user.entityId === this.localUserId) continue;
 
-      const userNodeName = `user#${user.entityId}`;
+      const userNodeName = getUserEntityName(user.entityId);
 
       const obj3d = new Group();
       obj3d.name = userNodeName;
@@ -245,3 +247,4 @@ class EntityManager {
 }
 
 export default EntityManager;
+export {getUserEntityName};

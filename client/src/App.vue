@@ -16,7 +16,8 @@ import AppState, {AppStates} from './core/app-state.js';
 import WorldPathRegistry from './core/world-path-registry.js';
 import WorldManager from './core/world-manager.js';
 import HttpClient from './core/http-client.js';
-import EntityManager from './core/entity-manager.js';
+import EntityManager, {getUserEntityName}
+  from './core/entity-manager.js';
 import UserCollider from './core/user-collider.js';
 import UserConfig from './core/user-config.js';
 import WsClient from './core/ws-client.js';
@@ -141,6 +142,8 @@ const plugWorldChat = async () => {
   worldChat.onMessage((entry) => {
     const data = JSON.parse(entry);
     userFeed.publish(data.msg, data.name);
+    engine3d.setEntityTagByName(getUserEntityName(data.id),
+        data.name);
   });
 };
 

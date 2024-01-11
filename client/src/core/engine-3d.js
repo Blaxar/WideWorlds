@@ -7,12 +7,16 @@ import {MathUtils} from 'three';
 import * as utils3D from './utils-3d.js';
 import {MeshBVH} from 'three-mesh-bvh';
 import {flattenGroup} from 'three-rwx-loader';
+import formatSignLines, {makeTagCanvas} from './sign-utils.js';
 
 const defaultUserHeight = 1.80; // In meters
 const defaultLightIntensity = 0.6;
 const defaultRenderingDistance = 100.0; // In meters
 const defaultHidingDistance = 60.0; // In meters
 const lightScalingFactor = Math.PI; // Since version 155 of three.js
+const entityTagName = 'entity-tag';
+const tagFontSizePx = 15;
+const tagHeightOffset = 0.2; // in meters
 const isNumber = (value) => !isNaN(value);
 
 /**
@@ -86,7 +90,6 @@ class Engine3D {
     this.scene.add(this.user);
     this.cameraDistance = 0;
 
-    // Double buffered entity map, to be used each frame for rendering
     this.entities = new THREE.Group();
     this.scene.add(this.entities);
 
@@ -149,6 +152,15 @@ class Engine3D {
 
   /** Clear the 3D scene of all live entities */
   clearEntities() {
+    this.entities.children.forEach((child) => {
+      const sprite = child.getObjectByName(entityTagName);
+
+      if (sprite) {
+        sprite.material.map.dispose();
+        sprite.material.dispose();
+      }
+    });
+
     this.entities.clear();
   }
 
@@ -654,9 +666,72 @@ class Engine3D {
       // Avatar must be changed
       const bbox = new THREE.Box3().setFromObject(avatar);
       entity.userData.avatarId = avatarId;
-      entity.clear();
       avatar.position.setY((bbox.max.y - bbox.min.y) / 2);
+
+      const sprite = entity.getObjectByName(entityTagName);
+
+      entity.clear();
       entity.add(avatar);
+
+      if (sprite) {
+        // Update the tag position (if any)
+        bbox.setFromObject(entity);
+        sprite.position.set(0, bbox.max.y + tagHeightOffset, 0);
+        entity.add(sprite);
+      }
+    }
+  }
+
+  /**
+   * Set entity tag using the name of the entity
+   * @param {string} name - Name of the three.js group to set the tag on.
+   * @param {string} tag - Tag string to set above the entity.
+   */
+  setEntityTagByName(name, tag = '') {
+    const entity = this.entities.getObjectByName(name);
+    if (!entity) return;
+
+    let sprite = entity.getObjectByName(entityTagName);
+
+    if (!sprite) {
+      const bbox = new THREE.Box3().setFromObject(entity);
+      const canvas = document.createElement('canvas');
+      canvas.width = 200;
+      canvas.height = 200;
+
+      const ctx = canvas.getContext('2d');
+
+      makeTagCanvas(ctx, [tag], tagFontSizePx,
+          formatSignLines(tag, ctx).maxLineWidth, 255, 255, 255);
+
+      const map = new THREE.CanvasTexture(canvas);
+      const material = new THREE.PointsMaterial({map});
+      material.alphaTest = 0.05;
+      material.transparent = true;
+      material.sizeAttenuation = false;
+      material.size = 200;
+
+      const geometry = new THREE.BufferGeometry();
+      const vertices = new Float32Array([0.0, 0.0, 0.0]);
+      geometry.setAttribute( 'position',
+          new THREE.BufferAttribute(vertices, 3));
+
+      // Using THREE.Points instead of THREE.Sprite allows size definition
+      // using pixels, matching the actual 2D canvas
+      sprite = new THREE.Points(geometry, material);
+      sprite.name = entityTagName;
+      sprite.position.set(0, bbox.max.y + tagHeightOffset, 0);
+      sprite.userData.lookup = {canvas};
+      entity.add(sprite);
+    } else {
+      // Reuse exsting canvas to write the new tag
+      const canvas = sprite.userData.lookup.canvas;
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      makeTagCanvas(ctx, [tag], tagFontSizePx,
+          formatSignLines(tag, ctx).maxLineWidth, 255, 255, 255);
+      sprite.material.map.needsUpdate = true;
+      sprite.material.needsUpdate = true;
     }
   }
 

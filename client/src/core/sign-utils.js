@@ -26,8 +26,18 @@ function rawTextToHTML(rawText) {
  * @param {integer} fontSize - Font size, in pixels.
  * @return {string} String to use as CSS font property.
  */
-function getCssFontProperty(fontSize) {
+function getSignCssFontProperty(fontSize) {
   return `bold ${fontSize}px Arial, Helvetica, sans-serif`;
+}
+
+/**
+ * Get the CSS font value to use for text rendering
+ * as tag
+ * @param {integer} fontSize - Font size, in pixels.
+ * @return {string} String to use as CSS font property.
+ */
+function getTagCssFontProperty(fontSize) {
+  return `${fontSize}px Arial, Helvetica, sans-serif`;
 }
 
 /**
@@ -38,7 +48,7 @@ function getCssFontProperty(fontSize) {
  * @return {integer} Width of the text, in pixels.
  */
 function measureLine(line, fontSize, canvasCtx) {
-  canvasCtx.font = getCssFontProperty(fontSize);
+  canvasCtx.font = getSignCssFontProperty(fontSize);
   return canvasCtx.measureText(line).width;
 }
 
@@ -129,7 +139,7 @@ function formatSignLines(text, canvasCtx) {
 
 /**
  * Make the whole HTML content for the sign to be displayed
- * @param {Array<string>} lines - Text lines ti display.
+ * @param {Array<string>} lines - Text lines to display.
  * @param {integer} fontSize - Font size, in pixels.
  * @param {integer} width - Width of the canvas, in pixels.
  * @param {integer} height - Height of the canvas, in pixels.
@@ -147,7 +157,7 @@ function makeSignHTML(lines, fontSize, width, height, r = 0, g = 0, b = 0) {
   return `<body style="` +
     `color:rgb(${r},${g},${b});` +
     `text-align:center;` +
-    `font:${getCssFontProperty(fontSize)};` +
+    `font:${getSignCssFontProperty(fontSize)};` +
     `margin:0;padding:0;` +
     `width:${width}px;height:${height}px;` +
     `line-height:${lineHeight}px;` +
@@ -159,7 +169,7 @@ function makeSignHTML(lines, fontSize, width, height, r = 0, g = 0, b = 0) {
 }
 
 /**
- * Draw text content on the provided canvas
+ * Draw text content on the provided canvas for a sign
  * @param {Object} canvasCtx - 2D HTML canvas context to draw with.
  * @param {Array<string>} lines - Text lines ti display.
  * @param {integer} fontSize - Font size, in pixels.
@@ -172,7 +182,7 @@ function makeSignCanvas(canvasCtx, lines, fontSize, maxLineWidth,
     r = 0, g = 0, b = 0) {
   if (!lines.length) return;
 
-  canvasCtx.font = getCssFontProperty(fontSize);
+  canvasCtx.font = getSignCssFontProperty(fontSize);
   canvasCtx.fillStyle = `rgb(${r},${g},${b})`;
   canvasCtx.textBaseline = 'top';
 
@@ -193,6 +203,45 @@ function makeSignCanvas(canvasCtx, lines, fontSize, maxLineWidth,
   });
 }
 
+/**
+ * Draw text content on the provided canvas for a tag
+ * @param {Object} canvasCtx - 2D HTML canvas context to draw with.
+ * @param {Array<string>} lines - Text lines to display.
+ * @param {integer} fontSize - Font size, in pixels.
+ * @param {integer} maxLineWidth - Maximum line width, in pixels.
+ * @param {integer} r - Red component of the text color (from 0 to 255).
+ * @param {integer} g - Green component of the text color (from 0 to 255).
+ * @param {integer} b - Blue component of the text color (from 0 to 255).
+ */
+function makeTagCanvas(canvasCtx, lines, fontSize, maxLineWidth,
+    r = 0, g = 0, b = 0) {
+  if (!lines.length) return;
+
+  canvasCtx.font = getTagCssFontProperty(fontSize);
+  canvasCtx.fillStyle = `rgb(${r},${g},${b})`;
+  canvasCtx.textBaseline = 'top';
+  canvasCtx.shadowColor = 'black';
+  canvasCtx.shadowBlur = 1;
+  canvasCtx.shadowOffsetX = 1;
+  canvasCtx.shadowOffsetY = 1;
+
+  const {width, height} = canvasCtx.canvas;
+
+  const lineHeight = parseInt(fontSize * lineHeightRatio);
+  const descent = canvasCtx.measureText(lines[lines.length-1])
+      .actualBoundingBoxDescent;
+
+  const spanHeight = lineHeight * (lines.length - 1) + descent;
+  const marginTop = (height - spanHeight) / 2;
+  const marginLeft = (width - maxLineWidth) / 2;
+
+  lines.forEach((line, i) => {
+    const leftOffset = (maxLineWidth - canvasCtx.measureText(line).width) / 2;
+    const topOffset = i * lineHeight;
+    canvasCtx.fillText(line, marginLeft + leftOffset, marginTop + topOffset);
+  });
+}
+
 export default formatSignLines;
-export {rawTextToHTML, getCssFontProperty, measureLine, makeSignHTML,
-  makeSignCanvas};
+export {rawTextToHTML, getSignCssFontProperty, getTagCssFontProperty,
+  measureLine, makeSignHTML, makeSignCanvas, makeTagCanvas};
