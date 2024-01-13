@@ -46,7 +46,7 @@ let entityManager = null;
 const tmpVec2 = new Vector2;
 const animationManager = new AnimationManager();
 
-const userState = {flying: true, onGround: false, running: false, idle: true,
+const userState = {flying: false, onGround: true, running: false, idle: true,
   explicit: {name: '', start: 0, duration: 0}};
 
 // Ready key bindings with default values
@@ -181,6 +181,8 @@ const resetBehavior = () => {
           '' :
           worldAvatars[engine3d.userAvatar.userData.avatarId].name;
     }),
+    isPositionSafe: ((x, z) =>
+      worldManager.isPositionCollisionReady(x, z)),
     tilt: engine3d.tilt,
     collider: userCollider,
     velocity: new Vector3(),

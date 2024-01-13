@@ -453,6 +453,17 @@ class WorldManager {
   }
 
   /**
+   * Tell if a given terrain page is already loaded
+   * @param {integer} x - Index of the page on the X axis.
+   * @param {integer} z - Index of the page on the Z axis.
+   * @return {boolean} True if page is loaded, false otherwise.
+   */
+  isPageLoaded(x, z) {
+    const pageId = `${x}_${z}`;
+    return this.pages.has(pageId);
+  }
+
+  /**
    * Get a 3D avatar asset from the current world registry
    * @param {string} name - Name of the 3D asset for the avatar.
    * @return {Promise} Promise of a three.js 3D asset.
@@ -747,6 +758,27 @@ class WorldManager {
     obj3d.matrixAutoUpdate = false;
     obj3d.updateMatrix();
     this.props.set(prop.id, obj3d);
+  }
+
+  /**
+   * Tell if a given position is ready for collision detection
+   * @param {number} x - X-axis coordinate value (in meters).
+   * @param {number} z - Z-axis coordinate value (in meters).
+   * @return {boolean} True if the position is ready, false
+   *                   otherwise.
+   */
+  isPositionCollisionReady(x, z) {
+    const {cX, cZ} = this.getChunkCoordinates(x, z);
+    if (!this.isChunkLoaded(cX, cZ)) return false;
+
+    const {pX, pZ} = this.getPageCoordinates(x, z);
+    if (!this.isPageLoaded(pX, pZ)) return false;
+
+    const chunkNodeId = this.chunks.get(`${cX}_${cZ}`);
+    const pageNodeId = this.chunks.get(`${pX}_${pZ}`);
+
+    return this.engine3d.isNodeBoundsTreeReady(chunkNodeId) &&
+        this.engine3d.isNodeBoundsTreeReady(pageNodeId);
   }
 }
 

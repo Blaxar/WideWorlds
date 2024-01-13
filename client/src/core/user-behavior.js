@@ -99,7 +99,10 @@ class UserBehavior extends SubjectBehavior {
     }
 
     if (this.subject.state.flying || this.subject.state.onGround ||
-        this.strafe()) {
+        this.strafe() || !this.subject.isPositionSafe(
+        this.subject.user.position.x,
+        this.subject.user.position.z,
+    )) {
       this.subject.velocity.setY(0);
     } else {
       this.subject.velocity.add(gravity.clone().multiplyScalar(delta));

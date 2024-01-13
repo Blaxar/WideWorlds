@@ -257,7 +257,7 @@ class Engine3D {
 
   /**
    * Update the bounds tree (for collision detection) on a node
-   * @param {integer} id - ID of the node de generate a bounds tree for.
+   * @param {integer} id - ID of the node to generate a bounds tree for.
    * @param {function} filter - Filter function to use when flattening
    *                            group, gets fed every mesh and group
    *                            and returns true to accept them in the
@@ -306,6 +306,19 @@ class Engine3D {
     }
 
     return true;
+  }
+
+  /**
+   * Tell if a give node as its bounds tree ready for collision detection
+   * @param {integer} id - ID of the node to look for a bounds tree on.
+   * @return {boolean} True if the node exists and its bounds tree is
+   *                   ready, false otherwise.
+   */
+  isNodeBoundsTreeReady(id) {
+    if (!this.nodes.has(id)) return false;
+    const node = this.nodes.get(id);
+
+    return node.boundsTree !== null && node.boundsTree !== undefined;
   }
 
   /**
