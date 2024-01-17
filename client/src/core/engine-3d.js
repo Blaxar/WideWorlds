@@ -309,7 +309,7 @@ class Engine3D {
   }
 
   /**
-   * Tell if a give node as its bounds tree ready for collision detection
+   * Tell if a given node has its bounds tree ready for collision detection
    * @param {integer} id - ID of the node to look for a bounds tree on.
    * @return {boolean} True if the node exists and its bounds tree is
    *                   ready, false otherwise.
@@ -318,7 +318,11 @@ class Engine3D {
     if (!this.nodes.has(id)) return false;
     const node = this.nodes.get(id);
 
-    return node.boundsTree !== null && node.boundsTree !== undefined;
+    // When the boundsTree attribute is null: it means
+    // there is no geometry to collide against, which is
+    // different from being undefined when the node has
+    // yet to be processed in that regard.
+    return node.boundsTree !== undefined;
   }
 
   /**
