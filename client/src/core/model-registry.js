@@ -70,6 +70,7 @@ class ModelRegistry {
     this.basicMaterialManager = new RWXMaterialManager(resourcePath,
         '.jpg', '.zip', fflate, true, this.textureColorSpace);
 
+    this.tmpMaterials = [];
     this.imageService = '';
     this.rasterizeHTML = rasterizeHTML;
     this.htmlSignRenderingNode = htmlSignRenderingNode;
@@ -193,6 +194,17 @@ class ModelRegistry {
     this.models.clear();
     this.basicModels.clear();
     this.avatarModels.clear();
+    this.clearTmpMaterials();
+  }
+
+  /** Clear temporary materials */
+  clearTmpMaterials() {
+    for (const material of this.tmpMaterials) {
+      material.map?.dispose();
+      material.dispose();
+    }
+
+    this.tmpMaterials = [];
   }
 
   /**
@@ -354,6 +366,7 @@ class ModelRegistry {
           materials[lastMatId].map = image;
           materials[lastMatId].transparent = true;
           materials[lastMatId].needsUpdate = true;
+          this.tmpMaterials.push(materials[lastMatId]);
         });
       }
 
@@ -365,6 +378,7 @@ class ModelRegistry {
 
         materials[lastMatId] = materials[lastMatId].clone();
         materials[lastMatId].color = new Color(1.0, 1.0, 1.0);
+        this.tmpMaterials.push(materials[lastMatId]);
         this.writeTextToCanvas(
             materials[lastMatId],
             sign.text,

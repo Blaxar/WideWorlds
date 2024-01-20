@@ -280,6 +280,7 @@ class WorldManager {
     this.currentWorld = null;
     this.currentWorldUpdateClient?.close();
     this.currentWorldUpdateClient = null;
+    this.currentModelRegistry.clearTmpMaterials();
     this.currentModelRegistry = null;
     this.engine3d.setCameraDistance(0);
     this.engine3d.clearEntities();
