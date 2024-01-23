@@ -127,7 +127,7 @@ describe('TerrainStorage', () => {
   });
 
   it('getPageFilePaths', async () => {
-    const tmpDir = join(tmpdir(), `setNode${Date.now()}`);
+    const tmpDir = join(tmpdir(), `getPageFilePaths${Date.now()}`);
     const terrainStorage = new TerrainStorage(tmpDir);
 
     let paths = terrainStorage.getPageFilePaths(5, -10);

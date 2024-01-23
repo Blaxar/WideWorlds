@@ -18,7 +18,7 @@ class TerrainStorage {
    */
   constructor(folder, pageDiameter = defaultPageDiameter) {
     // Note: a 'page' in this case is the equivalent of a 'page' following
-    // AW semantic, we get ride of the notion of node for simplicity
+    // AW semantic, we get rid of the notion of node for simplicity
     this.folder = folder;
     this.pageDiameter = pageDiameter;
     this.pages = new Map();
