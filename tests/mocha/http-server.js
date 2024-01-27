@@ -2,7 +2,6 @@
  * @author Julien 'Blaxar' Bardagi <blaxar.waldarax@gmail.com>
  */
 
-import TerrainStorage from '../../server/terrain-storage.js';
 import {defaultPageDiameter} from '../../common/terrain-utils.js';
 import makeHttpTestBase from '../utils.js';
 import request from 'superwstest';
@@ -202,6 +201,42 @@ describe('http server', () => {
   it('GET /api/worlds/id/terrain/x/z/texture - Forbidden', (done) => {
     request(base.server)
         .get('/api/worlds/' + base.worldId + '/terrain/-2/5/texture')
+        .set('Authorization', 'Bearer iNvAlId')
+        .expect(403, done);
+  });
+
+  // Testing water API
+
+  it('GET /api/worlds/id/water/x/z - OK', (done) => {
+    request(base.server)
+        .get('/api/worlds/' + base.worldId + '/water/-3/1')
+        .set('Authorization', 'Bearer ' + base.adminBearerToken)
+        .expect('Content-Type', /octet-stream/)
+        .expect(200).then((response) => {
+          const pageSize = defaultPageDiameter * defaultPageDiameter;
+          assert.strictEqual(response.body.length, pageSize * 2 + 2);
+          done();
+        })
+        .catch((err) => done(err));
+  });
+
+  it('GET /api/worlds/id/water/x/z - Not found', (done) => {
+    request(base.server)
+      .get('/api/worlds/' + (base.worldId + 3000) + '/water/a/b')
+        .set('Authorization', 'Bearer ' + base.adminBearerToken)
+      .expect(404, done);
+  });
+
+  it('GET /api/worlds/id/water/x/z - Unauthorized', (done) => {
+    request(base.server)
+        .get('/api/worlds/' + base.worldId + '/water/-2/5')
+        .set('Authorization', 'gibberish')
+        .expect(401, done);
+  });
+
+  it('GET /api/worlds/id/water/x/z - Forbidden', (done) => {
+    request(base.server)
+        .get('/api/worlds/' + base.worldId + '/water/-2/5')
         .set('Authorization', 'Bearer iNvAlId')
         .expect(403, done);
   });

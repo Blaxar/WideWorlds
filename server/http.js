@@ -6,6 +6,7 @@ import * as db from '../common/db/utils.js';
 import World from '../common/db/model/World.js';
 import User from '../common/db/model/User.js';
 import TerrainStorage from './terrain-storage.js';
+import WaterStorage from './water-storage.js';
 import {packElevationData} from '../common/terrain-utils.js';
 import {hasUserRole, hasUserIdInParams, middleOr, forbiddenOnFalse,
   getAuthenticationCallback} from './utils.js';
@@ -21,7 +22,7 @@ const defaultNbUsersPerPage = 200;
 const maxNbUsersPerPage = defaultNbUsersPerPage*10;
 
 const spawnHttpServer = async (path, port, secret, worldFolder, userCache,
-    terrainCache) => {
+    terrainCache, waterCache) => {
   // Get a version of the authentication method working with the
   // secret we need
   const authenticate = getAuthenticationCallback(secret);
@@ -33,6 +34,15 @@ const spawnHttpServer = async (path, port, secret, worldFolder, userCache,
     }
 
     return terrainCache.get(worldId);
+  };
+
+  const getWaterStorage = (worldId) => {
+    if (!waterCache.has(worldId)) {
+      const waterPath = join(worldFolder, `${worldId}`, 'water');
+      waterCache.set(worldId, new WaterStorage(waterPath));
+    }
+
+    return waterCache.get(worldId);
   };
 
   // Default callback for props changes (POST, PUT, DELETE)
@@ -158,6 +168,34 @@ const spawnHttpServer = async (path, port, secret, worldFolder, userCache,
                       },
                   );
                 }
+              });
+        });
+
+    app.get('/api/worlds/:id/water/:x/:z', authenticate,
+        (req, res) => {
+          res.setHeader('Content-Type', 'application/octet-stream');
+          const wid = req.params.id;
+          const pageX = parseInt(req.params.x);
+          const pageZ = parseInt(req.params.z);
+
+          if (isNaN(pageX) || isNaN(pageZ)) {
+            res.status(404).send();
+            return;
+          }
+
+          connection.manager.createQueryBuilder(World, 'world')
+              .where('world.id = :wid', {wid}).getOne().then((world) => {
+                if (!world) {
+                  res.status(404).send();
+                  return;
+                }
+
+                getWaterStorage(wid).getPage(pageX, pageZ).then(
+                    (page) => {
+                      const packed = packElevationData(page);
+                      res.send(Buffer.from(packed, 'binary'));
+                    },
+                );
               });
         });
 

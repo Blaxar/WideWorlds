@@ -52,7 +52,8 @@ const makeHttpTestBase = (port = 62931, dbFile = 'mocha-http-test-db.sqlite3', s
     citizenBearerToken: '',
     worldFolder: join(tmpdir(), `base${Date.now()}`),
     userCache: new Map(),
-    terrainCache: new Map()
+    terrainCache: new Map(),
+    waterCache: new Map()
   };
 
   const before = async () => {
@@ -61,7 +62,7 @@ const makeHttpTestBase = (port = 62931, dbFile = 'mocha-http-test-db.sqlite3', s
     }
 
     const {server, onPropsChange} = await spawnHttpServer(base.dbFile, base.port,
-        base.secret, base.worldFolder, base.userCache, base.terrainCache);
+        base.secret, base.worldFolder, base.userCache, base.terrainCache, base.waterCache);
     base.server = server;
     const {wss, wsChannelManager} = await spawnWsServer(server, base.secret, base.userCache);
     base.wss = wss;

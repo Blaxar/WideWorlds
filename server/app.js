@@ -35,9 +35,10 @@ const secret = randomBytes(64).toString('hex');
 
 const userCache = new Map();
 const terrainCache = new Map();
+const waterCache = new Map();
 
 spawnHttpServer(argv.db, argv.port, secret, argv.worldFolder, userCache,
-    terrainCache)
+    terrainCache, waterCache)
     .then(async ({server, onPropsChange}) => {
       const wsChannelManager =
           (await spawnWsServer(server, secret, userCache))
