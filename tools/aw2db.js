@@ -59,7 +59,25 @@ const worldAttr = {
   85: 'skyColorBottomR',
   86: 'skyColorBottomG',
   87: 'skyColorBottomB',
+  111: 'waterTexture',
+  112: 'waterOpacity',
+  113: 'waterColorR',
+  114: 'waterColorG',
+  115: 'waterColorB',
+  116: 'waterLevel',
+  117: 'waterSurfaceMove',
+  118: 'waterWaveMove',
+  119: 'waterMask',
+  120: 'waterBottomTexture',
+  121: 'waterBottomMask',
+  122: 'waterSpeed',
+  122: 'waterEnabled',
+  132: 'waterVisibility',
+  134: 'soundWaterEnter', // TODO for sound support
+  135: 'soundWaterExit', // TODO for sound support
+  137: 'waterBuoyancy',
   141: 'terrainElevationOffset',
+  145: 'waterUnderTerrain',
 };
 
 
@@ -141,6 +159,66 @@ const argv = yargs(hideBin(process.argv))
 
 
 /**
+ * Parse world water-related sub attributes
+ * @param {Object} water - Dictionnary to holdi water properties.
+ * @param {string} attrSubStr - Attribute name without the 'water' prefix.
+ * @param {string} value - String value for this attribute.
+ */
+function parseWaterAttribute(water, attrSubStr, value) {
+  switch (attrSubStr) {
+    case 'Texture':
+      water.texture = value;
+      break;
+    case 'Opacity':
+      water.opacity = parseFloat(value);
+      break;
+    case 'ColorR':
+      water.color[0] = parseInt(value);
+      break;
+    case 'ColorG':
+      water.color[1] = parseInt(value);
+      break;
+    case 'ColorB':
+      water.color[2] = parseInt(value);
+      break;
+    case 'Level':
+      water.level = parseFloat(value);
+      break;
+    case 'SurfaceMove':
+      water.surfaceMove = parseFloat(value);
+      break;
+    case 'WaveMove':
+      water.waveMove = parseFloat(value);
+      break;
+    case 'Mask':
+      water.texture = value;
+      break;
+    case 'BottomTexture':
+      water.bottomTexture = value;
+      break;
+    case 'BottomMask':
+      water.bottomMask = value;
+      break;
+    case 'Speed':
+      water.speed = parseFloat(value);
+      break;
+    case 'Enabled':
+      water.enabled = value === 'Y';
+      break;
+    case 'Visibility':
+      water.visibility = parseFloat(value);
+      break;
+    case 'Buoyancy':
+      water.buoyancy = parseFloat(value);
+      break;
+    case 'UnderTerrain':
+      water.underTerrain = value === 'Y'; ;
+      break;
+  }
+}
+
+
+/**
  * Parse world attribute file
  * @param {string} path - Path to the world attribute file.
  * @return {object} Object holding parsed world attributes.
@@ -157,10 +235,11 @@ function parseAttrFile(path) {
     west: [0, 0, 0],
     bottom: [0, 0, 0]};
 
-  const ambientColor = [];
-  const fogColor = [];
-  const directionalColor = [];
-  const directionalLightPosition = [];
+  const ambientColor = [0.0, 0.0, 0.0];
+  const fogColor = [0.0, 0.0, 0.0];
+  const directionalColor = [0.0, 0.0, 0.0];
+  const directionalLightPosition = [0.0, 0.0, 0.0];
+  const water = {enabled: false, color: [0.0, 0.0, 0.0]};
 
   // Decode the file and parse each line
   if (argv.v5) argv.encoding = 'utf8';
@@ -244,11 +323,14 @@ function parseAttrFile(path) {
           directionalLightPosition[2] = parseFloat(value);
           break;
       }
+    } else if (key.startsWith('water')) {
+      const trimmedKey = key.replace('water', '');
+      parseWaterAttribute(water, trimmedKey, value);
     } else if (key === 'enableTerrain') {
       if (argv.enableTerrain !== null) {
         worldData[key] = argv.enableTerrain;
       } else {
-        worldData[key] = value === 'Y' ? true : false;
+        worldData[key] = value === 'Y';
       }
     } else if (key === 'entryPoint') {
       const normalizedCoordinates = JSON.parse(
@@ -262,7 +344,7 @@ function parseAttrFile(path) {
       };
       worldData[key] = coordinates;
     } else if (key === 'enableFog') {
-      worldData[key] = value === 'Y' ? true : false;
+      worldData[key] = value === 'Y';
     } else if (key === 'path') {
       worldData[key] = argv.pathOverride ? argv.pathOverride : value;
     } else if (key === 'terrainElevationOffset') {
@@ -290,6 +372,12 @@ function parseAttrFile(path) {
           directionalColor[1],
           directionalColor[2]);
   worldData['dirLightPos'] = directionalLightPosition;
+  water.color =
+      rgbToHex(
+          water.color[0],
+          water.color[1],
+          water.color[2]);
+  worldData['water'] = water;
 
   return worldData;
 };
