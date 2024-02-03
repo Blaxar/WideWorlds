@@ -614,11 +614,11 @@ describe('http client', () => {
       });
   });
 
-  // Testing Page API
+  // Testing Terrain Page API
 
-  it('getPage - OK', (done) => {
+  it('getTerrainPage - OK', (done) => {
     login().then(() => {
-      httpClient.getPage(base.worldId, 0, 0)
+      httpClient.getTerrainPage(base.worldId, 0, 0)
         .then((body) => {
           assert.strictEqual(body.elevationData.length,
               defaultPageDiameter * defaultPageDiameter);
@@ -630,9 +630,9 @@ describe('http client', () => {
     }).catch((err) => done(err));
   });
 
-  it('getPage - Not found', (done) => {
+  it('getTerrainPage - Not found', (done) => {
     login().then(() => {
-      httpClient.getPage(
+      httpClient.getTerrainPage(
         base.worldId + 3000,
       ).then(() => done('Getting page should not work here'))
         .catch((err) => {
@@ -642,8 +642,44 @@ describe('http client', () => {
     });
   });
 
-  it('getPage - Unauthorized', (done) => {
-    httpClient.getPage(
+  it('getTerrainPage - Unauthorized', (done) => {
+    httpClient.getTerrainPage(
+      base.worldId,
+    ).then(() => done('Getting page should not work here'))
+      .catch((err) => {
+        if (err.message == 401) done();
+        else done(err);
+      });
+  });
+
+  // Testing Water Page API
+
+  it('getWaterPage - OK', (done) => {
+    login().then(() => {
+      httpClient.getWaterPage(base.worldId, 0, 0)
+        .then((body) => {
+          assert.strictEqual(body.length,
+              defaultPageDiameter * defaultPageDiameter);
+
+          done();
+        });
+    }).catch((err) => done(err));
+  });
+
+  it('getWaterPage - Not found', (done) => {
+    login().then(() => {
+      httpClient.getWaterPage(
+        base.worldId + 3000,
+      ).then(() => done('Getting page should not work here'))
+        .catch((err) => {
+          if (err.message == 404) done();
+          else done(err);
+        });
+    });
+  });
+
+  it('getWaterPage - Unauthorized', (done) => {
+    httpClient.getWaterPage(
       base.worldId,
     ).then(() => done('Getting page should not work here'))
       .catch((err) => {

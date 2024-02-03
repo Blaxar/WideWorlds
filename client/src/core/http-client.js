@@ -194,13 +194,13 @@ class HttpClient {
   }
 
   /**
-   * Get terrain terrain page
+   * Get terrain page
    * @param {integer} wid - ID of the world to get the URLs from.
    * @param {integer} pageX - Index of the page on the X axis.
    * @param {integer} pageZ - Index of the page on the Z axis.
    * @return {Object} Object storing elevation and texture data.
    */
-  async getPage(wid, pageX, pageZ) {
+  async getTerrainPage(wid, pageX, pageZ) {
     const pageURI = `${this.url}/worlds/${wid}/terrain/${pageX}/${pageZ}/`;
     const data = {
       elevationData: null,
@@ -239,6 +239,31 @@ class HttpClient {
     });
 
     return data;
+  }
+
+  /**
+   * Get water page
+   * @param {integer} wid - ID of the world to get the URLs from.
+   * @param {integer} pageX - Index of the page on the X axis.
+   * @param {integer} pageZ - Index of the page on the Z axis.
+   * @return {Uint16Array} Array storing water elevation data.
+   */
+  async getWaterPage(wid, pageX, pageZ) {
+    const pageURI = `${this.url}/worlds/${wid}/water/${pageX}/${pageZ}/`;
+
+    const elevationRequest = new Request(pageURI, {
+      method: 'GET',
+      headers: this.headers,
+      mode: this.cors ? 'cors' : undefined,
+    });
+
+    return await fetch(elevationRequest).then((response) => {
+      if (response.ok) {
+        return response.arrayBuffer();
+      } else throw new Error(response.status);
+    }).then((buffer) => {
+      return unpackElevationData(new Uint8Array(buffer));
+    });
   }
 }
 

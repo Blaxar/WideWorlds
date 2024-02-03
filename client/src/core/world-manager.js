@@ -564,7 +564,7 @@ class WorldManager {
     this.pages.set(pageName, pageNodeHandle);
 
     this.pageData.set(pageName,
-        await this.httpClient.getPage(this.currentWorld.id,
+        await this.httpClient.getTerrainPage(this.currentWorld.id,
             pageX, pageZ));
 
     const {elevationData, textureData} = this.pageData.get(pageName);
