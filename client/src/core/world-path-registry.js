@@ -3,7 +3,7 @@
  */
 
 import ModelRegistry from './model-registry.js';
-import {generateTerrainMaterials} from './utils-3d.js';
+import {generateTerrainMaterials} from './terrain-utils.js';
 
 /**
  * Manager of model registries associated to different worlds,

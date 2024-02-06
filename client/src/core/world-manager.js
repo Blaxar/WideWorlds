@@ -5,9 +5,10 @@
 import {loadAvatarsZip} from '../../../common/avatars-dat-parser.js';
 import {getPageName, defaultPageDiameter}
   from '../../../common/terrain-utils.js';
-import {makePagePlane, adjustPageEdges, pageNodeCollisionPreSelector,
-  flipYawDegrees}
+import {flipYawDegrees}
   from './utils-3d.js';
+import {makePagePlane, adjustPageEdges, pageNodeCollisionPreSelector}
+  from './terrain-utils.js';
 import {Vector3, Color, MathUtils} from 'three';
 import {userFeedPriority} from './user-feed.js';
 
