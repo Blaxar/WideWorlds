@@ -6,12 +6,17 @@ import {zeroElevationValue, pageAssetName} from
   '../../../common/terrain-utils.js';
 import * as THREE from 'three';
 
+const defaultOffset = new THREE.Vector3();
+
 // Tweaking the existing MeshPhongMaterial vertex shader for our
 // own needs
 const vertexShader = /* glsl */`
 #define PHONG
 
 uniform float time;
+uniform float speed;
+uniform float amplitude;
+uniform float wavelength;
 varying vec3 vViewPosition;
 
 #include <common>
@@ -42,12 +47,15 @@ void main() {
 
   #include <begin_vertex>
 
-  float x = transformed.x;
-  float z = transformed.z;
+  float x = transformed.x * PI2 / wavelength;
+  float z = transformed.z * PI2 / wavelength;
+  float t = time * speed;
   transformed = transformed +
-    vec3(0.0, sin(time + sqrt(x * x + z * z) * 2.0), 0.0);
-  float dfdx = cos(time + sqrt(x*x + z*z) * 2.0) * (x / sqrt(x*x + z*z));
-  float dfdz = cos(time + sqrt(x*x + z*z) * 2.0) * (z / sqrt(x*x + z*z));
+    vec3(0.0, amplitude * sin(t + sqrt(x * x + z * z)), 0.0);
+  float dfdx =
+    amplitude * cos(t + sqrt(x * x + z * z)) * (x / sqrt(x * x + z * z));
+  float dfdz =
+    amplitude * cos(t + sqrt(x * x + z * z)) * (z / sqrt(x * x + z * z));
 
   vec3 tx = vec3(1.0, dfdx, 0.0);
   vec3 tz = vec3(0.0, dfdz, 1.0);
@@ -91,6 +99,11 @@ class WaterPhongMaterial extends THREE.ShaderMaterial {
         THREE.ShaderLib[baseMatKey].uniforms,
     );
 
+    uniforms.time = {value: 0.0};
+    uniforms.speed = {value: 1.0};
+    uniforms.amplitude = {value: 1.0};
+    uniforms.wavelength = {value: 50.0};
+
     // From refreshUniformsCommon( uniforms, material )
     uniforms.emissive.value = new THREE.Color(0x111111);
     uniforms.diffuse.value = new THREE.Color(0xffffff);
@@ -105,7 +118,10 @@ class WaterPhongMaterial extends THREE.ShaderMaterial {
       uniforms.map.value = parameters.map;
       uniforms.map.value.updateMatrix();
       uniforms.mapTransform.value.copy(uniforms.map.value.matrix);
-      uniforms.time = {value: 0.0};
+    }
+
+    if (parameters.opacity) {
+      uniforms.opacity = {value: parameters.opacity};
     }
 
     const hiddenParameters = {
@@ -228,11 +244,12 @@ class WaterPhongMaterial extends THREE.ShaderMaterial {
  * @param {Uint16array} elevationData - Raw elevation data for the whole page.
  * @param {integer} sideSize - Length of the page side in real space.
  * @param {integer} nbSegments - Number of segments on both X and Z axis.
- * @param {Material} waterMaterial - Water materials to use.
+ * @param {Material} waterMaterial - Water material to use.
+ * @param {Vector3} offset - Position offset to apply on each vertex.
  * @return {Object3D} 3D asset for the water page
  */
 function makePagePlane(elevationData, sideSize, nbSegments,
-    waterMaterial) {
+    waterMaterial, offset = defaultOffset) {
   const pageGeometry = new THREE.BufferGeometry();
   const nbBufferEntries = (nbSegments + 1) * (nbSegments + 1);
   const positions = new Float32Array(nbBufferEntries * 3);
@@ -244,10 +261,10 @@ function makePagePlane(elevationData, sideSize, nbSegments,
 
   // Ready base grid geometry
   for (let x = 0; x < nbSegments + 1; x++) {
-    const posX = (x - (nbSegments / 2)) * (sideSize / nbSegments);
+    const posX = (x - (nbSegments / 2)) * (sideSize / nbSegments) + offset.x;
 
     for (let z = 0; z < nbSegments + 1; z++) {
-      const posZ = (z - (nbSegments / 2)) * (sideSize / nbSegments);
+      const posZ = (z - (nbSegments / 2)) * (sideSize / nbSegments) + offset.z;
       const dataId = z * nbSegments + x;
 
       const height = (elevationData[dataId] - zeroElevationValue) / 100.0;
@@ -261,7 +278,7 @@ function makePagePlane(elevationData, sideSize, nbSegments,
       // Out of bounds for elevation data, move on...
       if (x >= nbSegments || z >= nbSegments) continue;
 
-      positions[z * posStride + x * 3 + 1] = height;
+      positions[z * posStride + x * 3 + 1] = height + offset.y;
 
       if ((x + (z % 2) ) % 2) {
         faces.push(
