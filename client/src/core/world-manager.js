@@ -9,7 +9,10 @@ import {flipYawDegrees}
   from './utils-3d.js';
 import {makePagePlane, adjustPageEdges, pageNodeCollisionPreSelector}
   from './terrain-utils.js';
-import {Vector3, Color, MathUtils} from 'three';
+import {makePagePlane as makeWaterPagePlane, loadWaterMaterials,
+  pageNodeCollisionPreSelector as waterPageNodeCollisionPreSelector}
+  from './water-utils.js';
+import {Vector3, Color, MathUtils, TextureLoader} from 'three';
 import {userFeedPriority} from './user-feed.js';
 
 const defaultChunkLoadingPattern = [[-1, 1], [0, 1], [1, 1],
@@ -77,7 +80,17 @@ class WorldManager {
     this.lastTextureUpdate = 0;
     this.terrainEnabled = false;
     this.terrainElevationOffset = 0.0; // In meters
+
+    // Water handling
+    this.waterPages = new Map();
+    this.waterPageData = new Map(); // Stores elevation data
+    this.currentWaterMaterials = null;
+
+    this.waterEnabled = false;
+    this.waterElevationOffset = 0.0; // In meters
+
     this.previousCX = this.previousCZ = null;
+    this.textureLoader = new TextureLoader();
 
     if (propsLoadingNode) {
       // Ready props loading distance and its update callback
@@ -184,6 +197,13 @@ class WorldManager {
         data.terrainElevationOffset : 0.0;
 
     if (!data.path) throw new Error('Missing path field from world data json');
+
+    if (data.water) {
+      this.waterEnabled = data.water.enabled;
+      this.waterElevationOffset = data.water.level;
+      this.currentWaterMaterials = loadWaterMaterials(this.textureLoader,
+          `${data.path}/textures`, data.water);
+    }
 
     this.currentModelRegistry = await this.worldPathRegistry.get(data.path);
     this.currentWorldUpdateClient =
@@ -296,11 +316,13 @@ class WorldManager {
     this.engine3d.removeAllHelperObjects();
     this.clearChunks();
     this.clearPages();
+    this.clearWater();
     this.lastTextureUpdate = 0;
     this.terrainEnabled = false;
     this.terrainElevationOffset = 0.0;
     this.previousCX = this.previousCZ = null;
     this.loadingPages = false;
+    this.loadingWaterPages = false;
   }
 
   /**
@@ -341,7 +363,7 @@ class WorldManager {
     this.chunks.clear();
   }
 
-  /** Clear all pages */
+  /** Clear all terrain pages */
   clearPages() {
     for (const handle of this.pages.values()) {
       this.engine3d.removeNode(handle);
@@ -349,6 +371,23 @@ class WorldManager {
 
     this.pages.clear();
     this.pageData.clear();
+  }
+
+  /** Clear all water pages and associated materials **/
+  clearWater() {
+    for (const handle of this.waterPages.values()) {
+      this.engine3d.removeNode(handle);
+    }
+
+    this.currentWaterMaterials.waterMaterial?.map?.dispose();
+    this.currentWaterMaterials.waterMaterial?.dispose();
+    this.currentWaterMaterials.bottomMaterial?.map?.dispose();
+    this.currentWaterMaterials.bottomMaterial?.dispose();
+
+    this.currentWaterMaterials = null;
+
+    this.waterPages.clear();
+    this.waterPageData.clear();
   }
 
   /**
@@ -364,6 +403,11 @@ class WorldManager {
       this.lastTextureUpdate = 0;
     } else {
       this.lastTextureUpdate += delta;
+    }
+
+    if (this.currentWaterMaterials) {
+      this.currentWaterMaterials.waterMaterial.step(delta);
+      this.currentWaterMaterials.bottomMaterial.step(delta);
     }
 
     const {cX, cZ} = this.getChunkCoordinates(pos.x, pos.z);
@@ -404,19 +448,31 @@ class WorldManager {
         },
     ) : []));
 
-    if (!this.terrainEnabled || this.loadingPages) return;
+    if (this.terrainEnabled && !this.loadingPages) {
+      this.loadingPages = true;
+      // Unlike chunks, pages cannot be loaded independently so trivially,
+      // for the simple reason there are borders to sync up, so it's easier to
+      // do them one at a time to adjust the heights of points at the edges
+      (async () => {
+        for (const [x, z] of pageLoadingPattern) {
+          await this.loadPage(pX + x, pZ + z);
+        }
 
-    this.loadingPages = true;
-    // Unlike chunks, pages cannot be loaded independently so trivially,
-    // for the simple reason there are borders to sync up, so it's easier to do
-    // them one at a time to adjust the heights of points at the edges
-    (async () => {
-      for (const [x, z] of pageLoadingPattern) {
-        await this.loadPage(pX + x, pZ + z);
-      }
+        this.loadingPages = false;
+      })();
+    }
 
-      this.loadingPages = false;
-    })();
+    if (this.waterEnabled && !this.loadingWaterPages) {
+      this.loadingWaterPages = true;
+      // Same here...
+      (async () => {
+        for (const [x, z] of pageLoadingPattern) {
+          await this.loadWaterPage(pX + x, pZ + z);
+        }
+
+        this.loadingWaterPages = false;
+      })();
+    }
   }
 
   /**
@@ -461,8 +517,31 @@ class WorldManager {
    * @return {boolean} True if page is loaded, false otherwise.
    */
   isPageLoaded(x, z) {
-    const pageId = `${x}_${z}`;
-    return this.pages.has(pageId);
+    const pageName = getPageName(x, z);
+    return this.pages.has(pageName);
+  }
+
+  /**
+   * Load a single water page, return right away if already loaded
+   * @param {integer} pageX - Index of the page on the X axis.
+   * @param {integer} pageZ - Index of the page on the Z axis.
+   */
+  async loadWaterPage(pageX, pageZ) {
+    const pageName = getPageName(pageX, pageZ);
+    if (this.waterPages.has(pageName)) return;
+
+    await this.reloadWaterPage(pageX, pageZ);
+  }
+
+  /**
+   * Tell if a given water page is already loaded
+   * @param {integer} x - Index of the page on the X axis.
+   * @param {integer} z - Index of the page on the Z axis.
+   * @return {boolean} True if page is loaded, false otherwise.
+   */
+  isPageWaterLoaded(x, z) {
+    const pageName = getPageName(x, z);
+    return this.waterPages.has(pageName);
   }
 
   /**
@@ -603,6 +682,48 @@ class WorldManager {
     this.engine3d.appendToNode(pageNodeHandle, pagePlane);
     this.engine3d.updateNodeBoundsTree(pageNodeHandle,
         () => true, pageNodeCollisionPreSelector,
+        pagePlane.position);
+  }
+
+  /**
+   * Reload a single water page no matter what
+   * @param {integer} pageX - Index of the page on the X axis.
+   * @param {integer} pageZ - Index of the page on the Z axis.
+   */
+  async reloadWaterPage(pageX, pageZ) {
+    const pageName = getPageName(pageX, pageZ);
+
+    if (this.waterPages.has(pageName)) {
+      // The page is already there: this is a reload scenario
+      this.engine3d.removeNode(this.waterPages.get(pageName));
+      this.waterPages.remove(pageName);
+    }
+
+    if (this.waterPageData.has(pageName)) {
+      // Same here
+      this.waterPageData.remove(pageName);
+    }
+
+    const pagePos = [pageX * defaultPageDiameter * 10, 0,
+      pageZ * defaultPageDiameter * 10];
+    const pageNodeHandle = this.engine3d.spawnNode();
+    this.waterPages.set(pageName, pageNodeHandle);
+
+    // TODO: get actual water elevation, assume flat data from AW for the moment
+    const pagePlane = makeWaterPagePlane(
+        null,
+        defaultPageDiameter * 10,
+        defaultPageDiameter,
+        this.currentWaterMaterials.waterMaterial,
+        this.currentWaterMaterials.bottomMaterial,
+        new Vector3(pagePos[0], 0, pagePos[1]),
+    );
+    pagePlane.position.setY(this.waterElevationOffset);
+    pagePlane.updateMatrix();
+
+    this.engine3d.appendToNode(pageNodeHandle, pagePlane);
+    this.engine3d.updateNodeBoundsTree(pageNodeHandle,
+        () => true, waterPageNodeCollisionPreSelector,
         pagePlane.position);
   }
 

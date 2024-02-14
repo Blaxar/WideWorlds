@@ -71,7 +71,7 @@ const worldAttr = {
   120: 'waterBottomTexture',
   121: 'waterBottomMask',
   122: 'waterSpeed',
-  122: 'waterEnabled',
+  123: 'waterEnabled',
   132: 'waterVisibility',
   134: 'soundWaterEnter', // TODO for sound support
   135: 'soundWaterExit', // TODO for sound support
@@ -170,7 +170,11 @@ function parseWaterAttribute(water, attrSubStr, value) {
       water.texture = value;
       break;
     case 'Opacity':
-      water.opacity = parseFloat(value);
+      // Online documentation says it's an integer and the content of the dumps
+      // seems to match that, not sure on how many bits but 8 seems like a good
+      // guess for it to make sense, especially knowing that the RGB values are
+      // 0 and 255 and in the end this one here behaves like an alpha channel.
+      water.opacity = parseFloat(value) / 255;
       break;
     case 'ColorR':
       water.color[0] = parseInt(value);

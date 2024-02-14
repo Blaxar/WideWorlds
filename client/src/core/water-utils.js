@@ -6,6 +6,12 @@ import {zeroElevationValue, pageAssetName} from
   '../../../common/terrain-utils.js';
 import * as THREE from 'three';
 
+// Filter to use when computing bounds tree on the water page:
+// only the actual page geometry should be used, not the wireframe
+// and points cloud overlays
+const pageNodeCollisionPreSelector = (obj3d) =>
+  obj3d.getObjectByName(pageAssetName);
+
 const defaultOffset = new THREE.Vector3();
 
 // Tweaking the existing MeshPhongMaterial vertex shader for our
@@ -17,6 +23,7 @@ uniform float time;
 uniform float speed;
 uniform float amplitude;
 uniform float wavelength;
+uniform float normalScalar;
 varying vec3 vViewPosition;
 
 #include <common>
@@ -62,9 +69,9 @@ void main() {
   vec3 nc = normalize(cross(tz, tx));
   vec3 up = vec3(0.0, 1.0, 0.0);
   if (x == 0.0 && z == 0.0) {
-    vNormal = normalMatrix * up;
+    vNormal = normalMatrix * (up * normalScalar);
   } else {
-    vNormal = normalMatrix * nc;
+    vNormal = normalMatrix * (nc * normalScalar);
   }
 
   #include <morphtarget_vertex>
@@ -102,7 +109,8 @@ class WaterPhongMaterial extends THREE.ShaderMaterial {
     uniforms.time = {value: 0.0};
     uniforms.speed = {value: 1.0};
     uniforms.amplitude = {value: 1.0};
-    uniforms.wavelength = {value: 50.0};
+    uniforms.wavelength = {value: 30.0};
+    uniforms.normalScalar = {value: 1.0}; // -1.0 to face downwards
 
     // From refreshUniformsCommon( uniforms, material )
     uniforms.emissive.value = new THREE.Color(0x111111);
@@ -120,8 +128,28 @@ class WaterPhongMaterial extends THREE.ShaderMaterial {
       uniforms.mapTransform.value.copy(uniforms.map.value.matrix);
     }
 
-    if (parameters.opacity) {
-      uniforms.opacity = {value: parameters.opacity};
+    if (parameters.opacity !== undefined) {
+      uniforms.opacity.value = parameters.opacity;
+    }
+
+    if (parameters.color !== undefined) {
+      uniforms.diffuse.value = parameters.color;
+    }
+
+    if (parameters.normalScalar !== undefined) {
+      uniforms.normalScalar.value = parameters.normalScalar;
+    }
+
+    if (parameters.speed !== undefined) {
+      uniforms.speed.value = parameters.speed;
+    }
+
+    if (parameters.amplitude !== undefined) {
+      uniforms.amplitude.value = parameters.speed;
+    }
+
+    if (parameters.waveLength !== undefined) {
+      uniforms.waveLength.value = parameters.waveLength;
     }
 
     const hiddenParameters = {
@@ -129,10 +157,15 @@ class WaterPhongMaterial extends THREE.ShaderMaterial {
       vertexShader,
       fragmentShader: THREE.ShaderLib[baseMatKey].fragmentShader,
       lights: true,
-      side: THREE.DoubleSide,
+      side: THREE.FrontSide,
     };
 
     super(hiddenParameters);
+
+    this.normalScalar = null;
+    this.speed = null;
+    this.amplitude = null;
+    this.waveLength = null;
 
     this.color = new THREE.Color(0xffffff); // diffuse
     this.specular = new THREE.Color(0x111111);
@@ -237,29 +270,47 @@ class WaterPhongMaterial extends THREE.ShaderMaterial {
 
     return this;
   }
+
+  /**
+   * Move the water animation forward in time
+   * @param {number} delta - Elapsed number of seconds since last update.
+   */
+  step(delta) {
+    this.uniforms.time.value += delta;
+    this.needsUpdate = true;
+  }
 }
 
 /**
  * Make 3D asset for a single water page from provided elevation data
- * @param {Uint16array} elevationData - Raw elevation data for the whole page.
+ * @param {Uint16array|null} elevationData - Raw elevation data for the
+ *                                           whole page.
  * @param {integer} sideSize - Length of the page side in real space.
  * @param {integer} nbSegments - Number of segments on both X and Z axis.
- * @param {Material} waterMaterial - Water material to use.
+ * @param {Material} waterMaterial - Surface water material to use.
+ * @param {Material} bottomMaterial - Bottom water material to use.
  * @param {Vector3} offset - Position offset to apply on each vertex.
  * @return {Object3D} 3D asset for the water page
  */
 function makePagePlane(elevationData, sideSize, nbSegments,
-    waterMaterial, offset = defaultOffset) {
+    waterMaterial, bottomMaterial, offset = defaultOffset) {
   const pageGeometry = new THREE.BufferGeometry();
   const nbBufferEntries = (nbSegments + 1) * (nbSegments + 1);
   const positions = new Float32Array(nbBufferEntries * 3);
   const uvs = new Float32Array(nbBufferEntries * 2);
   const faces = [];
+  const groupDataPerPoint = 2 * 3;
+  const groupLength = nbSegments * nbSegments * groupDataPerPoint;
+
+  // If elevation data is not available: just provide flat, default height.
+  const getElevationData = elevationData ?
+        (dataId) => elevationData[dataId] :
+        () => zeroElevationValue;
 
   const posStride = (nbSegments + 1) * 3;
   const uvStride = (nbSegments + 1) * 2;
 
-  // Ready base grid geometry
+  // Ready top grid geometry
   for (let x = 0; x < nbSegments + 1; x++) {
     const posX = (x - (nbSegments / 2)) * (sideSize / nbSegments) + offset.x;
 
@@ -267,7 +318,7 @@ function makePagePlane(elevationData, sideSize, nbSegments,
       const posZ = (z - (nbSegments / 2)) * (sideSize / nbSegments) + offset.z;
       const dataId = z * nbSegments + x;
 
-      const height = (elevationData[dataId] - zeroElevationValue) / 100.0;
+      const height = (getElevationData(dataId) - zeroElevationValue) / 100.0;
 
       positions[z * posStride + x * 3] = posX;
       positions[z * posStride + x * 3 + 2] = posZ;
@@ -302,6 +353,34 @@ function makePagePlane(elevationData, sideSize, nbSegments,
     }
   }
 
+  // Make the bottom faces as well
+  for (let x = 0; x < nbSegments; x++) {
+    for (let z = 0; z < nbSegments; z++) {
+      if ((x + (z % 2) ) % 2) {
+        faces.push(
+            z * (nbSegments + 1) + x,
+            z * (nbSegments + 1) + x + 1,
+            (z + 1) * (nbSegments + 1) + x,
+            z * (nbSegments + 1) + x + 1,
+            (z + 1) * (nbSegments + 1) + x + 1,
+            (z + 1) * (nbSegments + 1) + x,
+        );
+      } else {
+        faces.push(
+            z * (nbSegments + 1) + x,
+            (z + 1) * (nbSegments + 1) + x + 1,
+            (z + 1) * (nbSegments + 1) + x,
+            z * (nbSegments + 1) + x,
+            z * (nbSegments + 1) + x + 1,
+            (z + 1) * (nbSegments + 1) + x + 1,
+        );
+      }
+    }
+  }
+
+  pageGeometry.addGroup(0, groupLength, 0);
+  pageGeometry.addGroup(groupLength, groupLength, 1);
+
   pageGeometry.setAttribute('position',
       new THREE.BufferAttribute(positions, 3));
   pageGeometry.setAttribute('uv',
@@ -311,7 +390,7 @@ function makePagePlane(elevationData, sideSize, nbSegments,
 
   const page = new THREE.Mesh(
       pageGeometry,
-      waterMaterial,
+      [waterMaterial, bottomMaterial],
   );
 
   page.name = pageAssetName;
@@ -319,5 +398,95 @@ function makePagePlane(elevationData, sideSize, nbSegments,
   return page;
 }
 
+/**
+ * Load water materials
+ * @param {TextureLoader} textureLoader - three.js texture loader instance.
+ * @param {string} url - Base texture URL.
+ * @param {Object} water - Dictionary holding water properties.
+ * @return {Object} Object holding waterMaterial and bottomMaterial.
+ */
+function loadWaterMaterials(textureLoader, url, water) {
+  let waterMaterial = null;
+  let bottomMaterial = null;
 
-export {WaterPhongMaterial, makePagePlane};
+  const opacity = water.opacity !== undefined ? water.opacity : 1.0;
+  const transparent = opacity < 1.0 ? true : false;
+  const amplitude = water.waveMove !== undefined ? water.waveMove: 0.0;
+  const speed = water.speed !== undefined ? water.speed: 1.0;
+
+  if (water.texture) {
+    const texture = textureLoader.load(`${url}/${water.texture}.jpg`);
+    texture.wrapS = THREE.RepeatWrapping;
+    texture.wrapT = THREE.RepeatWrapping;
+
+    waterMaterial = new WaterPhongMaterial({
+      map: texture,
+      opacity,
+      transparent,
+      amplitude,
+      speed,
+    });
+
+    // If there is no texture for the bottom, reuse the one from the
+    // surface.
+    if (!water.bottomTexture) {
+      bottomMaterial = new WaterPhongMaterial({
+        map: texture,
+        opacity,
+        transparent,
+        amplitude,
+        speed,
+        normalScalar: -1.0,
+      });
+    }
+  } else if (!water.bottomTexture) {
+    waterMaterial = new WaterPhongMaterial({
+      color: new THREE.Color(`#${water.color}`),
+      opacity,
+      transparent,
+      amplitude,
+      speed,
+    });
+  }
+
+  if (water.bottomTexture) {
+    const texture = textureLoader.load(`${url}/${water.bottomTexture}.jpg`);
+    texture.wrapS = THREE.RepeatWrapping;
+    texture.wrapT = THREE.RepeatWrapping;
+
+    bottomMaterial = new WaterPhongMaterial({
+      map: texture,
+      opacity,
+      transparent,
+      amplitude,
+      speed,
+      normalScalar: -1.0,
+    });
+
+    // If there is no texture for the surface, reuse the one from the
+    // bottom.
+    if (!water.texture) {
+      waterMaterial = new WaterPhongMaterial({
+        map: texture,
+        opacity,
+        transparent,
+        amplitude,
+        speed,
+      });
+    }
+  } else if (!water.waterTexture) {
+    bottomMaterial = new WaterPhongMaterial({
+      color: new THREE.Color(`#${water.color}`),
+      opacity,
+      transparent,
+      amplitude,
+      speed,
+      normalScalar: -1.0,
+    });
+  }
+
+  return {waterMaterial, bottomMaterial};
+}
+
+export {WaterPhongMaterial, makePagePlane, loadWaterMaterials,
+  pageNodeCollisionPreSelector};
