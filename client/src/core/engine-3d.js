@@ -77,7 +77,9 @@ class Engine3D {
     const near = 0.1;
 
     this.tmpVec3 = new THREE.Vector3();
+    this.tmpVec3bis = new THREE.Vector3();
     this.tmpQuat = new THREE.Quaternion();
+    this.tmpRaycaster = new THREE.Raycaster();
 
     this.cameraDirection = new THREE.Vector3();
     this.xzDirection = new THREE.Vector2();
@@ -402,6 +404,25 @@ class Engine3D {
   }
 
   /**
+   * Set the position of an existing node
+   * @param {integer} id - ID of the node to set the position of.
+   * @param {number} x - X coordinate of the node.
+   * @param {number} y - Y coordinate of the node.
+   * @param {number} z - Z coordinate of the node.
+   * @return {boolean} True if node exists, false otherwise.
+   */
+  setNodePosition(id, x, y, z) {
+    if (!this.nodes.has(id)) return false;
+
+    const node = this.nodes.get(id);
+
+    node.position.set(x, y, z);
+    node.updateMatrix();
+
+    return true;
+  }
+
+  /**
    * Remove node from the scene
    * @param {integer} id - ID of the node to remove.
    * @return {boolean} True if node exists, false otherwise.
@@ -580,6 +601,24 @@ class Engine3D {
     node.clear();
 
     return true;
+  }
+
+  /**
+   * Intersect a given node by raycasting from the camera
+   * @param {integer} id - ID of the node to intersect with.
+   * @param {Vector3} direction - Direction of the ray to cast.
+   * @param {boolean} recursive - Check the node descendants if true.
+   * @return {Array} Array of intersection candidates.
+   */
+  intersectNodeFromCamera(id, direction = null, recursive = true) {
+    if (!this.nodes.has(id)) return [];
+
+    const node = this.nodes.get(id);
+
+    this.tmpRaycaster.set(this.camera.getWorldPosition(this.tmpVec3),
+        direction || this.camera.getWorldDirection(this.tmpVec3bis));
+
+    return this.tmpRaycaster.intersectObject(node, recursive);
   }
 
   /**

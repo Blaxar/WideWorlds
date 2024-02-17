@@ -107,8 +107,7 @@ class PropsSelector {
   /**
    * Point at a prop to get contextual information
    * @param {Vector2} pointer - 2D Pointer for the raycaster.
-   * @return {string|null} Contextual text to display for the prop
-   *                       (if any).
+   * @return {string} Contextual text to display for the prop (if any).
    */
   point(pointer) {
     this.clickRaycaster.setFromCamera(
@@ -128,7 +127,7 @@ class PropsSelector {
       }
     }
 
-    return null;
+    return '';
   }
 
   /**

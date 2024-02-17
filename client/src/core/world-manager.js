@@ -9,8 +9,7 @@ import {flipYawDegrees}
   from './utils-3d.js';
 import {makePagePlane, adjustPageEdges, pageNodeCollisionPreSelector}
   from './terrain-utils.js';
-import {makePagePlane as makeWaterPagePlane, loadWaterMaterials,
-  pageNodeCollisionPreSelector as waterPageNodeCollisionPreSelector}
+import {makePagePlane as makeWaterPagePlane, loadWaterMaterials}
   from './water-utils.js';
 import {Vector3, Color, MathUtils, TextureLoader} from 'three';
 import {userFeedPriority} from './user-feed.js';
@@ -52,6 +51,7 @@ class WorldManager {
   constructor(engine3d, worldPathRegistry, httpClient, wsClient, userFeed,
       userCollider, propsLoadingNode = null, chunkSide = 20,
       textureUpdatePeriod = 0.20) {
+    this.elapsed = 0;
     this.chunkLoadingPattern = defaultChunkLoadingPattern;
     this.chunkCollisionPattern = defaultChunkLoadingPattern;
     this.pageCollisionPattern = defaultChunkLoadingPattern;
@@ -66,6 +66,11 @@ class WorldManager {
     this.currentWorldUpdateClient = null;
     this.currentTerrainMaterials = [];
     this.userFeed = userFeed;
+    this.tmpColor = new Color();
+    this.tmpVec3 = new Vector3();
+
+    // Lights
+    this.ambientColor = new Color();
 
     // Props handling
     this.chunkSide = chunkSide; // In meters
@@ -86,8 +91,23 @@ class WorldManager {
     this.waterPageData = new Map(); // Stores elevation data
     this.currentWaterMaterials = null;
 
-    this.waterEnabled = false;
-    this.waterElevationOffset = 0.0; // In meters
+    this.water = {
+      enabled: false,
+      level: 0, // In meters
+      surfaceMove: 0, // In meters
+      speed: 1.0,
+      color: '000000',
+      visbility: 20, // In meters
+    };
+
+    this.fog = {
+      enabled: false,
+      color: '000000',
+      minimum: 0,
+      maximum: 1000,
+    };
+
+    this.waterNodeHandle = this.engine3d.spawnNode();
 
     this.previousCX = this.previousCZ = null;
     this.textureLoader = new TextureLoader();
@@ -157,17 +177,19 @@ class WorldManager {
     this.engine3d.setSkyColorSpinning(false);
 
     if (data.enableFog) {
-      const fogColor = new Color('#' + data.fogColor);
-      this.engine3d.setFog(fogColor, data.fogMinimum, data.fogMaximum);
+      this.fog.enabled = true;
+      this.fog.color = data.fogColor;
+      this.fog.minimum = data.fogMinimum;
+      this.fog.maximum = data.fogMaximum;
     } else {
-      this.engine3d.resetFog();
+      this.fog.enabled = false;
     }
 
-    const ambientColor = new Color('#' + data.ambientColor);
+    this.ambientColor.set('#' + data.ambientColor);
     this.engine3d.setAmbientLight(
-        ambientColor);
+        this.ambientColor);
 
-    const directionalColor = new Color('#' + data.directionalColor);
+    const directionalColor = this.tmpColor.set('#' + data.directionalColor);
     this.engine3d.setDirectionalLight(
         directionalColor,
         // Note: AW stores the world directional light position
@@ -176,7 +198,7 @@ class WorldManager {
         //       - North to South instead of South to North
         //       - West to East instead of East to West
         //       - Up to Down instead of Down to Up
-        new Vector3(
+        this.tmpVec3.set(
             -data.dirLightPos[0],
             -data.dirLightPos[1],
             -data.dirLightPos[2],
@@ -199,8 +221,7 @@ class WorldManager {
     if (!data.path) throw new Error('Missing path field from world data json');
 
     if (data.water) {
-      this.waterEnabled = data.water.enabled;
-      this.waterElevationOffset = data.water.level;
+      this.water = Object.assign(this.water, data.water);
       this.currentWaterMaterials = loadWaterMaterials(this.textureLoader,
           `${data.path}/textures`, data.water);
     }
@@ -323,6 +344,7 @@ class WorldManager {
     this.previousCX = this.previousCZ = null;
     this.loadingPages = false;
     this.loadingWaterPages = false;
+    this.water.enabled = false;
   }
 
   /**
@@ -375,9 +397,7 @@ class WorldManager {
 
   /** Clear all water pages and associated materials **/
   clearWater() {
-    for (const handle of this.waterPages.values()) {
-      this.engine3d.removeNode(handle);
-    }
+    this.engine3d.wipeNode(this.waterNodeHandle);
 
     this.currentWaterMaterials.waterMaterial?.map?.dispose();
     this.currentWaterMaterials.waterMaterial?.dispose();
@@ -396,6 +416,7 @@ class WorldManager {
    * @param {number} delta - Elapsed number of seconds since last update.
    */
   update(pos, delta = 0) {
+    this.elapsed += delta;
     if (!(this.currentWorld && this.currentModelRegistry)) return;
 
     if (this.lastTextureUpdate > this.textureUpdatePeriod) {
@@ -408,6 +429,35 @@ class WorldManager {
     if (this.currentWaterMaterials) {
       this.currentWaterMaterials.waterMaterial.step(delta);
       this.currentWaterMaterials.bottomMaterial.step(delta);
+    }
+
+    if (this.water.enabled) {
+      this.engine3d.setNodePosition(
+          this.waterNodeHandle, 0,
+          this.water.level +
+           Math.sin(this.elapsed * this.water.speed) *
+           0.5 * this.water.surfaceMove,
+          0,
+      );
+    }
+
+    const intersects = this.engine3d.intersectNodeFromCamera(
+        this.waterNodeHandle,
+        this.tmpVec3.set(0, 1, 0),
+    );
+
+    if (intersects.length) {
+      this.tmpColor.set('#' + this.water.color);
+      this.engine3d.setAmbientLight(this.tmpColor);
+      this.engine3d.setFog(this.tmpColor, 0, this.water.visibility);
+    } else {
+      this.engine3d.setAmbientLight(this.ambientColor);
+      if (this.fog.enabled) {
+        this.tmpColor.set('#' + this.fog.color);
+        this.engine3d.setFog(this.tmpColor, this.fog.minimum, this.fog.maximum);
+      } else {
+        this.engine3d.resetFog();
+      }
     }
 
     const {cX, cZ} = this.getChunkCoordinates(pos.x, pos.z);
@@ -462,7 +512,7 @@ class WorldManager {
       })();
     }
 
-    if (this.waterEnabled && !this.loadingWaterPages) {
+    if (this.water.enabled && !this.loadingWaterPages) {
       this.loadingWaterPages = true;
       // Same here...
       (async () => {
@@ -695,7 +745,7 @@ class WorldManager {
 
     if (this.waterPages.has(pageName)) {
       // The page is already there: this is a reload scenario
-      this.engine3d.removeNode(this.waterPages.get(pageName));
+      this.waterPages.get(pageName).removeFromParent();
       this.waterPages.remove(pageName);
     }
 
@@ -706,8 +756,6 @@ class WorldManager {
 
     const pagePos = [pageX * defaultPageDiameter * 10, 0,
       pageZ * defaultPageDiameter * 10];
-    const pageNodeHandle = this.engine3d.spawnNode();
-    this.waterPages.set(pageName, pageNodeHandle);
 
     // TODO: get actual water elevation, assume flat data from AW for the moment
     const pagePlane = makeWaterPagePlane(
@@ -718,13 +766,9 @@ class WorldManager {
         this.currentWaterMaterials.bottomMaterial,
         new Vector3(pagePos[0], 0, pagePos[1]),
     );
-    pagePlane.position.setY(this.waterElevationOffset);
+    this.waterPages.set(pageName, pagePlane);
+    this.engine3d.appendToNode(this.waterNodeHandle, pagePlane);
     pagePlane.updateMatrix();
-
-    this.engine3d.appendToNode(pageNodeHandle, pagePlane);
-    this.engine3d.updateNodeBoundsTree(pageNodeHandle,
-        () => true, waterPageNodeCollisionPreSelector,
-        pagePlane.position);
   }
 
   /**
