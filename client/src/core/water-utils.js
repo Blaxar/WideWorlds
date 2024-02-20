@@ -57,12 +57,14 @@ void main() {
   float x = transformed.x * PI2 / wavelength;
   float z = transformed.z * PI2 / wavelength;
   float t = time * speed;
+
+  float dist = sqrt(x * x + z * z);
   transformed = transformed +
-    vec3(0.0, amplitude * sin(t + sqrt(x * x + z * z)), 0.0);
+    vec3(0.0, amplitude * sin(t + dist), 0.0);
   float dfdx =
-    amplitude * cos(t + sqrt(x * x + z * z)) * (x / sqrt(x * x + z * z));
+    amplitude * cos(t + dist) * (x / dist);
   float dfdz =
-    amplitude * cos(t + sqrt(x * x + z * z)) * (z / sqrt(x * x + z * z));
+    amplitude * cos(t + dist) * (z / dist);
 
   vec3 tx = vec3(1.0, dfdx, 0.0);
   vec3 tz = vec3(0.0, dfdz, 1.0);
@@ -282,18 +284,39 @@ class WaterPhongMaterial extends THREE.ShaderMaterial {
 }
 
 /**
+ * Interpolate elevation data for tessellation
+ * @param {number} tL - Top-left height value.
+ * @param {number} tR - Top-right height value.
+ * @param {number} bL - Bottom-left height value.
+ * @param {number} bR - Bottom-right height value.
+ * @param {number} pX - Progress ratio until the next X-axis coordinate.
+ * @param {number} pZ - Progress ratio until the next Z-axis coordinate.
+ * @return {number} Interpolated elevation data.
+ */
+function interpolateElevationData(tL, tR, bL, bR, pX, pZ) {
+  const top = tL * (1 - pX) + tR * pX;
+  const bottom = bL * (1 - pX) + bR * pX;
+
+  return top * (1 - pZ) + bottom * pZ;
+}
+
+/**
  * Make 3D asset for a single water page from provided elevation data
  * @param {Uint16array|null} elevationData - Raw elevation data for the
  *                                           whole page.
  * @param {integer} sideSize - Length of the page side in real space.
- * @param {integer} nbSegments - Number of segments on both X and Z axis.
+ * @param {integer} segments - Number of segments on both X and Z axis.
  * @param {Material} waterMaterial - Surface water material to use.
  * @param {Material} bottomMaterial - Bottom water material to use.
+ * @param {integer} tessellation - Tessellation level, 0 for no tessellation.
  * @param {Vector3} offset - Position offset to apply on each vertex.
  * @return {Object3D} 3D asset for the water page
  */
-function makePagePlane(elevationData, sideSize, nbSegments,
-    waterMaterial, bottomMaterial, offset = defaultOffset) {
+function makePagePlane(elevationData, sideSize, segments,
+    waterMaterial, bottomMaterial, tessellation = 0, offset = defaultOffset) {
+  const tessFactor = 1 << tessellation;
+  const tessDivider = parseFloat(tessFactor);
+  const nbSegments = segments * tessFactor;
   const pageGeometry = new THREE.BufferGeometry();
   const nbBufferEntries = (nbSegments + 1) * (nbSegments + 1);
   const positions = new Float32Array(nbBufferEntries * 3);
@@ -302,34 +325,47 @@ function makePagePlane(elevationData, sideSize, nbSegments,
   const groupDataPerPoint = 2 * 3;
   const groupLength = nbSegments * nbSegments * groupDataPerPoint;
 
-  // If elevation data is not available: just provide flat, default height.
-  const getElevationData = elevationData ?
-        (dataId) => elevationData[dataId] :
-        () => zeroElevationValue;
-
   const posStride = (nbSegments + 1) * 3;
   const uvStride = (nbSegments + 1) * 2;
 
   // Ready top grid geometry
   for (let x = 0; x < nbSegments + 1; x++) {
     const posX = (x - (nbSegments / 2)) * (sideSize / nbSegments) + offset.x;
+    const ogX = x / tessFactor; // integer
+    const pX = (x % tessFactor) / tessDivider; // float
 
     for (let z = 0; z < nbSegments + 1; z++) {
       const posZ = (z - (nbSegments / 2)) * (sideSize / nbSegments) + offset.z;
-      const dataId = z * nbSegments + x;
-
-      const height = (getElevationData(dataId) - zeroElevationValue) / 100.0;
+      const ogZ = z / tessFactor; // integer
+      const pZ = (z % tessFactor) / tessDivider; // float
 
       positions[z * posStride + x * 3] = posX;
       positions[z * posStride + x * 3 + 2] = posZ;
 
-      uvs[z * uvStride + x * 2] = x;
-      uvs[z * uvStride + x * 2 + 1] = nbSegments - z;
+      uvs[z * uvStride + x * 2] = x / tessDivider;
+      uvs[z * uvStride + x * 2 + 1] = (nbSegments - z) / tessDivider;
 
-      // Out of bounds for elevation data, move on...
+      if (ogX < segments && ogZ < segments) {
+        // Still in-bounds for elevation data
+        const tL = elevationData ?
+            elevationData[ogZ * segments + ogX] :
+            zeroElevationValue;
+        const tR = elevationData ?
+            elevationData[ogZ * segments + (ogX + 1)] :
+            zeroElevationValue;
+        const bL = elevationData ?
+            elevationData[(ogZ + 1) * segments + ogX] :
+            zeroElevationValue;
+        const bR = elevationData ?
+            elevationData[(ogZ + 1) * segments + (ogX + 1)] :
+            zeroElevationValue;
+        const height = (interpolateElevationData(tL, tR, bL, bR, pX, pZ) -
+            zeroElevationValue) / 100.0;
+        positions[z * posStride + x * 3 + 1] = height + offset.y;
+      }
+
+      // Out of bound for face geometry data
       if (x >= nbSegments || z >= nbSegments) continue;
-
-      positions[z * posStride + x * 3 + 1] = height + offset.y;
 
       if ((x + (z % 2) ) % 2) {
         faces.push(
