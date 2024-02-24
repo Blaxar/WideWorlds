@@ -115,6 +115,8 @@ class CommandParser {
       } else {
         return {error: 'ERR_INVALID_VALUES'};
       }
+
+      return {};
     };
 
     if (cmdArray.length === 3) {

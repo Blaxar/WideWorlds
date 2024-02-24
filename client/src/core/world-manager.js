@@ -56,7 +56,7 @@ class WorldManager {
     this.elapsed = 0;
     this.chunkLoadingPattern = defaultChunkLoadingPattern;
     this.chunkCollisionPattern = defaultChunkLoadingPattern;
-    this.pageCollisionPattern = defaultChunkLoadingPattern;
+    this.pageCollisionPattern = pageLoadingPattern;
     this.engine3d = engine3d;
     this.worldPathRegistry = worldPathRegistry;
     this.httpClient = httpClient;
@@ -487,7 +487,7 @@ class WorldManager {
       this.loadChunk(cX + x, cZ + z);
     }
 
-    // Test props collision with user
+    // Test props and terrain collision with user
     this.userCollider.update(this.chunkCollisionPattern.map(
         ([x, z]) => {
           const chunkId = `${cX + x}_${cZ + z}`;

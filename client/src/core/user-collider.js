@@ -266,6 +266,7 @@ class UserCollider {
   raycastAgainstBoundsTree(boundsTree, offset, worldMat) {
     if (offset.lengthSq() === 0) {
       // No offset to apply
+      this.tmpVec3.setFromMatrixPosition(worldMat);
       this.tmpMat4.copy(worldMat).invert();
     } else {
       this.tmpVec3.setFromMatrixPosition(worldMat);
@@ -274,9 +275,17 @@ class UserCollider {
     }
     let distance = stepHeight;
 
-    for (const ray of this.rays) {
+    const cast = (ray) => {
       this.tmpOrigin.copy(ray.origin);
       this.tmpDirection.copy(ray.direction);
+
+      const {x, z} = this.tmpOrigin;
+      const {min, max} = boundsTree.geometry.boundingBox;
+
+      if (x < min.x + this.tmpVec3.x || x > max.x + this.tmpVec3.x ||
+          z < min.z + this.tmpVec3.z || z > max.z + this.tmpVec3.z) {
+        return;
+      }
 
       ray.applyMatrix4(this.tmpMat4);
       const hit = boundsTree.raycastFirst(ray);
@@ -285,9 +294,11 @@ class UserCollider {
       ray.direction.copy(this.tmpDirection);
 
       if (hit && hit.distance < distance) {
-        distance = hit.distance; // Return the shortest distance of the hit
+        distance = hit.distance; // Set the shortest distance of the hit
       }
-    }
+    };
+
+    this.rays.forEach(cast);
 
     return distance < stepHeight ? distance : null;
   }
