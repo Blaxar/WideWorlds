@@ -22,8 +22,6 @@ const pageLoadingPattern = [[-1, -1], [0, -1], [1, -1],
   [-1, 0], [0, 0], [1, 0],
   [-1, 1], [0, 1], [1, 1]];
 
-const defaultWaterTessellation = 0;
-
 // Ignore non-solid props when computing bounds tree for collision detection
 const chunkNodeColliderFilter =
     (obj3d) => obj3d.userData.rwx?.solid === undefined ||
@@ -766,7 +764,6 @@ class WorldManager {
         defaultPageDiameter,
         this.currentWaterMaterials.waterMaterial,
         this.currentWaterMaterials.bottomMaterial,
-        defaultWaterTessellation,
         new Vector3(pagePos[0], 0, pagePos[2]),
     );
     this.waterPages.set(pageName, pagePlane);

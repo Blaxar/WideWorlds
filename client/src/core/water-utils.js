@@ -66,12 +66,27 @@ void main() {
   float dfdz =
     amplitude * cos(t + dist) * (z / dist);
 
+  vec3 trueUp = vec3(0.0, 1.0, 0.0);
+  vec3 forward = vec3(0.0, 0.0, 1.0);
+
   vec3 tx = vec3(1.0, dfdx, 0.0);
   vec3 tz = vec3(0.0, dfdz, 1.0);
   vec3 nc = normalize(cross(tz, tx));
-  vec3 up = vec3(0.0, 1.0, 0.0);
+
+  if (dot(objectNormal, trueUp) < 1.0) {
+    // Only apply transformation if the up axis and the native vertex
+    // normal are not colinear
+    vec3 up = normalize(objectNormal - trueUp); // 0-length if colinear
+    vec3 right = normalize(cross(forward, up));
+
+    mat3 t = mat3(right.x, right.y, right.z,
+                  up.x, up.y, up.z,
+                  forward.x, forward.y, forward.z);
+    nc = t * nc;
+  }
+
   if (x == 0.0 && z == 0.0) {
-    vNormal = normalMatrix * (up * normalScalar);
+    vNormal = normalMatrix * (objectNormal * normalScalar);
   } else {
     vNormal = normalMatrix * (nc * normalScalar);
   }
@@ -147,7 +162,7 @@ class WaterPhongMaterial extends THREE.ShaderMaterial {
     }
 
     if (parameters.amplitude !== undefined) {
-      uniforms.amplitude.value = parameters.speed;
+      uniforms.amplitude.value = parameters.amplitude;
     }
 
     if (parameters.waveLength !== undefined) {
@@ -284,39 +299,18 @@ class WaterPhongMaterial extends THREE.ShaderMaterial {
 }
 
 /**
- * Interpolate elevation data for tessellation
- * @param {number} tL - Top-left height value.
- * @param {number} tR - Top-right height value.
- * @param {number} bL - Bottom-left height value.
- * @param {number} bR - Bottom-right height value.
- * @param {number} pX - Progress ratio until the next X-axis coordinate.
- * @param {number} pZ - Progress ratio until the next Z-axis coordinate.
- * @return {number} Interpolated elevation data.
- */
-function interpolateElevationData(tL, tR, bL, bR, pX, pZ) {
-  const top = tL * (1 - pX) + tR * pX;
-  const bottom = bL * (1 - pX) + bR * pX;
-
-  return top * (1 - pZ) + bottom * pZ;
-}
-
-/**
  * Make 3D asset for a single water page from provided elevation data
  * @param {Uint16array|null} elevationData - Raw elevation data for the
  *                                           whole page.
  * @param {integer} sideSize - Length of the page side in real space.
- * @param {integer} segments - Number of segments on both X and Z axis.
+ * @param {integer} nbSegments - Number of segments on both X and Z axis.
  * @param {Material} waterMaterial - Surface water material to use.
  * @param {Material} bottomMaterial - Bottom water material to use.
- * @param {integer} tessellation - Tessellation level, 0 for no tessellation.
  * @param {Vector3} offset - Position offset to apply on each vertex.
  * @return {Object3D} 3D asset for the water page
  */
-function makePagePlane(elevationData, sideSize, segments,
-    waterMaterial, bottomMaterial, tessellation = 0, offset = defaultOffset) {
-  const tessFactor = 1 << tessellation;
-  const tessDivider = parseFloat(tessFactor);
-  const nbSegments = segments * tessFactor;
+function makePagePlane(elevationData, sideSize, nbSegments,
+    waterMaterial, bottomMaterial, offset = defaultOffset) {
   const pageGeometry = new THREE.BufferGeometry();
   const nbBufferEntries = (nbSegments + 1) * (nbSegments + 1);
   const positions = new Float32Array(nbBufferEntries * 3);
@@ -331,41 +325,24 @@ function makePagePlane(elevationData, sideSize, segments,
   // Ready top grid geometry
   for (let x = 0; x < nbSegments + 1; x++) {
     const posX = (x - (nbSegments / 2)) * (sideSize / nbSegments) + offset.x;
-    const ogX = x / tessFactor; // integer
-    const pX = (x % tessFactor) / tessDivider; // float
 
     for (let z = 0; z < nbSegments + 1; z++) {
       const posZ = (z - (nbSegments / 2)) * (sideSize / nbSegments) + offset.z;
-      const ogZ = z / tessFactor; // integer
-      const pZ = (z % tessFactor) / tessDivider; // float
 
       positions[z * posStride + x * 3] = posX;
       positions[z * posStride + x * 3 + 2] = posZ;
 
-      uvs[z * uvStride + x * 2] = x / tessDivider;
-      uvs[z * uvStride + x * 2 + 1] = (nbSegments - z) / tessDivider;
+      uvs[z * uvStride + x * 2] = x;
+      uvs[z * uvStride + x * 2 + 1] = (nbSegments - z);
 
-      if (ogX < segments && ogZ < segments) {
-        // Still in-bounds for elevation data
-        const tL = elevationData ?
-            elevationData[ogZ * segments + ogX] :
-            zeroElevationValue;
-        const tR = elevationData ?
-            elevationData[ogZ * segments + (ogX + 1)] :
-            zeroElevationValue;
-        const bL = elevationData ?
-            elevationData[(ogZ + 1) * segments + ogX] :
-            zeroElevationValue;
-        const bR = elevationData ?
-            elevationData[(ogZ + 1) * segments + (ogX + 1)] :
-            zeroElevationValue;
-        const height = (interpolateElevationData(tL, tR, bL, bR, pX, pZ) -
-            zeroElevationValue) / 100.0;
-        positions[z * posStride + x * 3 + 1] = height + offset.y;
-      }
+      // Still in-bounds for elevation data
+      const height = (elevationData ?
+          elevationData[z * nbSegments + x] - zeroElevationValue : 0) / 100.0;
 
       // Out of bound for face geometry data
       if (x >= nbSegments || z >= nbSegments) continue;
+
+      positions[z * posStride + x * 3 + 1] = height + offset.y;
 
       if ((x + (z % 2) ) % 2) {
         faces.push(
@@ -389,7 +366,19 @@ function makePagePlane(elevationData, sideSize, segments,
     }
   }
 
-  // Make the bottom faces as well
+  pageGeometry.setAttribute('position',
+      new THREE.BufferAttribute(positions, 3));
+  pageGeometry.setAttribute('uv',
+      new THREE.BufferAttribute(uvs, 2));
+  pageGeometry.setIndex(faces);
+
+  pageGeometry.addGroup(0, groupLength, 0);
+
+  // Compute vertex normals based on the top faces only, so they
+  // don't get cancelled by the bottom ones...
+  pageGeometry.computeVertexNormals();
+
+  // ... then add the bottom faces as well
   for (let x = 0; x < nbSegments; x++) {
     for (let z = 0; z < nbSegments; z++) {
       if ((x + (z % 2) ) % 2) {
@@ -414,15 +403,8 @@ function makePagePlane(elevationData, sideSize, segments,
     }
   }
 
-  pageGeometry.addGroup(0, groupLength, 0);
   pageGeometry.addGroup(groupLength, groupLength, 1);
-
-  pageGeometry.setAttribute('position',
-      new THREE.BufferAttribute(positions, 3));
-  pageGeometry.setAttribute('uv',
-      new THREE.BufferAttribute(uvs, 2));
   pageGeometry.setIndex(faces);
-  pageGeometry.computeVertexNormals();
 
   const page = new THREE.Mesh(
       pageGeometry,
