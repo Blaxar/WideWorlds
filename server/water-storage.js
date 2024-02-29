@@ -96,10 +96,10 @@ class WaterStorage {
    */
   async loadPage(pageX, pageZ) {
     const pageName = getPageName(pageX, pageZ);
-    let page = this.makeDefaultPage();
+    const ctx = {page: this.makeDefaultPage()};
 
     if (this.pages.has(pageName)) {
-      page = this.pages.get(pageName);
+      ctx.page = this.pages.get(pageName);
     }
 
     const elevationPath = join(this.folder, `${pageName}.water.png`);
@@ -110,7 +110,7 @@ class WaterStorage {
             (image) => image.data,
         ).then(
             (data) => {
-              page.from(data.buffer);
+              ctx.page = new Uint16Array(data.buffer);
               resolve();
             },
         ).catch((err) => {
@@ -121,9 +121,9 @@ class WaterStorage {
       };
     });
 
-    this.pages.set(pageName, page);
+    this.pages.set(pageName, ctx.page);
 
-    return page;
+    return ctx.page;
   }
 
   /**

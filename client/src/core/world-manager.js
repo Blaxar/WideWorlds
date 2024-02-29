@@ -9,7 +9,8 @@ import {flipYawDegrees}
   from './utils-3d.js';
 import {makePagePlane, adjustPageEdges, pageNodeCollisionPreSelector}
   from './terrain-utils.js';
-import {makePagePlane as makeWaterPagePlane, loadWaterMaterials}
+import {makePagePlane as makeWaterPagePlane,
+  adjustPageEdges as adjustWaterPageEdges, loadWaterMaterials}
   from './water-utils.js';
 import {Vector3, Color, MathUtils, TextureLoader} from 'three';
 import {userFeedPriority} from './user-feed.js';
@@ -754,18 +755,39 @@ class WorldManager {
       this.waterPageData.remove(pageName);
     }
 
+    this.waterPageData.set(pageName,
+        await this.httpClient.getWaterPage(this.currentWorld.id,
+            pageX, pageZ));
+
     const pagePos = [pageX * defaultPageDiameter * 10, 0,
       pageZ * defaultPageDiameter * 10];
 
-    // TODO: get actual water elevation, assume flat data from AW for the moment
+    const elevationData = this.waterPageData.get(pageName);
+
     const pagePlane = makeWaterPagePlane(
-        null,
+        elevationData,
         defaultPageDiameter * 10,
         defaultPageDiameter,
         this.currentWaterMaterials.waterMaterial,
         this.currentWaterMaterials.bottomMaterial,
         new Vector3(pagePos[0], 0, pagePos[2]),
     );
+
+    // Get surrounding planes, falsy if not ready yet
+    const left = this.waterPages.get(getPageName(pageX - 1, pageZ));
+    const topLeft = this.waterPages.get(getPageName(pageX - 1, pageZ - 1));
+    const top = this.waterPages.get(getPageName(pageX, pageZ - 1));
+
+    const right = this.waterPageData
+        .get(getPageName(pageX + 1, pageZ));
+    const bottomRight = this.waterPageData
+        .get(getPageName(pageX + 1, pageZ + 1));
+    const bottom = this.waterPageData
+        .get(getPageName(pageX, pageZ + 1));
+
+    adjustWaterPageEdges(pagePlane, elevationData, left, topLeft, top, right,
+        bottomRight, bottom, defaultPageDiameter);
+
     this.waterPages.set(pageName, pagePlane);
     this.engine3d.appendToNode(this.waterNodeHandle, pagePlane);
     pagePlane.updateMatrix();

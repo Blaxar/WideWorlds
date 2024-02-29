@@ -417,6 +417,101 @@ function makePagePlane(elevationData, sideSize, nbSegments,
 }
 
 /**
+ * Adjust edges for the page and its surroundings
+ * @param {Object3D} pagePlane - 3D plane for the page, as built by
+ *                               makePagePlane.
+ * @param {Uint16array} elevationData - Elevation data for the target page.
+ * @param {Object3D} left - 3D plane for the left page (if any).
+ * @param {Object3D} topLeft - 3D plane for the top-left page (if any).
+ * @param {Object3D} top - 3D plane for the top page (if any).
+ * @param {Uint16array} right - Elevation data for the right page (if any).
+ * @param {Uint16array} bottomRight - Elevation data for the bottom-right page
+ *                                    (if any).
+ * @param {Uint16array} bottom - Elevation data for the bottom page (if any).
+ * @param {integer} nbSegments - Number of segments on both X and Z axis.
+ */
+function adjustPageEdges(pagePlane, elevationData, left, topLeft, top, right,
+    bottomRight, bottom, nbSegments) {
+  const centerPositions = pagePlane.geometry.getAttribute('position');
+  const leftPositions =
+      left ? left.geometry.getAttribute('position') : null;
+  const topLeftPositions =
+      topLeft ? topLeft.geometry.getAttribute('position') : null;
+  const topPositions =
+      top ? top.geometry.getAttribute('position') : null;
+
+  const posStride = (nbSegments + 1) * 3;
+
+  const setHeight = (positions, x, z,
+      elev, elevX, elevZ) => {
+    const id = z * posStride + x * 3 + 1;
+    const value = (elev[elevZ * nbSegments + elevX] - zeroElevationValue) /
+        100.0;
+    positions.array[id] = value;
+  };
+
+  const computePageNormals = (page) => {
+    const halfLength = page.geometry.index.array.length / 2;
+    const index = page.geometry.index;
+    const halfIndex = page.geometry.index.array.slice(0, halfLength);
+
+    // Compute the vertex normals only based on the top faces
+    page.geometry.setIndex(halfIndex);
+    page.geometry.computeVertexNormals();
+
+    // Restore the bottom faces
+    page.geometry.setIndex(index);
+  };
+
+  // Adjust other planes first, starting
+  // with the top-left one (-1,-1)
+  if (topLeftPositions) {
+    setHeight(topLeftPositions, nbSegments, nbSegments,
+        elevationData, 0, 0);
+  }
+
+  // Then the left (-1, 0) and top (0, -1) ones
+  for (let i = 0; i < nbSegments; i++) {
+    if (leftPositions) {
+      setHeight(leftPositions, nbSegments, i,
+          elevationData, 0, i);
+    }
+
+    if (topPositions) {
+      setHeight(topPositions, i, nbSegments,
+          elevationData, i, 0);
+    }
+  }
+
+  // TODO: adjust normals without taking the bottom faces into account
+  if (topLeft) computePageNormals(topLeft);
+  if (left) computePageNormals(left);
+  if (top) computePageNormals(top);
+
+  // Second: adjust the target plane itself, staring with
+  // the bottom-right data (1, 1)
+  if (bottomRight) {
+    setHeight(centerPositions, nbSegments, nbSegments,
+        bottomRight, 0, 0);
+  }
+
+  // Then the right (1, 0) and bottom (0, 1) ones
+  for (let i = 0; i < nbSegments; i++) {
+    if (right) {
+      setHeight(centerPositions, nbSegments, i,
+          right, 0, i);
+    }
+
+    if (bottom) {
+      setHeight(centerPositions, i, nbSegments,
+          bottom, i, 0);
+    }
+  }
+
+  computePageNormals(pagePlane);
+}
+
+/**
  * Load water materials
  * @param {TextureLoader} textureLoader - three.js texture loader instance.
  * @param {string} url - Base texture URL.
@@ -506,5 +601,5 @@ function loadWaterMaterials(textureLoader, url, water) {
   return {waterMaterial, bottomMaterial};
 }
 
-export {WaterPhongMaterial, makePagePlane, loadWaterMaterials,
-  pageNodeCollisionPreSelector};
+export {WaterPhongMaterial, makePagePlane, adjustPageEdges,
+  loadWaterMaterials, pageNodeCollisionPreSelector};
