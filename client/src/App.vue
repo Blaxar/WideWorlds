@@ -410,7 +410,8 @@ onMounted(() => {
   // Ready world path registry for object caching
   worldManager = new WorldManager(engine3d, worldPathRegistry, httpClient,
       wsClient, userFeed, userCollider,
-      userConfig.at('graphics').at('propsLoadingDistance'));
+      userConfig.at('graphics').at('propsLoadingDistance'),
+      userConfig.at('graphics').at('idlePropsLoading'));
   propsSelector = new PropsSelector(engine3d, worldManager,
       onPropsSelectionChange, userConfig.at('graphics')
           .at('renderingDistance'));

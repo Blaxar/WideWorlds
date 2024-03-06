@@ -28,6 +28,8 @@ const chunkNodeColliderFilter =
     (obj3d) => obj3d.userData.rwx?.solid === undefined ||
         obj3d.userData.rwx.solid === true;
 
+const twoPi = 2*Math.PI;
+
 /** Central world-management class, handles chunk loading */
 class WorldManager {
   /**
@@ -44,14 +46,16 @@ class WorldManager {
    *                                      for collision detection.
    * @param {UserConfigNode} propsLoadingNode - Configuration node for the
    *                                            props loading distance.
+   * @param {UserConfigNode} idlePropsLoadingNode - Configuration node for the
+   *                                                idle props loading values.
    * @param {integer} chunkSide - Chunk side length (in meters).
    * @param {number} textureUpdatePeriod - Amount of time (in seconds) to wait
    *                                       before moving animated textures to
    *                                       their next frame.
    */
   constructor(engine3d, worldPathRegistry, httpClient, wsClient, userFeed,
-      userCollider, propsLoadingNode = null, chunkSide = 20,
-      textureUpdatePeriod = 0.20) {
+      userCollider, propsLoadingNode = null, idlePropsLoadingNode = null,
+      chunkSide = 20, textureUpdatePeriod = 0.20) {
     this.elapsed = 0;
     this.chunkLoadingPattern = defaultChunkLoadingPattern;
     this.chunkCollisionPattern = defaultChunkLoadingPattern;
@@ -120,6 +124,38 @@ class WorldManager {
       propsLoadingNode.onUpdate((value) => {
         this.updateChunkLoadingPattern(parseInt(value));
         this.previousCX = this.previousCZ = null;
+      });
+    }
+
+    // Internal state to keep track of idle loading progress
+    this.idleChunksLoading = {radius: 0, progress: 0, start: 0, last: 0};
+
+    // User-provided parameters
+    this.idlePropsLoading = {
+      distance: 0, // m
+      downtime: 1000, // ms here for convenience
+      cooldown: 1000, // ms here for convenience
+    };
+
+    if (idlePropsLoadingNode) {
+      // Ready idle props loading values and their callbacks
+      this.idlePropsLoading.distance =
+          parseInt(idlePropsLoadingNode.at('distance').value());
+      this.idlePropsLoading.downtime =
+          parseInt(idlePropsLoadingNode.at('downtime').value()) * 1000.0;
+
+      const speed = parseFloat(idlePropsLoadingNode.at('speed').value());
+      this.idlePropsLoading.cooldown = 1000.0 / (speed < 1 ? 1.0 : speed);
+
+      idlePropsLoadingNode.at('distance').onUpdate((value) => {
+        this.idlePropsLoading.distance = parseInt(value);
+      });
+      idlePropsLoadingNode.at('downtime').onUpdate((value) => {
+        this.idlePropsLoading.downtime = parseInt(value) * 1000.0;
+      });
+      idlePropsLoadingNode.at('speed').onUpdate((value) => {
+        const speed = parseFloat(value);
+        this.idlePropsLoading.cooldown = 1000.0 / (speed < 1 ? 1.0 : speed);
       });
     }
   }
@@ -463,8 +499,13 @@ class WorldManager {
 
     const {cX, cZ} = this.getChunkCoordinates(pos.x, pos.z);
     const {pX, pZ} = this.getPageCoordinates(pos.x, pos.z);
+    const now = Date.now();
 
     if (this.previousCX !== cX || this.previousCZ !== cZ) {
+      // Reset idle chunk loading state
+      this.idleChunksLoading.start = now;
+      this.idleChunksLoading.radius = 0;
+      this.idleChunksLoading.progress = 0;
       const lodCamera = this.engine3d.camera.clone();
       lodCamera.position.setY(0.0);
 
@@ -477,6 +518,39 @@ class WorldManager {
           },
       ).filter((nodeId) => nodeId !== undefined)),
       lodCamera);
+    } else if (this.idlePropsLoading.distance > 0 &&
+        this.idleChunksLoading.radius < this.idlePropsLoading.distance &&
+        (now - this.idleChunksLoading.start) > this.idlePropsLoading.downtime &&
+        (now - this.idleChunksLoading.last) > this.idlePropsLoading.cooldown) {
+      // 4 conditions need to be met to go on with idle chunk loading:
+      // - Be enabled via the distance being set above 0;
+      // - Have the current radius to load be inferior to the maximum allowed
+      //   distance (it won't ever stop on its own otherwise);
+      // - Have enough time elapsed since the user went "idle" chunk-wise, this
+      //   ensures that it stops when the user starts significantly moving;
+      // - Have enough time elapsed since the last loaded piece, this ensures
+      //   a reasonable pace to load props (not overworking the web browser).
+      this.idleChunksLoading.last = now;
+
+      let {radius, progress} = this.idleChunksLoading;
+
+      const {cX, cZ} = this.getChunkCoordinates(
+          pos.x + Math.cos(progress) * radius,
+          pos.z + Math.sin(progress) * radius);
+      this.loadChunk(cX, cZ, true);
+
+      const perimeter = twoPi*radius;
+      const nbSteps = parseInt(perimeter / this.chunkSide) * 2;
+      const radStep = twoPi / nbSteps;
+
+      progress += radStep;
+      if (progress > twoPi) {
+        // Past full circle: restart with a bigger radius
+        this.idleChunksLoading.progress = 0;
+        this.idleChunksLoading.radius += this.chunkSide;
+      } else {
+        this.idleChunksLoading.progress = progress;
+      }
     }
 
     this.previousCX = cX;
@@ -530,12 +604,13 @@ class WorldManager {
    * Load a single prop chunk, return right away if already loaded
    * @param {integer} x - Index of the chunk on the X axis.
    * @param {integer} z - Index of the chunk on the Z axis.
+   * @param {boolean} hide - Whether or not to hide chunk at creation.
    */
-  async loadChunk(x, z) {
+  async loadChunk(x, z, hide = false) {
     const chunkId = `${x}_${z}`;
     if (this.chunks.has(chunkId)) return;
 
-    await this.reloadChunk(x, z);
+    await this.reloadChunk(x, z, hide);
   }
 
   /**
@@ -612,9 +687,10 @@ class WorldManager {
    * none yet)
    * @param {integer} cX - Index of the chunk on the X axis.
    * @param {integer} cZ - Index of the chunk on the Z axis.
+   * @param {boolean} hide - Whether or not to hide chunk at creation.
    * @return {Object} Object holding chunk position and node handler.
    */
-  getChunkAnchor(cX, cZ) {
+  getChunkAnchor(cX, cZ, hide = false) {
     const chunkPos = new Vector3(cX * this.chunkSide, 0,
         cZ * this.chunkSide);
 
@@ -623,7 +699,7 @@ class WorldManager {
     if (chunkNodeHandle === undefined) {
       chunkNodeHandle =
         this.engine3d.spawnNode(chunkPos.x, chunkPos.y, chunkPos.z,
-            true);
+            true, hide);
       this.chunks.set(`${cX}_${cZ}`, chunkNodeHandle);
     }
 
@@ -634,8 +710,9 @@ class WorldManager {
    * Reload a single prop chunk no matter what
    * @param {integer} x - Index of the chunk on the X axis.
    * @param {integer} z - Index of the chunk on the Z axis.
+   * @param {boolean} hide - Whether or not to hide chunk at creation.
    */
-  async reloadChunk(x, z) {
+  async reloadChunk(x, z, hide = false) {
     const chunkId = `${x}_${z}`;
 
     if (this.chunks.has(chunkId)) {
@@ -644,7 +721,7 @@ class WorldManager {
       this.chunks.remove(chunkId);
     }
 
-    const chunkAnchor = this.getChunkAnchor(x, z);
+    const chunkAnchor = this.getChunkAnchor(x, z, hide);
 
     const halfChunkSide = this.chunkSide / 2;
     const chunk = await this.httpClient.getProps(this.currentWorld.id,

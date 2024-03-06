@@ -20,6 +20,27 @@ const propsLoadingDistance = {
   step: 20,
 };
 
+const idlePropsLoading = {
+  distance: { // In meters
+    min: 0, // 0 means disabled
+    max: 2000,
+    default: 120,
+    step: 20,
+  },
+  downtime: { // In seconds
+    min: 1,
+    max: 60,
+    default: 5,
+    step: 1,
+  },
+  speed: { // In chunks/second
+    min: 2,
+    max: 20,
+    default: 4,
+    step: 1,
+  },
+};
+
 // In meters
 const speeds = {
   walk: 5.0,
@@ -43,6 +64,11 @@ const defaultConfig = {
   graphics: {
     renderingDistance: renderingDistance.default,
     propsLoadingDistance: propsLoadingDistance.default,
+    idlePropsLoading: {
+      distance: idlePropsLoading.distance.default,
+      downtime: idlePropsLoading.downtime.default,
+      speed: idlePropsLoading.speed.default,
+    },
     useHtmlSignRendering: false,
     debugUserCollider: false,
   },
@@ -409,4 +435,5 @@ class UserConfig {
 }
 
 export default UserConfig;
-export {defaultConfig, renderingDistance, propsLoadingDistance, speeds};
+export {defaultConfig, renderingDistance, propsLoadingDistance,
+  idlePropsLoading, speeds};

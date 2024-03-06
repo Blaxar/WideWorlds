@@ -6,7 +6,7 @@
 import {onMounted, onUnmounted, ref} from 'vue';
 import UserInput, {UserInputListener, qwertyBindings}
   from '../core/user-input.js';
-import {renderingDistance, propsLoadingDistance}
+import {renderingDistance, propsLoadingDistance, idlePropsLoading}
   from '../core/user-config.js';
 
 const componentKey = 0;
@@ -31,6 +31,22 @@ const props = defineProps({
   propsLoadingDistanceText: {
     type: String,
     default: 'Props loading distance:',
+  },
+  idlePropsLoadingText: {
+    type: String,
+    default: 'Idle props loading',
+  },
+  idlePropsLoadingDistanceText: {
+    type: String,
+    default: 'Distance:',
+  },
+  idlePropsLoadingDowntimeText: {
+    type: String,
+    default: 'Downtime:',
+  },
+  idlePropsLoadingSpeedText: {
+    type: String,
+    default: 'Speed:',
   },
   useHtmlSignRenderingText: {
     type: String,
@@ -125,6 +141,70 @@ const savePropsLoadingDistance = (event) => {
   props.userConfig.at('graphics').at('propsLoadingDistance').set(value);
 };
 
+// Idle props loading distance: maximum radius to load chunks within
+
+const getIdlePropsLoadingDistance = () => {
+  return props.userConfig.at('graphics').at('idlePropsLoading')
+      .at('distance').value();
+};
+
+const setIdlePropsLoadingDistance = (event) => {
+  const value = parseInt(event.target.value);
+  localIdlePropsLoadingDistance.value = value;
+  props.userConfig.at('graphics').at('idlePropsLoading')
+      .at('distance').set(value, false);
+};
+
+const saveIdlePropsLoadingDistance = (event) => {
+  const value = parseInt(event.target.value);
+  localIdlePropsLoadingDistance.value = value;
+  props.userConfig.at('graphics').at('idlePropsLoading')
+      .at('distance').set(value);
+};
+
+// Idle props loading downtime: how long to before starting
+// once user stopped moving
+
+const getIdlePropsLoadingDowntime = () => {
+  return props.userConfig.at('graphics').at('idlePropsLoading')
+      .at('downtime').value();
+};
+
+const setIdlePropsLoadingDowntime = (event) => {
+  const value = parseInt(event.target.value);
+  localIdlePropsLoadingDowntime.value = value;
+  props.userConfig.at('graphics').at('idlePropsLoading')
+      .at('downtime').set(value, false);
+};
+
+const saveIdlePropsLoadingDowntime = (event) => {
+  const value = parseInt(event.target.value);
+  localIdlePropsLoadingDowntime.value = value;
+  props.userConfig.at('graphics').at('idlePropsLoading')
+      .at('downtime').set(value);
+};
+
+// Idle props loading speed: how many chunks to load per second
+
+const getIdlePropsLoadingSpeed = () => {
+  return props.userConfig.at('graphics').at('idlePropsLoading')
+      .at('speed').value();
+};
+
+const setIdlePropsLoadingSpeed = (event) => {
+  const value = parseInt(event.target.value);
+  localIdlePropsLoadingSpeed.value = value;
+  props.userConfig.at('graphics').at('idlePropsLoading')
+      .at('speed').set(value, false);
+};
+
+const saveIdlePropsLoadingSpeed = (event) => {
+  const value = parseInt(event.target.value);
+  localIdlePropsLoadingSpeed.value = value;
+  props.userConfig.at('graphics').at('idlePropsLoading')
+      .at('speed').set(value);
+};
+
 const setUseHtmlSignRendering = (event) => {
   props.userConfig.at('graphics')
       .at('useHtmlSignRendering').set(event.target.checked);
@@ -142,6 +222,9 @@ const setColliderInterpolation = (event) => {
 
 const localRenderingDistance = ref(getRenderingDistance());
 const localPropsLoadingDistance = ref(getPropsLoadingDistance());
+const localIdlePropsLoadingDistance = ref(getIdlePropsLoadingDistance());
+const localIdlePropsLoadingDowntime = ref(getIdlePropsLoadingDowntime());
+const localIdlePropsLoadingSpeed = ref(getIdlePropsLoadingSpeed());
 
 onMounted(() => {
   // Each time some binding changes: we look for the corresponding input field
@@ -217,6 +300,39 @@ onUnmounted(() => {
     :max="propsLoadingDistance.max" :defaultValue="getPropsLoadingDistance()"
     :step="propsLoadingDistance.step" @input="setPropsLoadingDistance"
     @change="savePropsLoadingDistance" />
+  </td></tr>
+  <tr><td colspan="2"> {{idlePropsLoadingText}} </td></tr>
+  <tr><td colspan="2">
+  <label for="idlePropsLoadingDistance">
+    {{idlePropsLoadingDistanceText}}: {{localIdlePropsLoadingDistance}}m
+  </label>
+  <input id="idlePropsLoadingDistance" type="range"
+    :min="idlePropsLoading.distance.min"
+    :max="idlePropsLoading.distance.max"
+    :defaultValue="getIdlePropsLoadingDistance()"
+    :step="idlePropsLoading.distance.step" @input="setIdlePropsLoadingDistance"
+    @change="saveIdlePropsLoadingDistance" />
+  </td></tr>
+  <tr><td colspan="2">
+  <label for="idlePropsLoadingDowntime">
+    {{idlePropsLoadingDowntimeText}}: {{localIdlePropsLoadingDowntime}}s
+  </label>
+  <input id="idlePropsLoadingDowntime" type="range"
+    :min="idlePropsLoading.downtime.min"
+    :max="idlePropsLoading.downtime.max"
+    :defaultValue="getIdlePropsLoadingDowntime()"
+    :step="idlePropsLoading.downtime.step" @input="setIdlePropsLoadingDowntime"
+    @change="saveIdlePropsLoadingDowntime" />
+  </td></tr>
+  <tr><td colspan="2">
+  <label for="idlePropsLoadingSpeed">
+    {{idlePropsLoadingSpeedText}}: {{localIdlePropsLoadingSpeed}} chunks/second
+  </label>
+  <input id="idlePropsLoadingSpeed" type="range"
+    :min="idlePropsLoading.speed.min"
+    :max="idlePropsLoading.speed.max" :defaultValue="getIdlePropsLoadingSpeed()"
+    :step="idlePropsLoading.speed.step" @input="setIdlePropsLoadingSpeed"
+    @change="saveIdlePropsLoadingSpeed" />
   </td></tr>
   <tr><td colspan="2">
   <input type="checkbox" id="useHtmlSignRendering"

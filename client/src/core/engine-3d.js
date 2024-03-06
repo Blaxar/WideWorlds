@@ -372,9 +372,10 @@ class Engine3D {
    * @param {number} z - Z coordinate of the node.
    * @param {boolean} lod - Whether or not the node will allow for different
    *                        levels of detail, false by default.
+   * @param {boolean} hide - Whether or not to hide node at creation.
    * @return {integer} ID of the newly-spawned node.
    */
-  spawnNode(x = 0, y = 0, z = 0, lod = false) {
+  spawnNode(x = 0, y = 0, z = 0, lod = false, hide = false) {
     const id = this.lastId++;
     this.nodes.set(id, lod ? new THREE.LOD() :
         new THREE.Group());
@@ -396,10 +397,16 @@ class Engine3D {
     }
 
     node.position.set(x, y, z);
-    this.scene.add(node);
+
     node.userData['dynamic'] = new Map();
     node.matrixAutoUpdate = false;
     node.updateMatrix();
+
+    if (hide) {
+      node.visible = false;
+    }
+
+    this.scene.add(node);
     return id;
   }
 
@@ -635,6 +642,7 @@ class Engine3D {
       const node = this.nodes.get(id);
       if (!node || !node.isLOD) return;
 
+      node.visible = true;
       node.levels[1].distance = this.hidingDistance;
       node.update(camera);
 
