@@ -393,7 +393,7 @@ class Engine3D {
       }
 
       this.lodNodeIDs.add(id);
-      this.visibleLODNodeIDs.add(id);
+      if (!hide) this.visibleLODNodeIDs.add(id);
     }
 
     node.position.set(x, y, z);
@@ -402,11 +402,8 @@ class Engine3D {
     node.matrixAutoUpdate = false;
     node.updateMatrix();
 
-    if (hide) {
-      node.visible = false;
-    }
+    if (!hide) this.scene.add(node);
 
-    this.scene.add(node);
     return id;
   }
 
@@ -642,13 +639,13 @@ class Engine3D {
       const node = this.nodes.get(id);
       if (!node || !node.isLOD) return;
 
-      node.visible = true;
       node.levels[1].distance = this.hidingDistance;
       node.update(camera);
 
       if (node.getCurrentLevel() > 0) {
         // Node went invisible
         this.visibleLODNodeIDs.delete(id);
+        node.removeFromParent();
       }
 
       // If the node was meant to turn invisible: then it will remain
@@ -667,6 +664,7 @@ class Engine3D {
 
       if (node.getCurrentLevel() <= 0) {
         // Node went visible
+        this.scene.add(node);
         this.visibleLODNodeIDs.add(id);
       }
     });

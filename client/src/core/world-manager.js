@@ -29,6 +29,7 @@ const chunkNodeColliderFilter =
         obj3d.userData.rwx.solid === true;
 
 const twoPi = 2*Math.PI;
+const maxLoadingAttempts = 4;
 
 /** Central world-management class, handles chunk loading */
 class WorldManager {
@@ -532,25 +533,35 @@ class WorldManager {
       //   a reasonable pace to load props (not overworking the web browser).
       this.idleChunksLoading.last = now;
 
-      let {radius, progress} = this.idleChunksLoading;
+      let cX = 0;
+      let cZ = 0;
+      let i = 0;
 
-      const {cX, cZ} = this.getChunkCoordinates(
-          pos.x + Math.cos(progress) * radius,
-          pos.z + Math.sin(progress) * radius);
+      do {
+        let {radius, progress} = this.idleChunksLoading;
+
+        const coordinates = this.getChunkCoordinates(
+            pos.x + Math.cos(progress) * radius,
+            pos.z + Math.sin(progress) * radius);
+
+        cX = coordinates.cX;
+        cZ = coordinates.cZ;
+
+        const perimeter = twoPi*radius;
+        const nbSteps = parseInt(perimeter / this.chunkSide) * 2;
+        const radStep = twoPi / nbSteps;
+
+        progress += radStep;
+        if (progress > twoPi) {
+          // Past full circle: restart with a bigger radius
+          this.idleChunksLoading.progress = 0;
+          this.idleChunksLoading.radius += this.chunkSide;
+        } else {
+          this.idleChunksLoading.progress = progress;
+        }
+      } while (this.isChunkLoaded(cX, cZ) && ++i < maxLoadingAttempts);
+
       this.loadChunk(cX, cZ, true);
-
-      const perimeter = twoPi*radius;
-      const nbSteps = parseInt(perimeter / this.chunkSide) * 2;
-      const radStep = twoPi / nbSteps;
-
-      progress += radStep;
-      if (progress > twoPi) {
-        // Past full circle: restart with a bigger radius
-        this.idleChunksLoading.progress = 0;
-        this.idleChunksLoading.radius += this.chunkSide;
-      } else {
-        this.idleChunksLoading.progress = progress;
-      }
     }
 
     this.previousCX = cX;
