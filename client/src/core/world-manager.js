@@ -519,6 +519,13 @@ class WorldManager {
           },
       ).filter((nodeId) => nodeId !== undefined)),
       lodCamera);
+
+      this.previousCX = cX;
+      this.previousCZ = cZ;
+
+      for (const [x, z] of this.chunkLoadingPattern) {
+        this.loadChunk(cX + x, cZ + z);
+      }
     } else if (this.idlePropsLoading.distance > 0 &&
         this.idleChunksLoading.radius < this.idlePropsLoading.distance &&
         (now - this.idleChunksLoading.start) > this.idlePropsLoading.downtime &&
@@ -562,13 +569,6 @@ class WorldManager {
       } while (this.isChunkLoaded(cX, cZ) && ++i < maxLoadingAttempts);
 
       this.loadChunk(cX, cZ, true);
-    }
-
-    this.previousCX = cX;
-    this.previousCZ = cZ;
-
-    for (const [x, z] of this.chunkLoadingPattern) {
-      this.loadChunk(cX + x, cZ + z);
     }
 
     // Test props and terrain collision with user

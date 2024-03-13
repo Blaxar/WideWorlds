@@ -48,6 +48,27 @@ function setBoundingBox(rwx) {
   boxHelper.geometry.attributes.position.needsUpdate = true;
 }
 
+/**
+ * Make placeholder mesh for unknown props
+ * @return {Mesh} Placeholder mesh.
+ */
+function makePlaceholderMesh() {
+  const placeholderGeometry = new BufferGeometry();
+  const positions = [
+    0.0, 0.2, 0.0,
+    -0.2, 0.0, 0.0,
+    0.2, 0.0, 0.0,
+  ];
+
+  placeholderGeometry.setAttribute('position',
+      new BufferAttribute(new Float32Array(positions), 3));
+  placeholderGeometry.setIndex([0, 1, 2]);
+  placeholderGeometry.addGroup(0, 3, 0);
+
+  return new Mesh(placeholderGeometry,
+      [new MeshBasicMaterial({color: 0x000000})]);
+}
+
 /** Model registry for a given world catalogue path */
 class ModelRegistry {
   /**
@@ -83,20 +104,7 @@ class ModelRegistry {
       });
     }
 
-    const placeholderGeometry = new BufferGeometry();
-    const positions = [
-      0.0, 0.2, 0.0,
-      -0.2, 0.0, 0.0,
-      0.2, 0.0, 0.0,
-    ];
-
-    placeholderGeometry.setAttribute('position',
-        new BufferAttribute(new Float32Array(positions), 3));
-    placeholderGeometry.setIndex([0, 1, 2]);
-    placeholderGeometry.addGroup(0, 3, 0);
-
-    this.placeholder = new Mesh(placeholderGeometry,
-        [new MeshBasicMaterial({color: 0x000000})]);
+    this.placeholder = makePlaceholderMesh();
     this.placeholder.name = unknownObjectName;
     this.placeholder.userData.rwx =
         {axisAlignment: unknownObjectAxisAlignment};
@@ -462,4 +470,5 @@ class ModelRegistry {
 }
 
 export default ModelRegistry;
-export {normalizePropName, unknownObjectName, boundingBoxName};
+export {normalizePropName, unknownObjectName, boundingBoxName,
+  makePlaceholderMesh};
