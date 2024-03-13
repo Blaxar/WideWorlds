@@ -44,7 +44,7 @@ describe('BackgroundScenery', () => {
 
     // Insert one of each
     scenery.set(obj1, 1);
-    scenery.set(obj2, 2);
+    scenery.set(obj2, 3);
 
     // New entries should exist
     assert.ok(scenery.meshes.has(obj1.name));
@@ -89,22 +89,22 @@ describe('BackgroundScenery', () => {
     assert.ok(scenery.meshes.has(obj1.name));
     assert.ok(scenery.meshes.has(obj2.name));
     assert.ok(scenery.maskMap.has(1));
-    assert.ok(scenery.maskMap.has(2));
+    assert.ok(scenery.maskMap.has(3));
     assert.ok(scenery.reverseMaskMap.has(obj1.id));
     assert.ok(scenery.reverseMaskMap.has(obj2.id));
     assert.equal(scenery.reverseMaskMap.get(obj1.id), 1);
-    assert.equal(scenery.reverseMaskMap.get(obj2.id), 2);
+    assert.equal(scenery.reverseMaskMap.get(obj2.id), 3);
     assert.ok(scenery.maskMap.get(1).has('some1.rwx_0'));
-    assert.ok(scenery.maskMap.get(2).has('some2.rwx_0'));
+    assert.ok(scenery.maskMap.get(3).has('some2.rwx_0'));
     assert.equal(scenery.maskMap.get(1).get('some1.rwx_0').name, 'some1.rwx');
-    assert.equal(scenery.maskMap.get(2).get('some2.rwx_0').name, 'some2.rwx');
+    assert.equal(scenery.maskMap.get(3).get('some2.rwx_0').name, 'some2.rwx');
     assert.equal(scenery.maskMap.get(1).get('some1.rwx_0').hash, 0);
-    assert.equal(scenery.maskMap.get(2).get('some2.rwx_0').hash, 0);
+    assert.equal(scenery.maskMap.get(3).get('some2.rwx_0').hash, 0);
     assert.ok(scenery.maskMap.get(1).get('some1.rwx_0').ids.has(obj1.id));
-    assert.ok(scenery.maskMap.get(2).get('some2.rwx_0').ids.has(obj2.id));
+    assert.ok(scenery.maskMap.get(3).get('some2.rwx_0').ids.has(obj2.id));
     assert.equal(scenery.activeMasks.size, 0);
 
-    // Update position of one of them
+    // Update position and mask key of one of them
     data2 = scenery.meshes.get(obj2.name).get(0);
     obj2.position.setZ(-300.5);
     obj2.updateMatrix();
@@ -118,6 +118,16 @@ describe('BackgroundScenery', () => {
     tmpMat.set(...data2.matrices.slice(0, 16));
     tmpMat.transpose(); // Get proper column-major
     assert.ok(tmpMat.equals(mat2));
+
+    assert.ok(scenery.maskMap.has(2));
+    assert.ok(scenery.reverseMaskMap.has(obj2.id));
+    assert.equal(scenery.reverseMaskMap.get(obj2.id), 2);
+    assert.ok(scenery.maskMap.get(2).has('some2.rwx_0'));
+    assert.equal(scenery.maskMap.get(2).get('some2.rwx_0').name, 'some2.rwx');
+    assert.equal(scenery.maskMap.get(2).get('some2.rwx_0').hash, 0);
+    assert.ok(scenery.maskMap.get(2).get('some2.rwx_0').ids.has(obj2.id));
+    assert.ok(!scenery.maskMap.get(3).get('some2.rwx_0').ids.has(obj2.id));
+    assert.equal(scenery.activeMasks.size, 0);
 
     const ogMat2 = obj2.matrixWorld.clone();
 

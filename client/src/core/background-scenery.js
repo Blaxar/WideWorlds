@@ -13,14 +13,14 @@ const nullMatrix = new Matrix4(...(new Array(16).fill(0)));
 class BackgroundScenery {
   /**
    * @constructor
-   * @param {null} param - Some param.
+   * @param {Group} group - Group holding the background scenery.
    */
-  constructor() {
+  constructor(group = new Group()) {
     this.meshes = new Map();
-    this.maskMap = new Map();
-    this.reverseMaskMap = new Map();
+    this.maskMap = new Map(); // Get prop IDs from mask key
+    this.reverseMaskMap = new Map(); // Get mask key from prop ID
     this.activeMasks = new Set();
-    this.group = new Group();
+    this.group = group;
     this.tmpMatrix = new Matrix4();
   }
 
@@ -33,6 +33,7 @@ class BackgroundScenery {
   set(obj3d, maskKey, hash = 0) {
     const id = obj3d.id;
     const name = obj3d.name;
+    const propRef = `${name}_${hash}`;
 
     if (!this.meshes.has(name)) {
       this.meshes.set(name, new Map());
@@ -52,9 +53,19 @@ class BackgroundScenery {
       if (entryMap.has(id)) {
         const entry = entryMap.get(id);
         // Instance of this prop is already there, update its position
+
         obj3d.matrixWorld.toArray(matrices, entry * 16);
         if (!this.activeMasks.has(maskKey)) {
           mesh.setMatrixAt(entry, obj3d.matrixWorld);
+        }
+
+        const currentMaskKey = this.reverseMaskMap.get(id);
+
+        // Update mask key if needed
+        if (currentMaskKey !== maskKey) {
+          this.maskMap.get(currentMaskKey).get(propRef)?.ids.delete(id);
+          // The reverse mask map will be set at the end, no matter the
+          // scenario
         }
       } else {
         // Instance of this prop is not there yet, create it
@@ -116,7 +127,6 @@ class BackgroundScenery {
 
     this.reverseMaskMap.set(id, maskKey);
     const maskEntries = this.maskMap.get(maskKey);
-    const propRef = `${name}_${hash}`;
 
     if (maskEntries.has(propRef)) {
       const {ids} = maskEntries.get(propRef);
