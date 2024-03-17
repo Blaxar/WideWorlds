@@ -9,18 +9,26 @@ const startCount = 32;
 const minimumCountThreshold = 16;
 const nullMatrix = new Matrix4(...(new Array(16).fill(0)));
 
+const clearInstancedMesh = (mesh) => {
+  for (let i = 0; i < mesh.count; i++) mesh.setMatrixAt(i, nullMatrix);
+};
+
 /** Background scenery handling, using optimized geometry */
 class BackgroundScenery {
   /**
    * @constructor
    * @param {Group} group - Group holding the background scenery.
+   * @param {function} getId - Function returning an ID value for
+   *                           each object, returns the Object3D
+   *                           ID value by default.
    */
-  constructor(group = new Group()) {
+  constructor(group = new Group(), getId = (obj3d) => obj3d.id) {
     this.meshes = new Map();
     this.maskMap = new Map(); // Get prop IDs from mask key
     this.reverseMaskMap = new Map(); // Get mask key from prop ID
     this.activeMasks = new Set();
     this.group = group;
+    this.getId = getId;
     this.tmpMatrix = new Matrix4();
   }
 
@@ -31,7 +39,7 @@ class BackgroundScenery {
    * @param {any} hash - Hash of the specific prop variant.
    */
   set(obj3d, maskKey, hash = 0) {
-    const id = obj3d.id;
+    const id = this.getId(obj3d);
     const name = obj3d.name;
     const propRef = `${name}_${hash}`;
 
@@ -55,7 +63,10 @@ class BackgroundScenery {
         // Instance of this prop is already there, update its position
 
         obj3d.matrixWorld.toArray(matrices, entry * 16);
-        if (!this.activeMasks.has(maskKey)) {
+        if (this.activeMasks.has(maskKey)) {
+          // Not meant to see this specific entry right now
+          mesh.setMatrixAt(entry, nullMatrix);
+        } else {
           mesh.setMatrixAt(entry, obj3d.matrixWorld);
         }
 
@@ -78,20 +89,34 @@ class BackgroundScenery {
 
         entryMap.set(id, entry);
 
-        if (count === mesh.count) {
+        if (entry === mesh.count) {
+          // Time to double the size
           let tmpMatrices = mesh.instanceMatrix.array;
+          mesh.removeFromParent();
+          const oldMesh = mesh;
+
           mesh = new InstancedMesh(mesh.geometry, mesh.material,
               mesh.count * 2);
+          clearInstancedMesh(mesh);
+
           mesh.instanceMatrix.array.set(tmpMatrices, 0);
           mesh.name = name;
+          mesh.matrixAutoUpdate = false;
+          oldMesh.dispose();
 
           tmpMatrices = new Float32Array(mesh.count * 16);
           tmpMatrices.set(matrices, 0);
           matrices = tmpMatrices;
         }
 
-        obj3d.matrixWorld.toArray(matrices, 16 * entry);
-        mesh.setMatrixAt(entry, obj3d.matrixWorld);
+        obj3d.matrixWorld.toArray(matrices, entry * 16);
+
+        if (this.activeMasks.has(maskKey)) {
+          // Not meant to see this specific entry right now
+          mesh.setMatrixAt(entry, nullMatrix);
+        } else {
+          mesh.setMatrixAt(entry, obj3d.matrixWorld);
+        }
 
         if (entry === count) count++;
 
@@ -100,7 +125,7 @@ class BackgroundScenery {
           this.group.add(mesh);
         }
 
-        mesh.updateMatrix();
+        mesh.instanceMatrix.needsUpdate = true;
         variants.set(hash, {mesh, matrices, entryMap, freeEntries, count});
       }
     } else {
@@ -109,18 +134,27 @@ class BackgroundScenery {
 
       // Flatten geometry, make it and instanced mesh.
       const mesh = new InstancedMesh(flat.geometry, flat.material, startCount);
+      clearInstancedMesh(mesh);
+
       mesh.name = name;
+      mesh.matrixAutoUpdate = false;
 
       // We store the original transformation matrices along with the instances
       // mesh so we can revert back the original values when unmasking.
       const matrices = new Float32Array(startCount * 16);
       obj3d.matrixWorld.toArray(matrices, 0);
-      mesh.setMatrixAt(0, obj3d.matrixWorld);
+
+      if (this.activeMasks.has(maskKey)) {
+        // Not meant to see this specific entry right now
+        mesh.setMatrixAt(entry, nullMatrix);
+      } else {
+        mesh.setMatrixAt(entry, obj3d.matrixWorld);
+      }
 
       const entryMap = new Map();
       entryMap.set(id, entry);
 
-      mesh.updateMatrix();
+      mesh.instanceMatrix.needsUpdate = true;
       variants.set(hash, {mesh, matrices, entryMap, freeEntries: new Set(),
         count: 1});
     }
@@ -141,15 +175,15 @@ class BackgroundScenery {
   /**
    * Unset a prop in the scenery, effectively removing it
    * @param {Object3D} obj3d - Instance of the prop.
+   * @param {any} hash - Hash of the specific prop variant.
    * @return {boolean} Whether the prop was registered or not.
    */
-  unset(obj3d) {
-    const id = obj3d.id;
+  unset(obj3d, hash = 0) {
+    const id = this.getId(obj3d);
     const name = obj3d.name;
-    const hash = 0; // Compute hash
 
     const variants = this.meshes.get(name);
-    if (!variants.has(hash)) return false;
+    if (!variants || !variants.has(hash)) return false;
 
     const {mesh, matrices, entryMap, freeEntries} = variants.get(hash);
 
@@ -159,6 +193,7 @@ class BackgroundScenery {
     freeEntries.add(entry);
     nullMatrix.toArray(matrices, entry * 16);
     mesh.setMatrixAt(entry, nullMatrix);
+    mesh.instanceMatrix.needsUpdate = true;
 
     const maskEntries = this.maskMap.get(this.reverseMaskMap.get(id));
     if (!maskEntries) return false;
@@ -179,11 +214,10 @@ class BackgroundScenery {
    * @param {string} maskKey - Key for masking the objects.
    */
   mask(maskKey) {
-    if (!this.maskMap.has(maskKey)) return;
-
     this.activeMasks.add(maskKey);
 
     const maskEntries = this.maskMap.get(maskKey);
+    if (!maskEntries) return;
 
     maskEntries.forEach(({name, hash, ids}) => {
       const variants = this.meshes.get(name);
@@ -195,23 +229,24 @@ class BackgroundScenery {
       const {mesh, entryMap} = variant;
 
       ids.forEach((id) => {
-        mesh.setMatrixAt(entryMap.get(id), nullMatrix);
-        mesh.updateMatrix();
+        const entry = entryMap.get(id);
+        mesh.setMatrixAt(entry, nullMatrix);
       });
+
+      mesh.instanceMatrix.needsUpdate = true;
     });
   }
 
   /**
-   * Unask the objects bound to a given masking key, making
+   * Unmask the objects bound to a given masking key, making
    * them visible in the scenery
    * @param {string} maskKey - Key for masking the objects.
    */
   unmask(maskKey) {
-    if (!this.maskMap.has(maskKey)) return;
-
     this.activeMasks.delete(maskKey);
 
     const maskEntries = this.maskMap.get(maskKey);
+    if (!maskEntries) return;
 
     maskEntries.forEach(({name, hash, ids}) => {
       const variants = this.meshes.get(name);
@@ -226,9 +261,10 @@ class BackgroundScenery {
         const entry = entryMap.get(id);
         this.tmpMatrix.set(...matrices.slice(entry * 16, (entry + 1) * 16));
         this.tmpMatrix.transpose();
-        mesh.setMatrixAt(entryMap.get(id), this.tmpMatrix);
-        mesh.updateMatrix();
+        mesh.setMatrixAt(entry, this.tmpMatrix);
       });
+
+      mesh.instanceMatrix.needsUpdate = true;
     });
   }
 
@@ -236,6 +272,9 @@ class BackgroundScenery {
    * Clear everything
    */
   clear() {
+    this.meshes.forEach((variants) => variants.forEach(({mesh}) => {
+      mesh.dispose();
+    }));
     this.meshes.clear();
     this.maskMap.clear();
     this.reverseMaskMap.clear();

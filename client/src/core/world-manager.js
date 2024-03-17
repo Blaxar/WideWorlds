@@ -9,10 +9,11 @@ import {flipYawDegrees}
   from './utils-3d.js';
 import {makePagePlane, adjustPageEdges, pageNodeCollisionPreSelector}
   from './terrain-utils.js';
+import BackgroundScenery from './background-scenery.js';
 import {makePagePlane as makeWaterPagePlane,
   adjustPageEdges as adjustWaterPageEdges, loadWaterMaterials}
   from './water-utils.js';
-import {Vector3, Color, MathUtils, TextureLoader} from 'three';
+import {Vector3, Color, MathUtils, TextureLoader, Group} from 'three';
 import {userFeedPriority} from './user-feed.js';
 
 const defaultChunkLoadingPattern = [[-1, 1], [0, 1], [1, 1],
@@ -30,6 +31,83 @@ const chunkNodeColliderFilter =
 
 const twoPi = 2*Math.PI;
 const maxLoadingAttempts = 4;
+const sceneryUpdateCooldown = 5000; // ms
+
+/**
+ * Wrapper around {@link BackgroundScenery} to process
+ * updates in batches, using a double-buffer approach, thus
+ * avoiding race conditions from the async processing
+ * of chunks.
+ */
+class BackgroundSceneryUpdater {
+  /**
+   * @constructor
+   * @param {BackgroundScenery} scenery - Background scenery.
+   */
+  constructor(scenery) {
+    this.scenery = scenery;
+    this.switch = 0; // double buffer to avoid read/write data race
+
+    this.clear();
+  }
+
+  /**
+   * Set prop into the scenery
+   * @param {Object3D} obj3d - Prop to add to the scenery.
+   * @param {string} maskKey - Masking key for this prop.
+   */
+  set(obj3d, maskKey) {
+    const setWrite = this.switch;
+
+    this.batch[setWrite].push({obj3d, maskKey});
+  }
+
+  /**
+   * Unset prop from the scenery
+   * @param {Object3D} obj3d - Prop to remove from the scenery.
+   */
+  unset(obj3d) {
+    const unsetWrite = 2 + this.switch;
+
+    this.batch[unsetWrite].push(obj3d);
+  }
+
+  /**
+   * Commit pending changes to the scenery, switching
+   * read and write buffers
+   */
+  commit() {
+    const setRead = this.switch;
+    const unsetRead = 2 + this.switch;
+    this.switch = (this.switch + 1) % 2;
+
+    for (const {obj3d, maskKey} of this.batch[setRead]) {
+      if (obj3d.visible) {
+        obj3d.updateMatrixWorld(true);
+        this.scenery.set(obj3d, maskKey);
+      } else {
+        this.scenery.unset(obj3d);
+      }
+    }
+
+    for (const obj3d of this.batch[unsetRead]) {
+      this.scenery.unset(obj3d);
+    }
+
+    this.batch[setRead] = [];
+    this.batch[unsetRead] = [];
+  }
+
+  /**
+   * Clear everything
+   */
+  clear() {
+    // First two arrays are read/write buffers for objects to be set,
+    // the second two ones are also read/write buffers, but for objects
+    // to be removed.
+    this.batch = [[], [], [], []];
+  }
+}
 
 /** Central world-management class, handles chunk loading */
 class WorldManager {
@@ -45,18 +123,15 @@ class WorldManager {
    * @param {UserFeed} userFeed - The user feed for publishing messages.
    * @param {userCollider} userCollider - Instance of the local user collider
    *                                      for collision detection.
-   * @param {UserConfigNode} propsLoadingNode - Configuration node for the
-   *                                            props loading distance.
-   * @param {UserConfigNode} idlePropsLoadingNode - Configuration node for the
-   *                                                idle props loading values.
+   * @param {UserConfigNode} graphicsNode - Configuration node for the graphics.
    * @param {integer} chunkSide - Chunk side length (in meters).
    * @param {number} textureUpdatePeriod - Amount of time (in seconds) to wait
    *                                       before moving animated textures to
    *                                       their next frame.
    */
   constructor(engine3d, worldPathRegistry, httpClient, wsClient, userFeed,
-      userCollider, propsLoadingNode = null, idlePropsLoadingNode = null,
-      chunkSide = 20, textureUpdatePeriod = 0.20) {
+      userCollider, graphicsNode = null, chunkSide = 20,
+      textureUpdatePeriod = 0.20) {
     this.elapsed = 0;
     this.chunkLoadingPattern = defaultChunkLoadingPattern;
     this.chunkCollisionPattern = defaultChunkLoadingPattern;
@@ -81,6 +156,7 @@ class WorldManager {
     // Props handling
     this.chunkSide = chunkSide; // In meters
     this.chunks = new Map();
+    this.chunkKeys = new Map(); // Reverse of this.chunks
     this.props = new Map();
 
     // Terrain handling
@@ -113,20 +189,19 @@ class WorldManager {
       maximum: 1000,
     };
 
+    this.sceneryNodeHandle = this.engine3d.spawnNode();
+    this.background = new Group();
+    this.scenery = new BackgroundScenery(this.background, (obj3d) => {
+      // Each prop in the scenery will be identified by its database ID
+      return obj3d.userData.prop.id;
+    });
+    this.sceneryUpdater = new BackgroundSceneryUpdater(this.scenery);
+    this.lastSceneryUpdate = Date.now();
+
     this.waterNodeHandle = this.engine3d.spawnNode();
 
     this.previousCX = this.previousCZ = null;
     this.textureLoader = new TextureLoader();
-
-    if (propsLoadingNode) {
-      // Ready props loading distance and its update callback
-      const propsLoadingDistance = parseInt(propsLoadingNode.value());
-      this.updateChunkLoadingPattern(propsLoadingDistance);
-      propsLoadingNode.onUpdate((value) => {
-        this.updateChunkLoadingPattern(parseInt(value));
-        this.previousCX = this.previousCZ = null;
-      });
-    }
 
     // Internal state to keep track of idle loading progress
     this.idleChunksLoading = {radius: 0, progress: 0, start: 0, last: 0};
@@ -138,7 +213,22 @@ class WorldManager {
       cooldown: 1000, // ms here for convenience
     };
 
-    if (idlePropsLoadingNode) {
+    this.backgroundScenery = {
+      enabled: false,
+    };
+
+    if (graphicsNode) {
+      // Ready props loading distance and its update callback
+      const propsLoadingNode = graphicsNode.at('propsLoadingDistance');
+      const propsLoadingDistance = parseInt(propsLoadingNode.value());
+
+      this.updateChunkLoadingPattern(propsLoadingDistance);
+      propsLoadingNode.onUpdate((value) => {
+        this.updateChunkLoadingPattern(parseInt(value));
+        this.previousCX = this.previousCZ = null;
+      });
+
+      const idlePropsLoadingNode = graphicsNode.at('idlePropsLoading');
       // Ready idle props loading values and their callbacks
       this.idlePropsLoading.distance =
           parseInt(idlePropsLoadingNode.at('distance').value());
@@ -157,6 +247,21 @@ class WorldManager {
       idlePropsLoadingNode.at('speed').onUpdate((value) => {
         const speed = parseFloat(value);
         this.idlePropsLoading.cooldown = 1000.0 / (speed < 1 ? 1.0 : speed);
+      });
+
+      const backgroundSceneryNode = graphicsNode.at('backgroundScenery');
+      // Ready background scenery value and its callback
+      const value = backgroundSceneryNode.at('enabled').value();
+      if (value) {
+        this.engine3d.appendToNode(this.sceneryNodeHandle, this.background);
+      }
+
+      backgroundSceneryNode.at('enabled').onUpdate((value) => {
+        if (value) {
+          this.engine3d.appendToNode(this.sceneryNodeHandle, this.background);
+        } else {
+          this.engine3d.wipeNode(this.sceneryNodeHandle);
+        }
       });
     }
   }
@@ -320,6 +425,7 @@ class WorldManager {
           // Remove the object from the dynamic object list (when applicable)
           this.engine3d.unsetDynamicOnNode(obj3d.userData.chunkNodeHandle,
               obj3d);
+          this.sceneryUpdater.unset(obj3d);
           obj3d.removeFromParent();
           this.props.delete(id);
         }
@@ -376,6 +482,8 @@ class WorldManager {
     this.clearChunks();
     this.clearPages();
     this.clearWater();
+    this.scenery.clear();
+    this.sceneryUpdater.clear();
     this.lastTextureUpdate = 0;
     this.terrainEnabled = false;
     this.terrainElevationOffset = 0.0;
@@ -421,6 +529,7 @@ class WorldManager {
 
     this.props.clear();
     this.chunks.clear();
+    this.chunkKeys.clear();
   }
 
   /** Clear all terrain pages */
@@ -502,6 +611,11 @@ class WorldManager {
     const {pX, pZ} = this.getPageCoordinates(pos.x, pos.z);
     const now = Date.now();
 
+    if (now - this.lastSceneryUpdate > sceneryUpdateCooldown) {
+      this.lastSceneryUpdate = now;
+      this.sceneryUpdater.commit();
+    }
+
     if (this.previousCX !== cX || this.previousCZ !== cZ) {
       // Reset idle chunk loading state
       this.idleChunksLoading.start = now;
@@ -510,22 +624,31 @@ class WorldManager {
       const lodCamera = this.engine3d.camera.clone();
       lodCamera.position.setY(0.0);
 
-      // We notify the 3D engine that we want to update the current
-      // chunks around the camera
-      this.engine3d.updateLODs(new Set(this.chunkLoadingPattern.map(
-          ([x, z]) => {
-            const chunkId = `${cX + x}_${cZ + z}`;
-            return this.chunks.get(chunkId);
-          },
-      ).filter((nodeId) => nodeId !== undefined)),
-      lodCamera);
-
-      this.previousCX = cX;
-      this.previousCZ = cZ;
-
       for (const [x, z] of this.chunkLoadingPattern) {
         this.loadChunk(cX + x, cZ + z);
       }
+
+      // We notify the 3D engine that we want to update the current
+      // chunks around the camera
+      const {visible, turnedInvisible} =
+          this.engine3d.updateLODs(new Set(this.chunkLoadingPattern.map(
+              ([x, z]) => {
+                const chunkId = `${cX + x}_${cZ + z}`;
+                return this.chunks.get(chunkId);
+              },
+          ).filter((nodeId) => nodeId !== undefined)),
+          lodCamera);
+
+      // Update background scenery
+      visible.forEach((id) => {
+        this.scenery.mask(this.chunkKeys.get(id));
+      });
+      turnedInvisible.forEach((id) => {
+        this.scenery.unmask(this.chunkKeys.get(id));
+      });
+
+      this.previousCX = cX;
+      this.previousCZ = cZ;
     } else if (this.idlePropsLoading.distance > 0 &&
         this.idleChunksLoading.radius < this.idlePropsLoading.distance &&
         (now - this.idleChunksLoading.start) > this.idlePropsLoading.downtime &&
@@ -712,6 +835,7 @@ class WorldManager {
         this.engine3d.spawnNode(chunkPos.x, chunkPos.y, chunkPos.z,
             true, hide);
       this.chunks.set(`${cX}_${cZ}`, chunkNodeHandle);
+      this.chunkKeys.set(chunkNodeHandle, `${cX}_${cZ}`);
     }
 
     return {chunkPos, chunkNodeHandle};
@@ -728,8 +852,10 @@ class WorldManager {
 
     if (this.chunks.has(chunkId)) {
       // The chunk is already there: this is a reload scenario
-      this.engine3d.removeNode(this.chunks.get(chunkId));
+      const key = this.chunks.get(chunkId);
+      this.engine3d.removeNode(key);
       this.chunks.remove(chunkId);
+      this.chunkKeys.remove(key);
     }
 
     const chunkAnchor = this.getChunkAnchor(x, z, hide);
@@ -1034,7 +1160,13 @@ class WorldManager {
 
     obj3d.matrixAutoUpdate = false;
     obj3d.updateMatrix();
+
     this.props.set(prop.id, obj3d);
+
+    // TODO: use hashing based on actions to distinguish different object
+    // variants
+    this.sceneryUpdater.set(obj3d,
+        this.chunkKeys.get(obj3d.userData.chunkNodeHandle));
   }
 
   /**

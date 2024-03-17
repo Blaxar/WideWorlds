@@ -48,6 +48,10 @@ const props = defineProps({
     type: String,
     default: 'Speed:',
   },
+  backgroundSceneryText: {
+    type: String,
+    default: 'Display background scenery',
+  },
   useHtmlSignRenderingText: {
     type: String,
     default: 'Use HTML rendering for signs',
@@ -72,6 +76,10 @@ const props = defineProps({
     type: Object,
   },
 });
+
+// Alias to shorten the path
+const backgroundScenery = () =>
+  props.userConfig.at('graphics').at('backgroundScenery');
 
 const formatLabel = (name) => {
   if (typeof name !== 'string' || name === '') return '';
@@ -205,6 +213,10 @@ const saveIdlePropsLoadingSpeed = (event) => {
       .at('speed').set(value);
 };
 
+const setBackgroundScenery = (event) => {
+  backgroundScenery().at('enabled').set(event.target.checked);
+};
+
 const setUseHtmlSignRendering = (event) => {
   props.userConfig.at('graphics')
       .at('useHtmlSignRendering').set(event.target.checked);
@@ -333,6 +345,14 @@ onUnmounted(() => {
     :max="idlePropsLoading.speed.max" :defaultValue="getIdlePropsLoadingSpeed()"
     :step="idlePropsLoading.speed.step" @input="setIdlePropsLoadingSpeed"
     @change="saveIdlePropsLoadingSpeed" />
+  </td></tr>
+  <tr><td colspan="2">
+  <input type="checkbox" id="backgroundScenery"
+    :checked="backgroundScenery().at('enabled').value()"
+    @change="setBackgroundScenery" />
+    <label for="backgroundScenery">
+      {{backgroundSceneryText}}
+    </label>
   </td></tr>
   <tr><td colspan="2">
   <input type="checkbox" id="useHtmlSignRendering"

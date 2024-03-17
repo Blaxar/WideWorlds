@@ -255,6 +255,15 @@ describe('BackgroundScenery', () => {
     const tmpMat = new Matrix4();
     const zeroMat = new Matrix4(...(new Array(16).fill(0)));
 
+    // Removing an object that was never registered should not work
+    const nObj = makePlaceholderMesh();
+    nObj.name = 'some.rwx';
+    group.add(nObj);
+    nObj.position.setY(-125);
+    nObj.updateMatrix();
+    nObj.updateMatrixWorld(true);
+    assert.ok(!scenery.unset(nObj));
+
     for (let i = 0; i < 44; i++) {
       const obj = makePlaceholderMesh();
       obj.name = 'some.rwx';

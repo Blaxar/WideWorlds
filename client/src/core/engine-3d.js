@@ -400,9 +400,11 @@ class Engine3D {
 
     node.userData['dynamic'] = new Map();
     node.matrixAutoUpdate = false;
-    node.updateMatrix();
 
     if (!hide) this.scene.add(node);
+
+    node.updateMatrix();
+    node.updateMatrixWorld(true);
 
     return id;
   }
@@ -633,8 +635,13 @@ class Engine3D {
    *                                    nodes will be ignored.
    * @param {Camera} camera - Camera to use as a reference to update the
    *                          displayed level of each LOD node.
+   * @return {Object} Sets of nodes that turned and stayed visible
+   *                  and also nodes that became invisible
    */
   updateLODs(lodNodeIDs, camera = this.camera) {
+    const visible = new Set();
+    const turnedInvisible = new Set();
+
     this.visibleLODNodeIDs.forEach((id) => {
       const node = this.nodes.get(id);
       if (!node || !node.isLOD) return;
@@ -646,6 +653,10 @@ class Engine3D {
         // Node went invisible
         this.visibleLODNodeIDs.delete(id);
         node.removeFromParent();
+        turnedInvisible.add(id);
+      } else {
+        // Node was visible and remains so
+        visible.add(id);
       }
 
       // If the node was meant to turn invisible: then it will remain
@@ -666,8 +677,11 @@ class Engine3D {
         // Node went visible
         this.scene.add(node);
         this.visibleLODNodeIDs.add(id);
+        visible.add(id);
       }
     });
+
+    return {visible, turnedInvisible};
   }
 
   /**

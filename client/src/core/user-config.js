@@ -35,7 +35,7 @@ const idlePropsLoading = {
   },
   speed: { // In chunks/second
     min: 2,
-    max: 20,
+    max: 40,
     default: 4,
     step: 1,
   },
@@ -68,6 +68,9 @@ const defaultConfig = {
       distance: idlePropsLoading.distance.default,
       downtime: idlePropsLoading.downtime.default,
       speed: idlePropsLoading.speed.default,
+    },
+    backgroundScenery: {
+      enabled: false,
     },
     useHtmlSignRendering: false,
     debugUserCollider: false,
