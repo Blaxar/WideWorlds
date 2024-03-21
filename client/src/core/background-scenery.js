@@ -27,6 +27,7 @@ class BackgroundScenery {
     this.maskMap = new Map(); // Get prop IDs from mask key
     this.reverseMaskMap = new Map(); // Get mask key from prop ID
     this.activeMasks = new Set();
+    this.variantMap = new Map(); // Get variant from prop ID
     this.group = group;
     this.getId = getId;
     this.tmpMatrix = new Matrix4();
@@ -36,12 +37,12 @@ class BackgroundScenery {
    * Set a prop in the scenery, update its position if already there
    * @param {Object3D} obj3d - Instance of the prop.
    * @param {string} maskKey - Identifier for the mask.
-   * @param {any} hash - Hash of the specific prop variant.
+   * @param {string} variant - String of the specific prop variant.
    */
-  set(obj3d, maskKey, hash = 0) {
+  set(obj3d, maskKey, variant = '') {
     const id = this.getId(obj3d);
     const name = obj3d.name;
-    const propRef = `${name}_${hash}`;
+    const propRef = `${name}_${variant}`;
 
     if (!this.meshes.has(name)) {
       this.meshes.set(name, new Map());
@@ -54,9 +55,18 @@ class BackgroundScenery {
     const variants = this.meshes.get(name);
     let entry = 0;
 
-    if (variants.has(hash)) {
+    const previousVariant = this.variantMap.get(id);
+    this.variantMap.set(id, variant);
+
+    if (previousVariant !== variant) {
+      // Object instance is changing variant, unset the previous entry first
+      this.unset(obj3d, previousVariant);
+    }
+
+    if (variants.has(variant)) {
       // This variant was already registered, keep adding to it
-      let {mesh, matrices, entryMap, freeEntries, count} = variants.get(hash);
+      let {mesh, matrices, entryMap, freeEntries, count} =
+          variants.get(variant);
 
       if (entryMap.has(id)) {
         const entry = entryMap.get(id);
@@ -126,7 +136,7 @@ class BackgroundScenery {
         }
 
         mesh.instanceMatrix.needsUpdate = true;
-        variants.set(hash, {mesh, matrices, entryMap, freeEntries, count});
+        variants.set(variant, {mesh, matrices, entryMap, freeEntries, count});
       }
     } else {
       // Make one single mesh
@@ -155,7 +165,7 @@ class BackgroundScenery {
       entryMap.set(id, entry);
 
       mesh.instanceMatrix.needsUpdate = true;
-      variants.set(hash, {mesh, matrices, entryMap, freeEntries: new Set(),
+      variants.set(variant, {mesh, matrices, entryMap, freeEntries: new Set(),
         count: 1});
     }
 
@@ -168,29 +178,30 @@ class BackgroundScenery {
       // duplicated
       ids.add(id);
     } else {
-      maskEntries.set(propRef, {name, hash, ids: new Set([id])});
+      maskEntries.set(propRef, {name, variant, ids: new Set([id])});
     }
   }
 
   /**
    * Unset a prop in the scenery, effectively removing it
    * @param {Object3D} obj3d - Instance of the prop.
-   * @param {any} hash - Hash of the specific prop variant.
+   * @param {string} variant - String of the specific prop variant.
    * @return {boolean} Whether the prop was registered or not.
    */
-  unset(obj3d, hash = 0) {
+  unset(obj3d, variant = '') {
     const id = this.getId(obj3d);
     const name = obj3d.name;
 
     const variants = this.meshes.get(name);
-    if (!variants || !variants.has(hash)) return false;
+    if (!variants || !variants.has(variant)) return false;
 
-    const {mesh, matrices, entryMap, freeEntries} = variants.get(hash);
+    const {mesh, matrices, entryMap, freeEntries} = variants.get(variant);
 
     const entry = entryMap.get(id);
-    if (!entry) return false;
+    if (entry === undefined) return false;
 
     freeEntries.add(entry);
+    entryMap.delete(id);
     nullMatrix.toArray(matrices, entry * 16);
     mesh.setMatrixAt(entry, nullMatrix);
     mesh.instanceMatrix.needsUpdate = true;
@@ -198,11 +209,12 @@ class BackgroundScenery {
     const maskEntries = this.maskMap.get(this.reverseMaskMap.get(id));
     if (!maskEntries) return false;
 
-    const propRef = `${name}_${hash}`;
+    const propRef = `${name}_${variant}`;
 
     if (maskEntries.has(propRef)) {
       const {ids} = maskEntries.get(propRef);
-      return ids.delete(id) && this.reverseMaskMap.delete(id);
+      return ids.delete(id) && this.reverseMaskMap.delete(id) &&
+          this.variantMap.delete(id);
     } else {
       return false;
     }
@@ -219,14 +231,14 @@ class BackgroundScenery {
     const maskEntries = this.maskMap.get(maskKey);
     if (!maskEntries) return;
 
-    maskEntries.forEach(({name, hash, ids}) => {
+    maskEntries.forEach(({name, variant, ids}) => {
       const variants = this.meshes.get(name);
       if (!variants) return;
 
-      const variant = variants.get(hash);
-      if (!variant) return;
+      const v = variants.get(variant);
+      if (!v) return;
 
-      const {mesh, entryMap} = variant;
+      const {mesh, entryMap} = v;
 
       ids.forEach((id) => {
         const entry = entryMap.get(id);
@@ -248,14 +260,14 @@ class BackgroundScenery {
     const maskEntries = this.maskMap.get(maskKey);
     if (!maskEntries) return;
 
-    maskEntries.forEach(({name, hash, ids}) => {
+    maskEntries.forEach(({name, variant, ids}) => {
       const variants = this.meshes.get(name);
       if (!variants) return;
 
-      const variant = variants.get(hash);
-      if (!variant) return;
+      const v = variants.get(variant);
+      if (!v) return;
 
-      const {mesh, matrices, entryMap} = variant;
+      const {mesh, matrices, entryMap} = v;
 
       ids.forEach((id) => {
         const entry = entryMap.get(id);
@@ -279,6 +291,7 @@ class BackgroundScenery {
     this.maskMap.clear();
     this.reverseMaskMap.clear();
     this.activeMasks.clear();
+    this.variantMap.clear();
     this.group.clear();
   }
 }

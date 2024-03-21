@@ -16,6 +16,7 @@ describe('BackgroundScenery', () => {
     assert.equal(scenery.maskMap.size, 0);
     assert.equal(scenery.reverseMaskMap.size, 0);
     assert.equal(scenery.activeMasks.size, 0);
+    assert.equal(scenery.variantMap.size, 0);
     assert.equal(scenery.group.children.length, 0);
   });
 
@@ -50,12 +51,12 @@ describe('BackgroundScenery', () => {
     assert.ok(scenery.meshes.has(obj1.name));
     assert.ok(scenery.meshes.has(obj2.name));
 
-    // Default hash is there
-    assert.ok(scenery.meshes.get(obj1.name).has(0));
-    assert.ok(scenery.meshes.get(obj2.name).has(0));
+    // Default variant is there
+    assert.ok(scenery.meshes.get(obj1.name).has(''));
+    assert.ok(scenery.meshes.get(obj2.name).has(''));
 
-    const data1 = scenery.meshes.get(obj1.name).get(0);
-    let data2 = scenery.meshes.get(obj2.name).get(0);
+    const data1 = scenery.meshes.get(obj1.name).get('');
+    let data2 = scenery.meshes.get(obj2.name).get('');
 
     // Validate each entry
     assert.equal(data1.mesh.name, obj1.name);
@@ -94,18 +95,19 @@ describe('BackgroundScenery', () => {
     assert.ok(scenery.reverseMaskMap.has(obj2.id));
     assert.equal(scenery.reverseMaskMap.get(obj1.id), 1);
     assert.equal(scenery.reverseMaskMap.get(obj2.id), 3);
-    assert.ok(scenery.maskMap.get(1).has('some1.rwx_0'));
-    assert.ok(scenery.maskMap.get(3).has('some2.rwx_0'));
-    assert.equal(scenery.maskMap.get(1).get('some1.rwx_0').name, 'some1.rwx');
-    assert.equal(scenery.maskMap.get(3).get('some2.rwx_0').name, 'some2.rwx');
-    assert.equal(scenery.maskMap.get(1).get('some1.rwx_0').hash, 0);
-    assert.equal(scenery.maskMap.get(3).get('some2.rwx_0').hash, 0);
-    assert.ok(scenery.maskMap.get(1).get('some1.rwx_0').ids.has(obj1.id));
-    assert.ok(scenery.maskMap.get(3).get('some2.rwx_0').ids.has(obj2.id));
+    assert.ok(scenery.maskMap.get(1).has('some1.rwx_'));
+    assert.ok(scenery.maskMap.get(3).has('some2.rwx_'));
+    assert.equal(scenery.maskMap.get(1).get('some1.rwx_').name, 'some1.rwx');
+    assert.equal(scenery.maskMap.get(3).get('some2.rwx_').name, 'some2.rwx');
+    assert.equal(scenery.maskMap.get(1).get('some1.rwx_').variant, '');
+    assert.equal(scenery.maskMap.get(3).get('some2.rwx_').variant, '');
+    assert.ok(scenery.maskMap.get(1).get('some1.rwx_').ids.has(obj1.id));
+    assert.ok(scenery.maskMap.get(3).get('some2.rwx_').ids.has(obj2.id));
     assert.equal(scenery.activeMasks.size, 0);
+    assert.equal(scenery.variantMap.size, 2);
 
     // Update position and mask key of one of them
-    data2 = scenery.meshes.get(obj2.name).get(0);
+    data2 = scenery.meshes.get(obj2.name).get('');
     obj2.position.setZ(-300.5);
     obj2.updateMatrix();
     obj2.updateMatrixWorld(true);
@@ -122,11 +124,11 @@ describe('BackgroundScenery', () => {
     assert.ok(scenery.maskMap.has(2));
     assert.ok(scenery.reverseMaskMap.has(obj2.id));
     assert.equal(scenery.reverseMaskMap.get(obj2.id), 2);
-    assert.ok(scenery.maskMap.get(2).has('some2.rwx_0'));
-    assert.equal(scenery.maskMap.get(2).get('some2.rwx_0').name, 'some2.rwx');
-    assert.equal(scenery.maskMap.get(2).get('some2.rwx_0').hash, 0);
-    assert.ok(scenery.maskMap.get(2).get('some2.rwx_0').ids.has(obj2.id));
-    assert.ok(!scenery.maskMap.get(3).get('some2.rwx_0').ids.has(obj2.id));
+    assert.ok(scenery.maskMap.get(2).has('some2.rwx_'));
+    assert.equal(scenery.maskMap.get(2).get('some2.rwx_').name, 'some2.rwx');
+    assert.equal(scenery.maskMap.get(2).get('some2.rwx_').variant, '');
+    assert.ok(scenery.maskMap.get(2).get('some2.rwx_').ids.has(obj2.id));
+    assert.ok(!scenery.maskMap.get(3).get('some2.rwx_').ids.has(obj2.id));
     assert.equal(scenery.activeMasks.size, 0);
 
     const ogMat2 = obj2.matrixWorld.clone();
@@ -142,7 +144,7 @@ describe('BackgroundScenery', () => {
       scenery.set(obj2, 2);
 
       const mat2 = obj2.matrixWorld.clone();
-      const data2 = scenery.meshes.get(obj2.name).get(0);
+      const data2 = scenery.meshes.get(obj2.name).get('');
 
       assert.equal(data2.mesh.name, obj2.name);
       assert.equal(data2.mesh.material.length, obj2.material.length);
@@ -167,7 +169,7 @@ describe('BackgroundScenery', () => {
     scenery.set(obj2, 2);
 
     mat2 = obj2.matrixWorld.clone();
-    data2 = scenery.meshes.get(obj2.name).get(0);
+    data2 = scenery.meshes.get(obj2.name).get('');
 
     assert.equal(data2.mesh.name, obj2.name);
     assert.equal(data2.mesh.material.length, obj2.material.length);
@@ -192,7 +194,7 @@ describe('BackgroundScenery', () => {
       scenery.set(obj2, 2);
 
       const mat2 = obj2.matrixWorld.clone();
-      const data2 = scenery.meshes.get(obj2.name).get(0);
+      const data2 = scenery.meshes.get(obj2.name).get('');
 
       assert.equal(data2.mesh.name, obj2.name);
       assert.equal(data2.mesh.material.length, obj2.material.length);
@@ -217,7 +219,7 @@ describe('BackgroundScenery', () => {
     scenery.set(obj2, 2);
 
     mat2 = obj2.matrixWorld.clone();
-    data2 = scenery.meshes.get(obj2.name).get(0);
+    data2 = scenery.meshes.get(obj2.name).get('');
 
     assert.equal(data2.mesh.name, obj2.name);
     assert.equal(data2.mesh.material.length, obj2.material.length);
@@ -239,6 +241,17 @@ describe('BackgroundScenery', () => {
     tmpMat.transpose(); // Get proper column-major
     assert.ok(tmpMat.equals(ogMat2));
 
+    // Have some prop change variant
+    const entry = data2.entryMap.get(obj2.id);
+    scenery.set(obj2, 2, 'other');
+    data2 = scenery.meshes.get(obj2.name).get('');
+    assert.ok(!data2.entryMap.has(obj2.id)); // Previous variant entry must have been removed
+    assert.ok(data2.freeEntries.has(entry)); // ...which makes a new spot available
+
+    data2 = scenery.meshes.get(obj2.name).get('other');
+    assert.ok(data2.entryMap.has(obj2.id)); // New variant entry must exist
+    assert.equal(data2.freeEntries.size, 0);
+
     // Clear everything
     scenery.clear();
 
@@ -246,6 +259,7 @@ describe('BackgroundScenery', () => {
     assert.equal(scenery.maskMap.size, 0);
     assert.equal(scenery.reverseMaskMap.size, 0);
     assert.equal(scenery.activeMasks.size, 0);
+    assert.equal(scenery.variantMap.size, 0);
     assert.equal(scenery.group.children.length, 0);
   });
 
@@ -274,7 +288,7 @@ describe('BackgroundScenery', () => {
       scenery.set(obj, 2);
 
       const mat = obj.matrixWorld.clone();
-      const data = scenery.meshes.get(obj.name).get(0);
+      const data = scenery.meshes.get(obj.name).get('');
 
       assert.equal(data.mesh.name, obj.name);
       assert.equal(data.mesh.material.length, obj.material.length);
@@ -287,7 +301,7 @@ describe('BackgroundScenery', () => {
       assert.ok(tmpMat.equals(mat));
     }
 
-    let data = scenery.meshes.get('some.rwx').get(0);
+    let data = scenery.meshes.get('some.rwx').get('');
 
     assert.equal(data.mesh.name, 'some.rwx');
     assert.equal(data.mesh.count, 64);
@@ -296,13 +310,12 @@ describe('BackgroundScenery', () => {
 
     const someObj = group.children[3];
 
+    const entry = data.entryMap.get(someObj.id);
     assert.ok(scenery.unset(someObj));
 
-    data = scenery.meshes.get('some.rwx').get(0);
+    data = scenery.meshes.get('some.rwx').get('');
     assert.equal(data.mesh.count, 64);
     assert.equal(data.count, 44);
-
-    const entry = data.entryMap.get(someObj.id);
 
     data.mesh.getMatrixAt(entry, tmpMat);
     assert.ok(tmpMat.equals(zeroMat));
@@ -315,10 +328,10 @@ describe('BackgroundScenery', () => {
     assert.ok(scenery.meshes.has(someObj.name));
     assert.ok(scenery.maskMap.has(2));
     assert.ok(!scenery.reverseMaskMap.has(someObj.id)); // Deleted entry
-    assert.ok(scenery.maskMap.get(2).has('some.rwx_0'));
-    assert.equal(scenery.maskMap.get(2).get('some.rwx_0').name, 'some.rwx');
-    assert.equal(scenery.maskMap.get(2).get('some.rwx_0').hash, 0);
-    assert.ok(!scenery.maskMap.get(2).get('some.rwx_0').ids.has(someObj.id)); // Deleted entry
+    assert.ok(scenery.maskMap.get(2).has('some.rwx_'));
+    assert.equal(scenery.maskMap.get(2).get('some.rwx_').name, 'some.rwx');
+    assert.equal(scenery.maskMap.get(2).get('some.rwx_').variant, '');
+    assert.ok(!scenery.maskMap.get(2).get('some.rwx_').ids.has(someObj.id)); // Deleted entry
     assert.equal(scenery.activeMasks.size, 0);
 
     // Adding a new prop should reuse the freed entry number
@@ -331,7 +344,7 @@ describe('BackgroundScenery', () => {
     scenery.set(obj, 2);
 
     const mat = obj.matrixWorld.clone();
-    data = scenery.meshes.get(obj.name).get(0);
+    data = scenery.meshes.get(obj.name).get('');
     assert.equal(data.count, 44);
     assert.equal(data.entryMap.get(obj.id), entry); // Entry has been reused
 
@@ -384,7 +397,7 @@ describe('BackgroundScenery', () => {
     assert.ok(!scenery.activeMasks.has(1));
     assert.ok(scenery.activeMasks.has(2));
 
-    let data = scenery.meshes.get(obj1.name).get(0);
+    let data = scenery.meshes.get(obj1.name).get('');
 
     assert.equal(data.count, 2);
     data.mesh.getMatrixAt(0, tmpMat);
@@ -406,7 +419,7 @@ describe('BackgroundScenery', () => {
     assert.ok(scenery.activeMasks.has(1));
     assert.ok(scenery.activeMasks.has(2));
 
-    data = scenery.meshes.get(obj1.name).get(0);
+    data = scenery.meshes.get(obj1.name).get('');
 
     assert.equal(data.count, 2);
     data.mesh.getMatrixAt(0, tmpMat);
@@ -428,7 +441,7 @@ describe('BackgroundScenery', () => {
     assert.ok(scenery.activeMasks.has(1));
     assert.ok(!scenery.activeMasks.has(2));
 
-    data = scenery.meshes.get(obj1.name).get(0);
+    data = scenery.meshes.get(obj1.name).get('');
 
     assert.equal(data.count, 2);
     data.mesh.getMatrixAt(0, tmpMat);
