@@ -64,7 +64,8 @@ let cameraMode = 0; // 0 is first person view, 1 is rear view, 2 is front view
 let lastAvatarUpdate = 0;
 
 const wsClient = new WsClient(
-    import.meta.env.VITE_SERVER_URL.replace(/http\:\/\//g, 'ws://') + '/api');
+    import.meta.env.VITE_SERVER_URL.replace(/http\:\/\//g, 'ws://')
+        .replace(/https\:\/\//g, 'wss://') + '/api');
 
 // Define reactive states for Vue.js
 const main = reactive({
