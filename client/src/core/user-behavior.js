@@ -249,8 +249,11 @@ class UserBehavior extends SubjectBehavior {
 
       const {x, y, z} = this.tmpVec3;
 
+      // Only use one single ray for casting to improve
+      // perfomances when doing collider interpolation
       const {topCollision, heightCorrection} =
-          this.subject.collider.putColliderBox(x, y, z);
+          this.subject.collider.putColliderBox(x, y, z,
+          interpolationSteps.length > 1 ? mov : null);
 
       if (topCollision && !this.strafe()) {
         // Colliding, can't move in that direction

@@ -9,6 +9,8 @@ const offCollideColor = 0x00ff00;
 const onCollideColor = 0xff0000;
 const stepHeight = 0.65; // in meters
 
+const centralRayId = 4;
+
 /** Class to handle local user collisions with the world geometry */
 class UserCollider {
   /**
@@ -29,11 +31,14 @@ class UserCollider {
 
     this.tmpOrigin = new Vector3();
     this.tmpDirection = new Vector3();
+    this.nullVec3 = new Vector3();
 
     this.rays = [];
     for (let i = 0; i < 9; i++) {
       this.rays.push(new Ray(new Vector3(), new Vector3(0, -1, 0)));
     }
+
+    this.forwardRay = new Ray(new Vector3(), new Vector3(0, -1, 0));
 
     this.debugBox = new Group();
     this.topBoxMaterial = new MeshBasicMaterial({color: offCollideColor,
@@ -156,10 +161,13 @@ class UserCollider {
 
   /**
    * Adjust the rays for the current collider box
+   * @param {Vector3} direction - Movement direction.
    */
-  adjustRays() {
-    const cX = (this.colliderBox.max.x + this.colliderBox.min.x) / 2.0;
-    const cZ = (this.colliderBox.max.z + this.colliderBox.min.z) / 2.0;
+  adjustRays(direction = this.nullVec3) {
+    const rX = (this.colliderBox.max.x - this.colliderBox.min.x) / 2;
+    const rZ = (this.colliderBox.max.z - this.colliderBox.min.z) / 2;
+    let cX = (this.colliderBox.max.x + this.colliderBox.min.x) / 2.0;
+    let cZ = (this.colliderBox.max.z + this.colliderBox.min.z) / 2.0;
 
     let rayId = 0;
     for (const x of [this.colliderBox.min.x, cX, this.colliderBox.max.x]) {
@@ -168,6 +176,23 @@ class UserCollider {
         origin.set(x, this.colliderBox.min.y, z);
       }
     }
+
+    if (direction.x * direction.x > direction.z * direction.z &&
+        direction.x !== 0.0) { // Avoid dividing by 0
+      // Adjust X to reach the border of the collider box ("project" onto it)
+      // and scale Z accordingly to maintain the direction
+      cX = direction.x > 0 ? cX + rX : cX - rX;
+      cZ = (rX / Math.abs(direction.x)) * direction.z + cZ;
+    } else if (direction.z !== 0.0) { // Avoid dividing by 0
+      // Same logic, but by adjusting Z and scaling X accordingly
+      cZ = direction.z > 0 ? cZ + rZ : cZ - rZ;
+      cX = (rZ / Math.abs(direction.z)) * direction.x + cX;
+    } else {
+      this.forwardRay.origin.copy(this.rays[centralRayId].origin);
+      return;
+    }
+
+    this.forwardRay.origin.set(cX, this.colliderBox.min.y, cZ);
   }
 
   /**
@@ -176,9 +201,10 @@ class UserCollider {
    * @param {number} x - X coordinate, in meters.
    * @param {number} y - Y coordinate, in meters.
    * @param {number} z - Z coordinate, in meters.
+   * @param {Vector3} direction - Movement direction.
    * @return {Object} topCollision and heightCorrection values.
    */
-  putColliderBox(x, y, z) {
+  putColliderBox(x, y, z, direction = null) {
     const {min, max} = this.colliderBox;
 
     min.x = this.colliderCenter.x + x - this.colliderHalfSide;
@@ -190,7 +216,7 @@ class UserCollider {
 
     if (max.y < min.y) min.y = max.y - 0.01;
 
-    this.adjustRays();
+    this.adjustRays(direction ? direction : this.nullVec3);
 
     const topCollision = this.collidesWithNodes(this.nodeIDs);
 
@@ -200,7 +226,8 @@ class UserCollider {
       this.topBoxMaterial.color.set(offCollideColor);
     }
 
-    const bottomStep = this.raycastAgainstNodes(this.nodeIDs);
+    const bottomStep = this.raycastAgainstNodes(this.nodeIDs,
+        direction ? true : false);
 
     if (bottomStep) {
       this.bottomBoxMaterial.color.set(onCollideColor);
@@ -259,11 +286,13 @@ class UserCollider {
    * @param {Vector3} offset - bounds tree 3D position offset.
    * @param {Matrix4} worldMat - Transformation matrix associated to the
    *                             bounds tree geometry.
+   * @param {boolean} single - Whether or not to use a single ray for
+   *                           casting, false by default.
    * @return {number|null} Distance of the hit (in meters) if any, given the
    *                       provided geometry and the shape of the collider,
    *                       null otherwise.
    */
-  raycastAgainstBoundsTree(boundsTree, offset, worldMat) {
+  raycastAgainstBoundsTree(boundsTree, offset, worldMat, single = false) {
     if (offset.lengthSq() === 0) {
       // No offset to apply
       this.tmpVec3.setFromMatrixPosition(worldMat);
@@ -298,7 +327,11 @@ class UserCollider {
       }
     };
 
-    this.rays.forEach(cast);
+    if (single) {
+      cast(this.forwardRay);
+    } else {
+      this.rays.forEach(cast);
+    }
 
     return distance < stepHeight ? distance : null;
   }
@@ -329,11 +362,13 @@ class UserCollider {
    * Raycast bottom part of the collider given the provided 3D engine node IDs
    * @param {Array<integer>} nodeIDs - Array of IDs for nodes to be
    *                                   fetched from the 3D engine.
+   * @param {boolean} single - Whether or not to use a single ray for
+   *                           casting, false by default.
    * @return {number|null} Distance of the hit (in meters) if any, given
    *                       the provided nodes and the shape of the collider,
    *                       null otherwise.
    */
-  raycastAgainstNodes(nodeIDs) {
+  raycastAgainstNodes(nodeIDs, single = false) {
     let shortestDistance = stepHeight;
 
     for (const nodeID of nodeIDs) {
@@ -342,7 +377,7 @@ class UserCollider {
       const worldMat = this.engine3d.getNodeMatrixWorld(nodeID);
       if (boundsTree && worldMat && offset) {
         const distance =
-            this.raycastAgainstBoundsTree(boundsTree, offset, worldMat);
+            this.raycastAgainstBoundsTree(boundsTree, offset, worldMat, single);
         if (distance && distance < shortestDistance) {
           shortestDistance = distance; // The shortest distance of the hit
         }
