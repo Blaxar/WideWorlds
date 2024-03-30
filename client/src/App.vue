@@ -312,7 +312,7 @@ const handleAvatar = (avatarId) => {
   // Load avatar
   worldManager.getAvatar(worldAvatars[avatarId].geometry).then((obj3d) => {
     engine3d.setUserAvatar(obj3d, avatarId);
-    userCollider.adjustToObject(obj3d);
+    userCollider.adjustToObject(obj3d, true);
     obj3d.userData.avatarId = avatarId;
 
     const {name, imp, exp} = worldAvatars[avatarId];

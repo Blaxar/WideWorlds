@@ -231,11 +231,12 @@ class UserBehavior extends SubjectBehavior {
 
     if (this.colliderInterpolation && !this.strafe() &&
         movement.lengthSq() > interpolationDistance * interpolationDistance) {
-      const nbSteps = parseInt(movement.length() / interpolationDistance);
+      const stepRatio = movement.length() / interpolationDistance;
+      const nbSteps = parseInt(stepRatio);
 
       for (let i = 1; i <= nbSteps; i++) {
         interpolationSteps.push(
-            movement.clone().multiplyScalar(i / parseFloat(nbSteps)),
+            movement.clone().multiplyScalar(i / stepRatio),
         );
       }
     }

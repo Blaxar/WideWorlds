@@ -10,6 +10,7 @@ const onCollideColor = 0xff0000;
 const stepHeight = 0.65; // in meters
 
 const centralRayId = 4;
+const avatarSpan = 0.6; // in meters
 
 /** Class to handle local user collisions with the world geometry */
 class UserCollider {
@@ -135,13 +136,18 @@ class UserCollider {
    * Adjust the shape of the collider and the position of the rays to
    * the provided 3D asset
    * @param {Object3D} obj3d - 3D asset to fit the collider for.
+   * @param {Object3D} isAvatar - Whether or not this collider box is to
+   *                              be used for avatar collision, false by
+   *                              default;
+   *                              True means the width and depth will
+   *                              always be fixed (matching AW behavior).
    */
-  adjustToObject(obj3d) {
+  adjustToObject(obj3d, isAvatar = false) {
     this.colliderBox.setFromObject(obj3d);
     const width = this.colliderBox.max.x - this.colliderBox.min.x;
     const height = this.colliderBox.max.y - this.colliderBox.min.y;
     const depth = this.colliderBox.max.z - this.colliderBox.min.z;
-    const side = width > depth ? width : depth;
+    const side = isAvatar ? avatarSpan : (width > depth ? width : depth);
 
     this.colliderHalfSide = side / 2;
     this.colliderHalfHeight = height / 2;
