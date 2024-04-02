@@ -189,7 +189,10 @@ class WorldManager {
       maximum: 1000,
     };
 
-    this.sceneryNodeHandle = this.engine3d.spawnNode();
+    // Background scenery will not be included in the selection domain
+    // when right-clicking...
+    this.sceneryNodeHandle =
+      this.engine3d.spawnNode(0, 0, 0, false, false, false);
     this.background = new Group();
     this.scenery = new BackgroundScenery(this.background, (obj3d) => {
       // Each prop in the scenery will be identified by its database ID

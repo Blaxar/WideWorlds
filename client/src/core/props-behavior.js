@@ -146,7 +146,7 @@ class PropsSelector {
 
     const intersects =
         this.clickRaycaster.intersectObjects(
-            this.engine3d.scene.children, true,
+            this.engine3d.getSelectableNodes(), true,
         );
 
     for (const intersect of intersects) {

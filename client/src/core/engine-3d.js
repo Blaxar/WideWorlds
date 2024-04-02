@@ -110,6 +110,8 @@ class Engine3D {
     this.backgroundScene.add(this.reversedOctahedron);
     this.nodes = new Map();
     this.lodNodeIDs = new Set();
+    this.selectableNodeIDs = new Set();
+    this.selectionCandidateNodeIDs = new Set();
     this.lastId = 0;
 
     this.helperArrows = utils3D.makeHelperArrows(1);
@@ -373,13 +375,17 @@ class Engine3D {
    * @param {boolean} lod - Whether or not the node will allow for different
    *                        levels of detail, false by default.
    * @param {boolean} hide - Whether or not to hide node at creation.
+   * @param {boolean} selectable - Whether or not to have this node as part of
+   *                               the selection domain (when right clicking).
    * @return {integer} ID of the newly-spawned node.
    */
-  spawnNode(x = 0, y = 0, z = 0, lod = false, hide = false) {
+  spawnNode(x = 0, y = 0, z = 0, lod = false, hide = false, selectable = true) {
     const id = this.lastId++;
     this.nodes.set(id, lod ? new THREE.LOD() :
         new THREE.Group());
     const node = this.nodes.get(id);
+
+    if (selectable) this.selectableNodeIDs.add(id);
 
     if (lod) {
       // Ready the LOD with different levels, ready to welcome
@@ -393,8 +399,15 @@ class Engine3D {
       }
 
       this.lodNodeIDs.add(id);
-      if (!hide) this.visibleLODNodeIDs.add(id);
+
+      if (!hide) {
+        if (selectable) this.selectionCandidateNodeIDs.add(id);
+        this.visibleLODNodeIDs.add(id);
+      }
+    } else if (selectable) {
+      this.selectionCandidateNodeIDs.add(id);
     }
+
 
     node.position.set(x, y, z);
 
@@ -440,6 +453,8 @@ class Engine3D {
 
     this.lodNodeIDs.delete(id);
     this.visibleLODNodeIDs.delete(id);
+    this.selectableNodeIDs.delete(id);
+    this.selectionCandidateNodeIDs.delete(id);
 
     this.scene.remove(node);
     this.nodes.delete(id);
@@ -652,6 +667,7 @@ class Engine3D {
       if (node.getCurrentLevel() > 0) {
         // Node went invisible
         this.visibleLODNodeIDs.delete(id);
+        this.selectionCandidateNodeIDs.delete(id);
         node.removeFromParent();
         turnedInvisible.add(id);
       } else {
@@ -677,11 +693,23 @@ class Engine3D {
         // Node went visible
         this.scene.add(node);
         this.visibleLODNodeIDs.add(id);
+        if (this.selectableNodeIDs.has(id)) {
+          this.selectionCandidateNodeIDs.add(id);
+        }
         visible.add(id);
       }
     });
 
     return {visible, turnedInvisible};
+  }
+
+  /**
+   * Get a list of currently-selectable nodes
+   * @return {Array<Object3D>} List of selectable nodes.
+   */
+  getSelectableNodes() {
+    return [...this.selectionCandidateNodeIDs.values()].map((id) =>
+      this.nodes.get(id));
   }
 
   /**
