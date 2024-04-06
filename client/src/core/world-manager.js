@@ -32,6 +32,7 @@ const chunkNodeColliderFilter =
 const twoPi = 2*Math.PI;
 const maxLoadingAttempts = 4;
 const sceneryUpdateCooldown = 5000; // ms
+const outerRadiusDelta = 2;
 
 /**
  * Wrapper around {@link BackgroundScenery} to process
@@ -295,6 +296,17 @@ class WorldManager {
     });
 
     this.chunkLoadingPattern = chunkLoadingPattern;
+
+    // Tune the pruning threshold, we consider that the amount
+    // of invisble chunks we want to leave in the scene (without
+    // removing them yet) is roughly 2 more layers of circle area
+    const chunkArea = this.chunkSide * this.chunkSide;
+    const innerArea = radius * radius * Math.PI;
+    const innerCount = innerArea / chunkArea;
+    const outerArea = (radius + outerRadiusDelta * this.chunkSide) *
+        (radius + outerRadiusDelta * this.chunkSide) * Math.PI;
+    const outerCount = outerArea / chunkArea;
+    this.engine3d.setLODPruningThreshold(parseInt(outerCount - innerCount));
   }
 
   /**

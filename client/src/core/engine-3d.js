@@ -18,6 +18,7 @@ const entityTagName = 'entity-tag';
 const tagFontSizePx = 15;
 const tagHeightOffset = 0.2; // in meters
 const isNumber = (value) => !isNaN(value);
+const minimumLODPruningThreshold = 50;
 
 /**
  * Core 3D management class, meant to abstract several three.js
@@ -41,6 +42,8 @@ class Engine3D {
     this.foregroundScene = new THREE.Scene();
     this.userHeight = defaultUserHeight;
     this.visibleLODNodeIDs = new Set();
+    this.lodNodeIDsToPrune = new Set();
+    this.lodPruningThreshold = minimumLODPruningThreshold;
 
     this.user = new THREE.Group();
     this.head = new THREE.Group();
@@ -408,13 +411,13 @@ class Engine3D {
       this.selectionCandidateNodeIDs.add(id);
     }
 
-
     node.position.set(x, y, z);
 
     node.userData['dynamic'] = new Map();
     node.matrixAutoUpdate = false;
 
-    if (!hide) this.scene.add(node);
+    if (hide) node.visible = false;
+    else this.scene.add(node);
 
     node.updateMatrix();
     node.updateMatrixWorld(true);
@@ -454,6 +457,7 @@ class Engine3D {
     this.lodNodeIDs.delete(id);
     this.visibleLODNodeIDs.delete(id);
     this.selectableNodeIDs.delete(id);
+    this.lodNodeIDsToPrune.delete(id);
     this.selectionCandidateNodeIDs.delete(id);
 
     this.scene.remove(node);
@@ -668,7 +672,8 @@ class Engine3D {
         // Node went invisible
         this.visibleLODNodeIDs.delete(id);
         this.selectionCandidateNodeIDs.delete(id);
-        node.removeFromParent();
+        this.lodNodeIDsToPrune.add(id);
+        node.visible = false;
         turnedInvisible.add(id);
       } else {
         // Node was visible and remains so
@@ -691,7 +696,9 @@ class Engine3D {
 
       if (node.getCurrentLevel() <= 0) {
         // Node went visible
-        this.scene.add(node);
+        this.lodNodeIDsToPrune.delete(id);
+        node.visible = true;
+        if (!node.parent) this.scene.add(node);
         this.visibleLODNodeIDs.add(id);
         if (this.selectableNodeIDs.has(id)) {
           this.selectionCandidateNodeIDs.add(id);
@@ -700,7 +707,42 @@ class Engine3D {
       }
     });
 
+    this.maybePruneLODs();
+
     return {visible, turnedInvisible};
+  }
+
+  /**
+   * Prune invisible LODs from the scene if too many of them
+   * were accumulated, for internal use by {@link updateLODs}
+   */
+  maybePruneLODs() {
+    // Do nothing if below the pruning threshold
+    if (this.lodNodeIDsToPrune.size <= this.lodPruningThreshold) {
+      return;
+    }
+
+    console.info(`Pruning ${this.lodNodeIDsToPrune.size} LODs ` +
+        `(threshold is ${this.lodPruningThreshold}).`);
+
+    this.lodNodeIDsToPrune.forEach((id) => {
+      const node = this.nodes.get(id);
+      if (!node || !node.isLOD) return;
+
+      node.removeFromParent();
+    });
+
+    this.lodNodeIDsToPrune.clear();
+  }
+
+  /**
+   * Set the new pruning threshold amount for LODs
+   * @param {integer} threshold - New threshold value.
+   */
+  setLODPruningThreshold(threshold) {
+    this.lodPruningThreshold =
+      minimumLODPruningThreshold > threshold ?
+      minimumLODPruningThreshold : threshold;
   }
 
   /**
