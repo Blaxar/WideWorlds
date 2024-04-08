@@ -58,7 +58,7 @@ VITE_SERVER_URL=http://localhost:8080 npm run client-dev
 
 Prepending `VITE_HTTP_SERVER_URL=<url>` as environment variable is essential, as it tells the _Vue.js_ app which base url to use when performing http requests.
 
-You can then browse the app going to `http://localhost:3000` on your favorite web browser, note that building and serving the _Vue.js_ app this way is only meant for development and debugging purposes, as editing source files from the frontend should trigger a thorough rebuilding and automatically reload the web page, which is convenient for live-testing of various changes.
+You can then browse the app going to `http://localhost:5173` on your favorite web browser, note that building and serving the _Vue.js_ app this way is only meant for development and debugging purposes, as editing source files from the frontend should trigger a thorough rebuilding and automatically reload the web page, which is convenient for live-testing of various changes.
 
 ## Tools
 
