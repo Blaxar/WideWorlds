@@ -5,6 +5,7 @@
 import {URL} from 'url';
 import {WebSocketServer} from 'ws';
 import jwt from 'jsonwebtoken';
+import logger from './logger.js';
 import {formatUserMessage, forwardEntityState, packEntityStates, entityType}
   from '../common/ws-data-format.js';
 
@@ -159,8 +160,12 @@ class WsChannelManager {
     }
 
     // TODO: catch error if any and log it somewhere
-    this.worldStateBuffers[worldId].set(clientId,
-        forwardEntityState(entityType.user, clientId, state));
+    try {
+      this.worldStateBuffers[worldId].set(clientId,
+          forwardEntityState(entityType.user, clientId, state));
+    } catch (e) {
+      logger.error(e);
+    }
   }
 
   /**

@@ -132,6 +132,7 @@ describe('ws client', () => {
 
   it('world state', async () => {
     const state = dummyEntityState(base.citizenId);
+    const invalidState = dummyEntityState(base.adminId);
 
     const client = new WsClient(`ws://127.0.0.1:${base.port}/api`, base.citizenBearerToken);
     const states = await client.worldStateConnect(base.worldId);
@@ -150,9 +151,17 @@ describe('ws client', () => {
     assert.strictEqual(closed, false);
 
     states.send(state);
-    await sleep(150);
+    await sleep(110);
 
     // The deserialized payloads should be identical
+    assert.equal(message.length, 1);
+    assert.equal(JSON.stringify(message[0]), JSON.stringify(state));
+    message = null;
+
+    // Sending an invalid payload should not result in any update
+    states.send(invalidState);
+    await sleep(110);
+
     assert.equal(message.length, 1);
     assert.equal(JSON.stringify(message[0]), JSON.stringify(state));
 
