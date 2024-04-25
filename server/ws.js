@@ -8,6 +8,7 @@ import jwt from 'jsonwebtoken';
 import logger from './logger.js';
 import {formatUserMessage, forwardEntityState, packEntityStates, entityType}
   from '../common/ws-data-format.js';
+import {requestRemoteAddress} from './utils.js';
 
 const bearerRegex = /^Bearer (.*)$/i;
 const worldChatRegex = /^\/api\/worlds\/([0-9]+)\/ws\/chat$/;
@@ -90,12 +91,13 @@ class WsChannelManager {
   sendWorldChatMessage(clientId, worldId, msg) {
     const worldChat = this.worldChannels[worldId]?.chat;
     if (worldChat === undefined) {
-      throw new Error('World not found, can\'t send message');
+      throw new Error(`World #${worldId} not found, can't send message`);
     }
 
     const user = this.userCache.get(clientId);
     if (!user) {
-      throw new Error('User not found, can\'t send message');
+      throw new Error(`User with client #${clientId} not found, ` +
+                      'can\'t send message');
     }
 
     // Do not propagate empty messages, ignore silently
@@ -151,12 +153,13 @@ class WsChannelManager {
   updateWorldState(clientId, worldId, state) {
     const worldState = this.worldChannels[worldId]?.state;
     if (worldState === undefined) {
-      throw new Error('World not found, can\'t update state');
+      throw new Error(`World #${worldId} not found, can't update state`);
     }
 
     const user = this.userCache.get(clientId);
     if (!user) {
-      throw new Error('User not found, can\'t update state');
+      throw new Error(`User for client #${clientId} not found, ` +
+                      'can\'t update state');
     }
 
     // TODO: catch error if any and log it somewhere
@@ -215,6 +218,7 @@ class WsChannelManager {
     const worldUpdate = this.worldChannels[worldId]?.update;
     if (worldUpdate === undefined) {
       // World not found: nobody is listening to it yet
+      logger.error(`World #${worldId} not found for world update broadcast`);
       return;
     }
 
@@ -266,12 +270,14 @@ class WsChannelManager {
     const clientChat = this.userChannels[clientId];
 
     if (clientChat === undefined) {
-      throw new Error('Source user not online, can\'t send message');
+      throw new Error(`Source user with client #${clientId} not online, ` +
+                      'can\'t send message');
     }
 
     const user = this.userCache.get(clientId);
     if (!user) {
-      throw new Error('Source user not cached, can\'t send message');
+      throw new Error(`Source user with client #${clientId} not cached, ` +
+                      'can\'t send message');
     }
 
     let data = formatUserMessage(false, clientId, user.name, user.role, msg);
@@ -331,8 +337,12 @@ const spawnWsServer = async (server, secret, userCache) => {
         });
 
         ws.on('message', (data) => {
-          wsChannelManager.sendWorldChatMessage(userId, id,
-              new TextDecoder().decode(data));
+          try {
+            wsChannelManager.sendWorldChatMessage(userId, id,
+                new TextDecoder().decode(data));
+          } catch (e) {
+            logger.error(e);
+          }
         });
       } else if (type == 'state') {
         wsChannelManager.addWorldStateConnection(id, ws, userId);
@@ -342,7 +352,11 @@ const spawnWsServer = async (server, secret, userCache) => {
         });
 
         ws.on('message', (data) => {
-          wsChannelManager.updateWorldState(userId, id, new Uint8Array(data));
+          try {
+            wsChannelManager.updateWorldState(userId, id, new Uint8Array(data));
+          } catch (e) {
+            logger.error(e);
+          }
         });
       } else if (type == 'update') {
         wsChannelManager.addWorldUpdateConnection(id, ws, userId);
@@ -365,8 +379,12 @@ const spawnWsServer = async (server, secret, userCache) => {
       }
 
       ws.on('message', (data) => {
-        wsChannelManager.sendUserChatMessage(userId, id,
-            new TextDecoder().decode(data));
+        try {
+          wsChannelManager.sendUserChatMessage(userId, id,
+              new TextDecoder().decode(data));
+        } catch (e) {
+          logger.error(e);
+        }
       });
     }
   });
@@ -374,6 +392,9 @@ const spawnWsServer = async (server, secret, userCache) => {
   server.on('upgrade', function upgrade(request, socket, head) {
     const {pathname, searchParams} = new URL(request.url, 'https://wideworlds.org');
     // We don't care about the base
+
+    // Handle reverse-proxy forwarding (if set) to get the actual remote address
+    const remoteAddress = requestRemoteAddress(request);
 
     const worldMatch = pathname.match(worldChatRegex);
     const stateMatch = pathname.match(worldStateRegex);
@@ -396,6 +417,8 @@ const spawnWsServer = async (server, secret, userCache) => {
           decodeURIComponent(searchParams.get('token'));
       } else {
         // No parameters, can't go further
+        logger.warn(`Unauthorized WS connection to '${pathname}' from ` +
+                    `'${remoteAddress}': missing parameters in headers`);
         socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n');
         socket.destroy();
         return;
@@ -404,8 +427,12 @@ const spawnWsServer = async (server, secret, userCache) => {
 
     authenticate(request, (err) => {
       if (err == 401) {
+        logger.warn(`Unauthorized WS connection to '${pathname}' from ` +
+                    `'${remoteAddress}': failed authentication`);
         socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n');
       } else if (err == 403) {
+        logger.warn(`Forbidden WS connection to '${pathname}' from `+
+                    `'${remoteAddress}': bad credentials`);
         socket.write('HTTP/1.1 403 Forbidden\r\n\r\n');
       }
       socket.destroy();

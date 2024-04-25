@@ -16,13 +16,19 @@ You will of course need a working version of `npm` installed on your system.
 
 ### `Node.js` backend server app
 
-To start the server, simply run the following:
+To start the server, simply run the following command, note that `pino-pretty` is there to prettify logger messages in the console (errors, warnings, etc.):
 
 ```bash
-npm run server
+npm run server | npx pino-pretty
 ```
 
 This will run the http/ws server app listening on port `8080`.
+
+Log level can be customized via the `LOG_LEVEL` environment variable, defaulting to `info` when nothing is provided, use `silent` to disable logging entirely:
+
+```bash
+LOG_LEVEL=silent npm run server
+```
 
 You can customize the port by running the following:
 

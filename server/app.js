@@ -6,6 +6,7 @@ import {spawnHttpServer} from './http.js';
 import {spawnWsServer} from './ws.js';
 import yargs from 'yargs';
 import {randomBytes} from 'crypto';
+import logger from './logger.js';
 
 const argv = yargs(process.argv)
     .option('db', {
@@ -47,4 +48,6 @@ spawnHttpServer(argv.db, argv.port, secret, argv.worldFolder, userCache,
         wsChannelManager.broadcastWorldUpdate(wid, data);
       });
       wsChannelManager.startBroadcasting();
+      logger.info('Started WideWorlds HTTP & WebSocket server, ' +
+                  `listening on port ${argv.port}`);
     });

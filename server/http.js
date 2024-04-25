@@ -16,6 +16,7 @@ import jwt from 'jsonwebtoken';
 import cors from 'cors';
 import express from 'express';
 import {join} from 'node:path';
+import logger from './logger.js';
 
 const minNbUsersPerPage = 1;
 const defaultNbUsersPerPage = 200;
@@ -89,7 +90,11 @@ const spawnHttpServer = async (path, port, secret, worldFolder, userCache,
               res.status(401).json({});
             }
           })
-          .catch((err) => res.status(500).json({}));
+          .catch((e) => {
+            logger.fatal('Critical DB access error while trying to log user ' +
+                         `'${username}' in: ` + e);
+            return res.status(500).json({});
+          });
     });
 
     app.get('/api/worlds', authenticate, (req, res) => {
@@ -97,7 +102,11 @@ const spawnHttpServer = async (path, port, secret, worldFolder, userCache,
       // Get a list of all existing worlds
       connection.manager.createQueryBuilder(World, 'world')
           .getMany().then((worlds) => res.send(worlds))
-          .catch((err) => res.status(500).json({}));
+          .catch((e) => {
+            logger.fatal('Critical DB access error while trying to get list ' +
+                         'of worlds: ' + e);
+            return res.status(500).json({});
+          });
     });
 
     app.get('/api/worlds/:id', authenticate, (req, res) => {
@@ -112,7 +121,11 @@ const spawnHttpServer = async (path, port, secret, worldFolder, userCache,
               res.status(404).json({});
             }
           })
-          .catch((err) => res.status(500).json({}));
+          .catch((e) => {
+            logger.fatal('Critical DB access error while trying to get world ' +
+                         `#${req.params.id}}: ` + e);
+            return res.status(500).json({});
+          });
     });
 
     registerPropsEndpoints(app, authenticate, connection, ctx);
@@ -222,7 +235,11 @@ const spawnHttpServer = async (path, port, secret, worldFolder, userCache,
                 res.send(users.map((user) => (({id, name, email, role}) =>
                   ({id, name, email, role}))(user))),
               )
-              .catch((err) => res.status(500).json({}));
+              .catch((e) => {
+                logger.fatal('Critical DB access error while trying to get ' +
+                             'list of users: ' + e);
+                return res.status(500).json({});
+              });
         });
 
     app.get('/api/users/:id', authenticate, forbiddenOnFalse(
@@ -238,7 +255,11 @@ const spawnHttpServer = async (path, port, secret, worldFolder, userCache,
               res.status(404).json({});
             }
           })
-          .catch((err) => res.status(500).json({}));
+          .catch((e) => {
+            logger.fatal('Critical DB access error while trying to get user ' +
+                         `#${req.params.id}: ` + e);
+            return res.status(500).json({});
+          });
     });
 
     server.on('close', async () => {

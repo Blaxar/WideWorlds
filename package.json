@@ -5,7 +5,7 @@
   "description": "3D online universe client/server solution, walking in the steps of Active Worlds",
   "main": "index.js",
   "scripts": {
-    "test": "mocha -R spec \"tests/mocha/*.js\"",
+    "test": "LOG_LEVEL=silent mocha -R spec \"tests/mocha/*.js\"",
     "lint-client-vue": "eslint --ext js,vue 'client/src/**/*.vue'",
     "lint-client-js": "eslint --ext js 'client/src/**/*.js'",
     "lint-client": "npm run lint-client-vue && npm run lint-client-js",
@@ -68,6 +68,7 @@
     "eslint-plugin-vue": "^9.8.0",
     "mocha": "^10.4.0",
     "node-localstorage": "^3.0.5",
+    "pino-pretty": "^11.0.0",
     "supertest": "^6.2.2",
     "superwstest": "^2.0.1",
     "vite": "^5.2.8"

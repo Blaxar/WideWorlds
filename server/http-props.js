@@ -2,6 +2,7 @@
  * @author Julien 'Blaxar' Bardagi <blaxar.waldarax@gmail.com>
  */
 
+import logger from './logger.js';
 import World from '../common/db/model/World.js';
 import Prop from '../common/db/model/Prop.js';
 
@@ -111,7 +112,11 @@ function registerPropsEndpoints(app, authenticate, connection, ctx) {
           // Respond with list of props
           queryBuilder.getMany().then((props) => res.send(props));
         })
-        .catch((err) => res.status(500).json({}));
+        .catch((e) => {
+          logger.fatal('Critical DB access error while trying to get props ' +
+                       `for world #${wid}: ` + e);
+          return res.status(500).json({});
+        });
   });
 
   app.put('/api/worlds/:id/props', authenticate, (req, res) => {
@@ -199,9 +204,12 @@ function registerPropsEndpoints(app, authenticate, connection, ctx) {
               res.json(response);
               ctx.propsChangedCallback(wid,
                   JSON.stringify({op: 'update', data: propsToSave}));
-            }).catch((err) => {
-              res.status(500).json({});
-            });
+            })
+                .catch((e) => {
+                  logger.fatal('Critical DB access error while trying to ' +
+                               `put props for world #${wid}: ` + e);
+                  return res.status(500).json({});
+                });
           } else {
             res.json(response);
           }
@@ -292,8 +300,10 @@ function registerPropsEndpoints(app, authenticate, connection, ctx) {
                   ctx.propsChangedCallback(wid,
                       JSON.stringify({op: 'create', data: savedProps}));
                 })
-                .catch((err) => {
-                  res.status(500).json({});
+                .catch((e) => {
+                  logger.fatal('Critical DB access error while trying to ' +
+                               `post props for world #${wid}: ` + e);
+                  return res.status(500).json({});
                 });
           } else {
             res.json(response);
@@ -379,8 +389,11 @@ function registerPropsEndpoints(app, authenticate, connection, ctx) {
                   res.json(response);
                   ctx.propsChangedCallback(wid,
                       JSON.stringify({op: 'delete', data: propsToDelete}));
-                }).catch((err) => {
-                  res.status(500).json({});
+                })
+                .catch((e) => {
+                  logger.fatal('Critical DB access error while trying to ' +
+                               `delete props for world #${wid}: ` + e);
+                  return res.status(500).json({});
                 });
           } else {
             res.json(response);
