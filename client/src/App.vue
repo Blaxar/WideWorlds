@@ -10,6 +10,7 @@ import TopBar from './components/TopBar.vue';
 import CentralOverlay from './components/CentralOverlay.vue';
 import UserChat from './components/UserChat.vue';
 import UserSettings from './components/UserSettings.vue';
+import UserCompass from './components/UserCompass.vue';
 import PropSettings from './components/PropSettings.vue';
 import AnimationPicker from './components/AnimationPicker.vue';
 import AppState, {AppStates} from './core/app-state.js';
@@ -72,6 +73,7 @@ const main = reactive({
   state: AppStates.SIGNED_OUT,
   worlds: {},
   worldId: null,
+  facing: 0,
   displayUserSettings: false,
   displayPropSettings: false,
   propSettingsTrigger: 0,
@@ -381,6 +383,7 @@ const render = () => {
       //                                        animation
     };
 
+    main.facing = engine3d.user.rotation.y;
     worldState.then((state) => state.send(localUserState));
     lastAvatarUpdate = Date.now();
   }
@@ -550,6 +553,10 @@ document.addEventListener('mousemove', (event) => {
     <template v-slot:animations>
       <AnimationPicker :key="main.animationListTrigger"
       :animations="animations" @animation="handleAnimation" />
+    </template>
+    <template v-slot:compass>
+      <UserCompass :key="main.facing"
+      :facing="main.facing" />
     </template>
     </TopBar>
     <CentralOverlay v-if="displayEdgebars">

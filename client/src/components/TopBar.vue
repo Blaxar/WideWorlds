@@ -71,6 +71,9 @@ onMounted(() => {
     </select>
     <slot name="animations" />
     </div>
+    <div class="info-bar">
+    <slot name="compass" />
+    </div>
     </div>
     </div>
 </template>
