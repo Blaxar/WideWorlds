@@ -54,8 +54,10 @@ const userState = {flying: false, onGround: true, running: false, idle: true,
 const storedKeyBindings = JSON.parse(JSON.stringify(qwertyBindings));
 const isTextSelected = () => !!window.getSelection()?.toString();
 const unselectText = () => window.getSelection()?.removeAllRanges();
-const isOverlay3D = (target) => !['button-bar', 'chat-entry']
-    .some((className) => target.classList.contains(className));
+const isOverlay3D = (target) =>
+  target.tagName == 'DIV' &&
+        !['surface', 'window', 'window-body', 'title-bar', 'title-text']
+            .some((className) => target.classList.contains(className));
 
 let defaultWorldId = null;
 let worldAvatars = [];

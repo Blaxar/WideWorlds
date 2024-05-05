@@ -789,6 +789,20 @@ class PropsSelector {
     this.notifyChange(this.props.length);
     this.hasChanged = false;
   }
+
+  /**
+   * Reset rotation on current prop selection
+   */
+  resetRotation() {
+    // TODO: implement
+  }
+
+  /**
+   * Snap current prop selection to grid
+   */
+  snapToGrid() {
+    // TODO: implement
+  }
 };
 
 /** Define the behavior of the props in the 3D space based on key inputs */

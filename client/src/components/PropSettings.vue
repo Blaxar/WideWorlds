@@ -106,6 +106,12 @@ const onButtonClick = (event) => {
   } else if (name === 'prop-rot-z-cw') {
     props.propsSelector.rotateZcw(rotationAngle);
     emit('defocus');
+  } else if (name === 'prop-reset') {
+    props.propsSelector.resetRotation();
+    emit('defocus');
+  } else if (name === 'prop-snap') {
+    props.propsSelector.snapToGrid();
+    emit('defocus');
   }
 };
 
@@ -140,6 +146,10 @@ const setAbsoluteMove = (event) => {
     title="Rotate Z Counter-Clockwise" />
   <button name="prop-rot-z-cw" @click="onButtonClick"
     title="Rotate Z Clockwise" />
+  <button name="prop-reset" @click="onButtonClick" disabled="true"
+    title="Reset rotation" />
+  <button name="prop-snap" @click="onButtonClick" disabled="true"
+    title="Snap to grid" />
   </td></tr>
   <tr class="prop-name"><th scope="row">Name:</th>
   <td><input type="text"

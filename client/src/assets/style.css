@@ -169,6 +169,24 @@ button[name=prop-rot-z-cw], button[name=prop-rot-z-ccw]:active {
     background-size: 2.1em 2.1em;
 }
 
+button[name=prop-reset], button[name=prop-reset]:active {
+    background: url(icons/prop-reset.svg);
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: 2.1em 2.1em;
+}
+
+button[name=prop-snap], button[name=prop-snap]:active {
+    background: url(icons/prop-snap.svg);
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: 2.1em 2.1em;
+}
+
+button:disabled {
+    opacity: 30%;
+}
+
 table.prop-container tr.prop-name th {
     vertical-align: middle;
 }
