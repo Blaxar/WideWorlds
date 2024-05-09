@@ -38,6 +38,7 @@
   },
   "homepage": "https://github.com/Blaxar/WideWorlds#readme",
   "dependencies": {
+    "ml-regression-exponential": "^2.1.0 >2.1.2 || ^2.1.0 <2.1.2 ",
     "aw-action-parser": "npm:@_nekohime_/aw-action-parser@^1.1.10",
     "aw-sequence-parser": "^0.4.2",
     "awcoordinates": "^0.5.5",
@@ -46,7 +47,7 @@
     "express": "^4.17.3",
     "fflate": "^0.8.2",
     "iconv-lite": "^0.6.3",
-    "image-js": "^0.35.3",
+    "image-js": "^0.35.5",
     "isomorphic-ws": "^5.0.0",
     "jsonwebtoken": "^9.0.0",
     "pino": "^8.20.0",
