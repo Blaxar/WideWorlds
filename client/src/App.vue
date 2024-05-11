@@ -76,10 +76,12 @@ const main = reactive({
   worlds: {},
   worldId: null,
   facing: 0,
+  at: {x: 0, y: 0, z: 0},
   displayUserSettings: false,
   displayPropSettings: false,
   propSettingsTrigger: 0,
   animationListTrigger: 0,
+  frameTrigger: 0,
   propSettings: {run: false, strafe: false},
 });
 
@@ -386,8 +388,11 @@ const render = () => {
     };
 
     main.facing = engine3d.user.rotation.y;
+    main.at = (({x, y, z} = engine3d.user.position) => ({x, y, z}))();
     worldState.then((state) => state.send(localUserState));
     lastAvatarUpdate = Date.now();
+
+    main.frameTrigger = (main.frameTrigger + 1) % 2;
   }
 
   propsSelector.updatePropAxis(engine3d.camera);
@@ -557,8 +562,8 @@ document.addEventListener('mousemove', (event) => {
       :animations="animations" @animation="handleAnimation" />
     </template>
     <template v-slot:compass>
-      <UserCompass :key="main.facing"
-      :facing="main.facing" />
+      <UserCompass :key="main.frameTrigger"
+      :facing="main.facing" :at="main.at" />
     </template>
     </TopBar>
     <CentralOverlay v-if="displayEdgebars">

@@ -212,6 +212,16 @@ table.prop-container tr td textarea {
     margin-left: auto;
     margin-right: 1em;
     vertical-align: middle;
+    display: flex;
+    flex-direction: row;
+    height: min-content;
+    font-family: Monospace;
+    font-size: 1.1em;
+}
+
+.top-bar .surface .info-bar #user-position {
+    padding-top: 0.45em;
+    padding-right: 0.45em;
 }
 
 .top-bar .surface .info-bar #user-compass {
@@ -222,8 +232,6 @@ table.prop-container tr td textarea {
 {
     display: block;
     background: linear-gradient(90deg, #00000000 0%, #000000ff 47%, #ff0000ff 48%, #ff0000ff 52%, #000000ff 53%, #00000000 100%);
-    font-family: Monospace;
-    font-size: 1.1em;
     background-clip: text;
     text-fill-color: transparent;
     -webkit-background-clip: text;

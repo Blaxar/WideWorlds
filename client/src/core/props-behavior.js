@@ -643,7 +643,7 @@ class PropsSelector {
 
   /**
    * Move prop selection up
-   * @param {boolean} scalar - Length to move by (in meters).
+   * @param {number} scalar - Length to move by (in meters).
    */
   moveUp(scalar = defaultMoveLength) {
     const moveDirection = new Vector3(0, 1, 0);
@@ -655,7 +655,7 @@ class PropsSelector {
 
   /**
    * Move prop selection down
-   * @param {boolean} scalar - Length to move by (in meters).
+   * @param {number} scalar - Length to move by (in meters).
    */
   moveDown(scalar = defaultMoveLength) {
     const moveDirection = new Vector3(0, -1, 0);
@@ -667,7 +667,7 @@ class PropsSelector {
 
   /**
    * Move prop selection left
-   * @param {boolean} scalar - Length to move by (in meters).
+   * @param {number} scalar - Length to move by (in meters).
    */
   moveLeft(scalar = defaultMoveLength) {
     const moveDirection = this.cloneDirection()
@@ -678,7 +678,7 @@ class PropsSelector {
 
   /**
    * Move prop selection right
-   * @param {boolean} scalar - Length to move by (in meters).
+   * @param {number} scalar - Length to move by (in meters).
    */
   moveRight(scalar = defaultMoveLength) {
     const moveDirection = this.cloneDirection()
@@ -689,7 +689,7 @@ class PropsSelector {
 
   /**
    * Move prop selection forward
-   * @param {boolean} scalar - Length to move by (in meters).
+   * @param {number} scalar - Length to move by (in meters).
    */
   moveForward(scalar = defaultMoveLength) {
     const moveDirection = this.cloneDirection()
@@ -699,7 +699,7 @@ class PropsSelector {
 
   /**
    * Move prop selection backward
-   * @param {boolean} scalar - Length to move by (in meters).
+   * @param {number} scalar - Length to move by (in meters).
    */
   moveBackward(scalar = defaultMoveLength) {
     const moveDirection = this.cloneDirection()
@@ -709,56 +709,56 @@ class PropsSelector {
 
   /**
    * Rotate prop selection counter-clockwise on the X axis
-   * @param {boolean} scalar - Angle to rotate by (in radians).
+   * @param {number} angle - Angle to rotate by (in radians).
    */
-  rotateXccw(scalar = defaultRotationAngle) {
+  rotateXccw(angle = defaultRotationAngle) {
     const rotationAxis = new Vector3(1.0, 0.0, 0.0);
-    this.rotate(rotationAxis, scalar);
+    this.rotate(rotationAxis, angle);
   }
 
   /**
    * Rotate prop selection clockwise around the X axis
-   * @param {boolean} scalar - Angle to rotate by (in radians).
+   * @param {number} angle - Angle to rotate by (in radians).
    */
-  rotateXcw(scalar = defaultRotationAngle) {
+  rotateXcw(angle = defaultRotationAngle) {
     const rotationAxis = new Vector3(1.0, 0.0, 0.0);
-    this.rotate(rotationAxis, -scalar);
+    this.rotate(rotationAxis, -angle);
   }
 
   /**
    * Rotate prop selection counter-clockwise around the Y axis
-   * @param {boolean} scalar - Angle to rotate by (in radians).
+   * @param {number} angle - Angle to rotate by (in radians).
    */
-  rotateYccw(scalar = defaultRotationAngle) {
+  rotateYccw(angle = defaultRotationAngle) {
     const rotationAxis = new Vector3(0.0, 1.0, 0.0);
-    this.rotate(rotationAxis, scalar);
+    this.rotate(rotationAxis, angle);
   }
 
   /**
    * Rotate prop selection clockwise around the Y axis
-   * @param {boolean} scalar - Angle to rotate by (in radians).
+   * @param {number} angle - Angle to rotate by (in radians).
    */
-  rotateYcw(scalar = defaultRotationAngle) {
+  rotateYcw(angle = defaultRotationAngle) {
     const rotationAxis = new Vector3(0.0, 1.0, 0.0);
-    this.rotate(rotationAxis, -scalar);
+    this.rotate(rotationAxis, -angle);
   }
 
   /**
    * Rotate prop selection counter-clockwise around the Y axis
-   * @param {boolean} scalar - Angle to rotate by (in radians).
+   * @param {number} angle - Angle to rotate by (in radians).
    */
-  rotateZccw(scalar = defaultRotationAngle) {
+  rotateZccw(angle = defaultRotationAngle) {
     const rotationAxis = new Vector3(0.0, 0.0, 1.0);
-    this.rotate(rotationAxis, scalar);
+    this.rotate(rotationAxis, angle);
   }
 
   /**
    * Rotate prop selection clockwise around the Y axis
-   * @param {boolean} scalar - Angle to rotate by (in radians).
+   * @param {number} angle - Angle to rotate by (in radians).
    */
-  rotateZcw(scalar = defaultRotationAngle) {
+  rotateZcw(angle = defaultRotationAngle) {
     const rotationAxis = new Vector3(0.0, 0.0, 1.0);
-    this.rotate(rotationAxis, -scalar);
+    this.rotate(rotationAxis, -angle);
   }
 
   /**
@@ -906,12 +906,12 @@ class PropsBehavior extends SubjectBehavior {
     }
 
     if (this.left() && !this.right()) {
-      this.moveDirection.add(propsSelector.propDirection.clone()
+      this.moveDirection.add(propsSelector.cloneDirection()
           .applyAxisAngle(this.upAxis, Math.PI / 2)
           .multiplyScalar(moveLength));
       move = true;
     } else if (!this.left() && this.right()) {
-      this.moveDirection.add(propsSelector.propDirection.clone()
+      this.moveDirection.add(propsSelector.cloneDirection()
           .applyAxisAngle(this.upAxis, - Math.PI / 2)
           .multiplyScalar(moveLength));
       move = true;
