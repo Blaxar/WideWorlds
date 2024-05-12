@@ -274,6 +274,7 @@ class ModelRegistry {
       let sign = null;
       let scale = null;
       let opacity = null;
+      let say = null;
 
       for (const action of createActions) {
         switch (action.commandType) {
@@ -297,6 +298,10 @@ class ModelRegistry {
 
           case 'picture':
             picture = action;
+            break;
+
+          case 'say':
+            say = action;
             break;
 
           case 'sign':
@@ -337,9 +342,13 @@ class ModelRegistry {
 
       if (opacity) rwxMaterial.opacity = opacity.opacity;
 
+
       obj3d.userData.rwx.solid = solid;
       obj3d.visible = visible;
       obj3d.userData.invisible = !visible;
+      if (say) {
+        obj3d.userData.say = say.text;
+      }
 
       const newSignature = rwxMaterial.getMatSignature();
 

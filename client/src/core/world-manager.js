@@ -1142,6 +1142,12 @@ class WorldManager {
 
     try {
       this.currentModelRegistry.applyActionString(obj3d, prop.action);
+
+      if (obj3d.userData?.say) {
+        this.userFeed.publish(
+            obj3d.userData.say,
+        );
+      }
     } catch (e) {
       console.error(e);
     }
