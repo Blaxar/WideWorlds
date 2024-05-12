@@ -146,9 +146,9 @@ const setAbsoluteMove = (event) => {
     title="Rotate Z Counter-Clockwise" />
   <button name="prop-rot-z-cw" @click="onButtonClick"
     title="Rotate Z Clockwise" />
-  <button name="prop-reset" @click="onButtonClick" disabled="true"
+  <button name="prop-reset" @click="onButtonClick"
     title="Reset rotation" />
-  <button name="prop-snap" @click="onButtonClick" disabled="true"
+  <button name="prop-snap" @click="onButtonClick"
     title="Snap to grid" />
   </td></tr>
   <tr class="prop-name"><th scope="row">Name:</th>
