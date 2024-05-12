@@ -791,17 +791,61 @@ class PropsSelector {
   }
 
   /**
-   * Reset rotation on current prop selection
+   * Reset rotation on current prop selection to 0, 0, 0
+   * Executes on an individual basis on each object, and not on the entire group
    */
   resetRotation() {
-    // TODO: implement
+    this.hasChanged = true;
+
+    this.props.forEach(({stagingProp, boundingBox}) => {
+      const obj3d = stagingProp;
+
+      obj3d.rotation.set(0, 0, 0);
+      obj3d.userData.prop.pitch = 0;
+      obj3d.userData.prop.yaw = 0;
+      obj3d.userData.prop.roll = 0;
+
+      boundingBox.rotation.copy(obj3d.rotation);
+      boundingBox.updateMatrix();
+
+      // Update the position if needed
+      obj3d.position.copy(obj3d.userData.prop);
+      obj3d.updateMatrix();
+    });
+
+    this.updateArrows();
   }
 
   /**
    * Snap current prop selection to grid
+      to the nearest whole integers on the X, Y, and Z axes.
+   * Executes on an individual basis on each object, and not on the entire group
    */
   snapToGrid() {
-    // TODO: implement
+    this.hasChanged = true;
+
+    this.props.forEach(({stagingProp, boundingBox}) => {
+      const obj3d = stagingProp;
+
+      // Round the positions to the nearest integers
+      obj3d.userData.prop.x = Math.round(obj3d.userData.prop.x);
+      obj3d.userData.prop.y = Math.round(obj3d.userData.prop.y);
+      obj3d.userData.prop.z = Math.round(obj3d.userData.prop.z);
+
+      // Update the position
+      obj3d.position.set(
+          obj3d.userData.prop.x,
+          obj3d.userData.prop.y,
+          obj3d.userData.prop.z,
+      );
+      obj3d.updateMatrix();
+
+      // Update bounding box position
+      boundingBox.position.copy(obj3d.position);
+      boundingBox.updateMatrix();
+    });
+
+    this.updateArrows();
   }
 };
 
