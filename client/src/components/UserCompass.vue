@@ -27,15 +27,19 @@ const atToText = (position) => {
   const absX = Math.abs(x);
   const absZ = Math.abs(z);
 
-  if (absX < 5.0 && absZ < 5.0) return `GZ (${altitude}m)`;
+  if (absX < 5.0 && absZ < 5.0) {
+    return `<span class="compass-atGZ">Ground Zero</span> ` +
+    `(<span class="compass-atY">${altitude}m</span>)`;
+  }
 
   const latitudeVal =
       parseInt(absZ < 5.0 ? 0 : ((absZ - 5.0) / 10.0) + 1);
   const longitudeVal =
      parseInt(absX < 5.0 ? 0 : ((absX - 5.0) / 10.0) + 1);
 
-  return `${latitudeVal}${latitudeDir} ${longitudeVal}${longitudeDir} ` +
-      `(${altitude}m)`;
+  return `<span class="compass-atZ">${latitudeVal}${latitudeDir}</span> ` +
+    `<span class="compass-atX">${longitudeVal}${longitudeDir}</span> ` +
+    `(<span class="compass-atY">${altitude}m</span>)`;
 };
 
 const facingToText = (angle) => {
@@ -60,7 +64,7 @@ const facingToText = (angle) => {
 </script>
 <template>
 <div id="user-position">
-<span> {{ atToText(props.at) }} </span>
+<span v-html="atToText(props.at)"></span>
 </div>
 <div id="user-compass">
 <span> {{ facingToText(props.facing) }} </span>

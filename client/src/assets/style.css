@@ -238,6 +238,22 @@ table.prop-container tr td textarea {
     -webkit-text-fill-color: transparent;
 }
 
+.compass-atX {
+    color: red;
+    font-weight: bold;
+}
+.compass-atY {
+    color: green;
+    font-weight: bold;
+}
+.compass-atZ {
+    color: blue;
+    font-weight: bold;
+}
+.compass-atGZ {
+  font-weight: bold;
+}
+
 .bottom-bar {
     width: 100%;
     height: min-content;
