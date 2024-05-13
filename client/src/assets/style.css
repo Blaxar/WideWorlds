@@ -3,364 +3,353 @@
  */
 
 body {
-    margin: 0;
-    padding: 0;
-    height: 100vh;
-    width: 100vw;
+  margin: 0;
+  padding: 0;
+  height: 100vh;
+  width: 100vw;
 }
 
 #overlay {
-    z-index: 1;
-    position: absolute;
-    width: 100%;
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
+  z-index: 1;
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
 }
 
 .prompt {
-    margin: auto;
+  margin: auto;
 }
 
 .login {
-    width: min-content;
+  width: min-content;
 }
 
 .world-selection {
-    width: min-content;
+  width: min-content;
 }
 
 .central-overlay {
-    width: 100%;
-    height: min-content;
-    display: flex;
-    flex-direction: row;
+  width: 100%;
+  height: min-content;
+  display: flex;
+  flex-direction: row;
 }
 
 .left-surface, .central-surface, .right-surface {
-    width: 33.333vw;
-    vertical-align: middle;
-    height: 50vh;
+  width: 33.333vw;
+  vertical-align: middle;
+  height: 50vh;
 }
 
-div.prop-settings {
-    width: 75%;
-    margin-left: auto;
-    margin-right: 0;
+.prop-settings {
+  width: 75%;
+  margin-left: auto;
+  margin-right: 0;
+
+  .button-bar {
+    height: min-content;
+  }
 }
 
-table.prop-container tr th {
+.prop-container {
+  tr th {
     width: 10%;
     vertical-align: top;
     text-align: right;
-}
+  }
 
-table.prop-container tr.button-bar button {
+  tr.prop-name th {
+    vertical-align: middle;
+  }
+
+  tr td textarea {
+    width: 100%;
+    min-height: 12vh;
+    resize: none;
+  }
+
+  button:disabled {
+      opacity: 0.3;
+  }
+
+  tr.button-bar button {
     width: 2.6em;
     height: 2.6em;
     min-width: 1em;
     min-height: 1em;
     margin-right: 0.2em;
-}
+  }
 
-button[name=prop-undo] {
-    background: url(icons/prop-undo.svg);
+  button[name="prop-undo"] {
+    background: url("icons/prop-undo.svg");
     background-position: center;
     background-repeat: no-repeat;
     background-size: 2.1em 2.1em;
-}
+  }
 
-button[name=prop-delete] {
-    background: url(icons/prop-delete.svg);
+  button[name="prop-delete"] {
+    background: url("icons/prop-delete.svg");
     background-position: center;
     background-repeat: no-repeat;
     background-size: 2.1em 2.1em;
-}
+  }
 
-button[name=prop-duplicate] {
-    background: url(icons/prop-duplicate.svg);
+  button[name="prop-duplicate"] {
+    background: url("icons/prop-duplicate.svg");
     background-position: center;
     background-repeat: no-repeat;
     background-size: 2.1em 2.1em;
-}
+  }
 
-button[name=prop-up], button[name=prop-up]:active {
-    background: url(icons/prop-up.svg);
+  button[name="prop-up"], button[name="prop-up"]:active {
+    background: url("icons/prop-up.svg");
     background-position: center;
     background-repeat: no-repeat;
     background-size: 2.1em 2.1em;
-}
+  }
 
-button[name=prop-down], button[name=prop-down]:active {
-    background: url(icons/prop-down.svg);
+  button[name="prop-down"], button[name="prop-down"]:active {
+    background: url("icons/prop-down.svg");
     background-position: center;
     background-repeat: no-repeat;
     background-size: 2.1em 2.1em;
-}
+  }
 
-button[name=prop-left], button[name=prop-left]:active {
-    background: url(icons/prop-left.svg);
+  button[name="prop-left"], button[name="prop-left"]:active {
+    background: url("icons/prop-left.svg");
     background-position: center;
     background-repeat: no-repeat;
     background-size: 2.1em 2.1em;
-}
+  }
 
-button[name=prop-right], button[name=prop-right]:active {
-    background: url(icons/prop-right.svg);
+  button[name="prop-right"], button[name="prop-right"]:active {
+    background: url("icons/prop-right.svg");
     background-position: center;
     background-repeat: no-repeat;
     background-size: 2.1em 2.1em;
-}
+  }
 
-button[name=prop-forward], button[name=prop-forward]:active {
-    background: url(icons/prop-forward.svg);
+  button[name="prop-forward"], button[name="prop-forward"]:active {
+    background: url("icons/prop-forward.svg");
     background-position: center;
     background-repeat: no-repeat;
     background-size: 2.1em 2.1em;
-}
+  }
 
-button[name=prop-backward], button[name=prop-backward]:active {
-    background: url(icons/prop-backward.svg);
+  button[name="prop-backward"], button[name="prop-backward"]:active {
+    background: url("icons/prop-backward.svg");
     background-position: center;
     background-repeat: no-repeat;
     background-size: 2.1em 2.1em;
-}
+  }
 
-button[name=prop-rot-x-ccw], button[name=prop-rot-x-ccw]:active {
-    background: url(icons/prop-rot-x-ccw.svg);
+  button[name="prop-rot-x-ccw"], button[name="prop-rot-x-ccw"]:active {
+    background: url("icons/prop-rot-x-ccw.svg");
     background-position: center;
     background-repeat: no-repeat;
     background-size: 2.1em 2.1em;
-}
+  }
 
-button[name=prop-rot-x-cw], button[name=prop-rot-x-cw]:active {
-    background: url(icons/prop-rot-x-cw.svg);
+  button[name="prop-rot-x-cw"], button[name="prop-rot-x-cw"]:active {
+    background: url("icons/prop-rot-x-cw.svg");
     background-position: center;
     background-repeat: no-repeat;
     background-size: 2.1em 2.1em;
-}
+  }
 
-button[name=prop-rot-y-ccw], button[name=prop-rot-y-ccw]:active {
-    background: url(icons/prop-rot-y-ccw.svg);
+  button[name="prop-rot-y-ccw"], button[name="prop-rot-y-ccw"]:active {
+    background: url("icons/prop-rot-y-ccw.svg");
     background-position: center;
     background-repeat: no-repeat;
     background-size: 2.1em 2.1em;
-}
+  }
 
-button[name=prop-rot-y-cw], button[name=prop-rot-y-cw]:active {
-    background: url(icons/prop-rot-y-cw.svg);
+  button[name="prop-rot-y-cw"], button[name="prop-rot-y-cw"]:active {
+    background: url("icons/prop-rot-y-cw.svg");
     background-position: center;
     background-repeat: no-repeat;
     background-size: 2.1em 2.1em;
-}
+  }
 
-button[name=prop-rot-z-ccw], button[name=prop-rot-z-ccw]:active {
-    background: url(icons/prop-rot-z-ccw.svg);
+  button[name="prop-rot-z-ccw"], button[name="prop-rot-z-ccw"]:active {
+    background: url("icons/prop-rot-z-ccw.svg");
     background-position: center;
     background-repeat: no-repeat;
     background-size: 2.1em 2.1em;
-}
+  }
 
-button[name=prop-rot-z-cw], button[name=prop-rot-z-ccw]:active {
-    background: url(icons/prop-rot-z-cw.svg);
+  button[name="prop-rot-z-cw"], button[name="prop-rot-z-ccw"]:active {
+    background: url("icons/prop-rot-z-cw.svg");
     background-position: center;
     background-repeat: no-repeat;
     background-size: 2.1em 2.1em;
-}
+  }
 
-button[name=prop-reset], button[name=prop-reset]:active {
-    background: url(icons/prop-reset.svg);
+  button[name="prop-reset"], button[name="prop-reset"]:active {
+    background: url("icons/prop-reset.svg");
     background-position: center;
     background-repeat: no-repeat;
     background-size: 2.1em 2.1em;
-}
+  }
 
-button[name=prop-snap], button[name=prop-snap]:active {
-    background: url(icons/prop-snap.svg);
+  button[name="prop-snap"], button[name="prop-snap"]:active {
+    background: url("icons/prop-snap.svg");
     background-position: center;
     background-repeat: no-repeat;
     background-size: 2.1em 2.1em;
+  }
 }
 
-button:disabled {
-    opacity: 30%;
-}
-
-table.prop-container tr.prop-name th {
-    vertical-align: middle;
-}
-
-table.prop-container tr td textarea {
-    width: 100%;
-    min-height: 12vh;
-    resize: none;
-}
 
 .top-bar {
-    width: 100%;
-    height: min-content;
-}
+  width: 100%;
+  height: min-content;
 
-.top-bar .surface {
+  .surface {
     display: flex;
     flex-direction: row;
     height: min-content;
+
+    .info-bar {
+      margin-left: auto;
+      margin-right: 1em;
+      vertical-align: middle;
+      display: flex;
+      flex-direction: row;
+      height: min-content;
+      font-family: monospace;
+      font-size: 1.1em;
+
+      #user-position {
+        padding-top: 0.45em;
+        padding-right: 0.45em;
+      }
+
+      #user-compass {
+        padding-top: 0.45em;
+        display: block;
+        background: linear-gradient(90deg, #0000 0%, #000f 47%, #f00f 48%, #f00f 52%, #000f 53%, #0000 100%);
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+    }
+  }
 }
 
-.top-bar .surface .info-bar {
-    margin-left: auto;
-    margin-right: 1em;
-    vertical-align: middle;
-    display: flex;
-    flex-direction: row;
-    height: min-content;
-    font-family: Monospace;
-    font-size: 1.1em;
-}
-
-.top-bar .surface .info-bar #user-position {
-    padding-top: 0.45em;
-    padding-right: 0.45em;
-}
-
-.top-bar .surface .info-bar #user-compass {
-    padding-top: 0.45em;
-}
-
-.top-bar .surface .info-bar #user-compass span
-{
-    display: block;
-    background: linear-gradient(90deg, #00000000 0%, #000000ff 47%, #ff0000ff 48%, #ff0000ff 52%, #000000ff 53%, #00000000 100%);
-    background-clip: text;
-    text-fill-color: transparent;
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-}
-
-.compass-atX {
-    color: red;
-    font-weight: bold;
-}
-.compass-atY {
-    color: green;
-    font-weight: bold;
-}
-.compass-atZ {
-    color: blue;
-    font-weight: bold;
-}
-.compass-atGZ {
-  font-weight: bold;
-}
-
-.bottom-bar {
-    width: 100%;
-    height: min-content;
-}
-
-#chat-prompt {
-    width: 100%
-}
-
-pre#chat-box{
-    width: 100%;
-    white-space: pre-wrap;       /* Since CSS 2.1 */
-    white-space: -moz-pre-wrap;  /* Mozilla, since 1999 */
-    white-space: -pre-wrap;      /* Opera 4-6 */
-    white-space: -o-pre-wrap;    /* Opera 7 */
-    word-wrap: break-word;       /* Internet Explorer 5.5+ */
-
-    /* Enable scrolling */
-    overflow: scroll;
-    overflow-x: hidden;
-    max-height: 7vh;
-    margin: 0;
-    padding: 0;
-
-    /* reverse vertical display: last elements go top */
-    display: flex;
-    flex-direction: column-reverse;
-
-    background: rgba(0,0,0,0.4);
-    transition: 0.3s;
-}
-
-pre#chat-box:hover{
-    max-height: 25vh;
-    background: rgba(0,0,0,0.85);
-}
-
-pre#chat-box span {
-    display: block;
-    color: white;
-    text-shadow: 2px 2px 3px black;
-    margin-left: 0.07in;
-}
-
-pre#chat-box span.error {
-  color: #ff9999;
-}
-
-pre#chat-box span.warning {
-  color: #ffaa55;
-}
-
-pre#chat-box span.info {
-  color: #99ffff;
-}
-
-pre#chat-box span strong {
-    tab-size: 12;
-    color: #55ff55;
-}
-
-pre#chat-box span strong::after {
-  color: white;
-  content: ":\0009";
-}
-
-.button-bar {
-    height: min-content;
-}
-
-.info-bar {
-    height: min-content;
-}
-
-.settings-pannel {
-    height: min-content;
-}
-
-.controls-container {
+.user-settings {
+  .controls-container {
     display: flex;
     flex-direction: row;
     margin-top: 10px;
     padding: 10px;
     width: fit-content;
-}
 
-.controls-container table {
-    display: block;
-    margin-right: 10px;
-}
+    table {
+      display: block;
+      margin-right: 10px;
+    }
+  }
 
-th.controls-header {
+  th.controls-header {
     text-align: left;
+  }
+}
+
+.compass-at-x {
+  color: red;
+  font-weight: bold;
+}
+
+.compass-at-y {
+  color: green;
+  font-weight: bold;
+}
+
+.compass-at-z {
+  color: blue;
+  font-weight: bold;
+}
+
+.compass-at-gz {
+  font-weight: bold;
+}
+
+.bottom-bar {
+  width: 100%;
+  height: min-content;
+}
+
+#chat-prompt {
+  width: 100%;
+}
+
+#chat-box {
+  width: 100%;
+  white-space: pre-wrap;
+
+  /* Enable scrolling */
+  overflow: scroll;
+  overflow-x: hidden;
+  max-height: 7vh;
+  margin: 0;
+  padding: 0;
+
+  /* reverse vertical display: last elements go top */
+  display: flex;
+  flex-direction: column-reverse;
+  background: rgb(0 0 0 / 40%);
+  transition: 0.3s;
+
+  span {
+    display: block;
+    color: white;
+    text-shadow: 2px 2px 3px black;
+    margin-left: 0.07in;
+  }
+
+  .error {
+    color: #f99;
+  }
+
+  .warning {
+    color: #fa5;
+  }
+
+  .info {
+    color: #9ff;
+  }
+
+  span strong {
+    tab-size: 12;
+    color: #5f5;
+  }
+
+  span strong::after {
+    color: white;
+    content: ":\0009";
+  }
+}
+
+pre#chat-box:hover {
+  max-height: 25vh;
+  background: rgba(0 0 0 / 85%);
 }
 
 #main-3d-canvas {
-    position: absolute;
-    z-index: -1;
-    height: 100%;
-    width: 100%;
+  position: absolute;
+  z-index: -1;
+  height: 100%;
+  width: 100%;
 }
 
 .text-input {
-    font-family: "Monospace";
-    font-size: 0.92em;
+  font-family: monospace;
+  font-size: 0.92em;
 }
 
 .text-input:disabled {
-    background-color: lightgrey;
+  background-color: lightgrey;
 }
