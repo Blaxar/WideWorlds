@@ -63,7 +63,8 @@ const onSubmit = (event) => {
 <span class="chat-entry" :key="id"
   :class="{info: entry.priority == userFeedPriority.info,
 	warning: entry.priority == userFeedPriority.warning,
-	error: entry.priority == userFeedPriority.error}"
+	error: entry.priority == userFeedPriority.error,
+  'object-say': entry.priority == userFeedPriority.objectSay}"
 v-for="(entry, id) in messages.slice(-props.maxMessageAmount).reverse()"
 ><strong v-if="entry.emitter">{{entry.emitter}}</strong>{{entry.entry}}</span>
 <!-- eslint-enable no-tabs -->

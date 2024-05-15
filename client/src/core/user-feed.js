@@ -9,6 +9,8 @@ const userFeedPriority = {
   warning: 3,
   error: 4,
   critical: 5,
+
+  objectSay: 6,
 };
 
 /**
