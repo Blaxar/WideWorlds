@@ -1145,7 +1145,7 @@ class WorldManager {
 
       if (obj3d.userData?.say) {
         this.userFeed.publish(
-            obj3d.userData.say,
+            obj3d.userData.say, null, userFeedPriority.objectSay,
         );
       }
     } catch (e) {

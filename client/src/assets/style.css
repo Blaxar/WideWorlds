@@ -322,6 +322,15 @@ body {
     color: #9ff;
   }
 
+  .object-say::before {
+    content: '🧊 ';
+  }
+
+  .object-say {
+    color: #61d1f8;
+    font-style: italic;
+  }
+
   span strong {
     tab-size: 12;
     color: #5f5;
