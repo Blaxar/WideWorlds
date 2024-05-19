@@ -57,6 +57,7 @@ const defaultConfig = {
     runByDefault: false,
     walkSpeed: speeds.walk,
     runSpeed: speeds.run,
+    legacyCoordinates: true,
   },
   network: {
     imageService: 'https://images.weserv.nl/?url=',
