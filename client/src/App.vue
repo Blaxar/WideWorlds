@@ -563,7 +563,8 @@ document.addEventListener('mousemove', (event) => {
     </template>
     <template v-slot:compass>
       <UserCompass :key="main.frameTrigger"
-      :facing="main.facing" :at="main.at" />
+      :facing="main.facing" :at="main.at"
+      :userConfig="userConfig" />
     </template>
     </TopBar>
     <CentralOverlay v-if="displayEdgebars">

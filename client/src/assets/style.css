@@ -226,6 +226,7 @@ body {
       #user-position {
         padding-top: 0.45em;
         padding-right: 0.45em;
+        user-select: none;
       }
 
       #user-compass {
@@ -234,6 +235,7 @@ body {
         background: linear-gradient(90deg, #0000 0%, #000f 47%, #f00f 48%, #f00f 52%, #000f 53%, #0000 100%);
         background-clip: text;
         -webkit-text-fill-color: transparent;
+        user-select: none;
       }
     }
   }

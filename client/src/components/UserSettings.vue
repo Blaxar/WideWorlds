@@ -64,6 +64,10 @@ const props = defineProps({
     type: String,
     default: 'Enable collider interpolation',
   },
+  legacyCoordinatesText: {
+    type: String,
+    default: 'Enable Legacy (AW) Coordinates',
+  },
   userInputs: {
     type: Array,
     default: UserInput,
@@ -232,6 +236,12 @@ const setColliderInterpolation = (event) => {
       .at('colliderInterpolation').set(event.target.checked);
 };
 
+const setlegacyCoordinates = (event) => {
+  props.userConfig.at('controls')
+      .at('legacyCoordinates').set(event.target.checked);
+};
+
+
 const localRenderingDistance = ref(getRenderingDistance());
 const localPropsLoadingDistance = ref(getPropsLoadingDistance());
 const localIdlePropsLoadingDistance = ref(getIdlePropsLoadingDistance());
@@ -381,6 +391,16 @@ onUnmounted(() => {
       {{colliderInterpolationText}}
     </label>
   </td></tr>
+  <tr><td colspan="2">
+  <input type="checkbox" id="legacyCoordinates"
+    :checked=
+    "props.userConfig.at('controls').at('legacyCoordinates').value()"
+    @change="setlegacyCoordinates" />
+    <label for="legacyCoordinates">
+      {{legacyCoordinatesText}}
+    </label>
+  </td></tr>
+
 </table>
 </div>
 </div>
