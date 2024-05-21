@@ -208,13 +208,18 @@ const onPropsSelectionChange = (nbProps) => {
     // prop(s) selected: the selector will be the subject of every
     // input from now on
     propsSelector.updateMainAxis(engine3d.camera);
+
+    if (worldManager.isBuildMode()) return;
+
+    worldManager.setBuildMode(true);
+    engine3d.revealProps();
     inputListener.setSubject('props', propsSelector);
     main.displayPropSettings = true;
-    engine3d.revealProps();
   } else {
     main.displayPropSettings = false;
     resetBehavior();
     engine3d.hideProps();
+    worldManager.setBuildMode(false);
   }
 };
 

@@ -220,6 +220,8 @@ class WorldManager {
       enabled: false,
     };
 
+    this.buildMode = false;
+
     if (graphicsNode) {
       // Ready props loading distance and its update callback
       const propsLoadingNode = graphicsNode.at('propsLoadingDistance');
@@ -391,6 +393,7 @@ class WorldManager {
           const obj3d = await modelRegistry.get(prop.name);
 
           this.updateAssetFromProp(obj3d, prop, chunkAnchor);
+          if (this.buildMode) obj3d.visible = true;
         }
       } else if (entries.op === 'update') {
         for (const value of entries.data) {
@@ -416,6 +419,7 @@ class WorldManager {
           const newObj3d = await modelRegistry.get(value.name);
 
           this.updateAssetFromProp(newObj3d, value);
+          if (this.buildMode) newObj3d.visible = true;
         }
       } else if (entries.op === 'delete') {
         for (const id of entries.data) {
@@ -1197,6 +1201,22 @@ class WorldManager {
 
     return this.engine3d.isNodeBoundsTreeReady(chunkNodeId) &&
         this.engine3d.isNodeBoundsTreeReady(pageNodeId);
+  }
+
+  /**
+   * Set build mode state
+   * @param {boolean} value - True if on, false otherwise.
+   */
+  setBuildMode(value) {
+    this.buildMode = value;
+  }
+
+  /**
+   * Get build mode state
+   * @return {boolean} True if on, false otherwise.
+   */
+  isBuildMode() {
+    return this.buildMode;
   }
 }
 

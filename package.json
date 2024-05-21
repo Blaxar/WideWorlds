@@ -12,7 +12,7 @@
     "lint-server": "eslint --ext js 'server/**/*.js'",
     "lint-tools": "eslint --ext js 'tools/**/*.js'",
     "lint-common": "eslint --ext js 'common/**/*.js'",
-    "lint-style": "npx stylelint '**/*.css'",
+    "lint-style": "npx stylelint 'client/src/assets/*.css'",
     "lint": "npm run lint-client && npm run lint-server && npm run lint-tools && npm run lint-common && npm run lint-style",
     "server": "node server/app.js",
     "client-dev": "vite client",

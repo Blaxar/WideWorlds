@@ -158,7 +158,7 @@ class PropsSelector {
         if (!add) {
           // If we're not in multiprop selection mode:
           // commit the current content to the server
-          this.commitAndClear();
+          this.commitAndClear(false);
         }
 
         done = true;
@@ -175,7 +175,7 @@ class PropsSelector {
           if (add) {
             // ... unless multiprop selection is on, then we deselect this
             // single object and commit the changes for it.
-            this.commitAndClearSingle(foundPropId);
+            this.commitAndClearSingle(foundPropId, false);
           }
           done = true;
           break;
@@ -184,7 +184,7 @@ class PropsSelector {
         if (!add) {
           // If we're not in multiprop selection mode:
           // commit the current content to the server
-          this.commitAndClear();
+          this.commitAndClear(false);
         }
 
         // We expect the object to have pre-computed bounding box geometry
@@ -199,6 +199,7 @@ class PropsSelector {
 
         // Ready the staging prop
         const stagingProp = prop.clone();
+        stagingProp.visible = true;
         stagingProp.position.set(x, y, z);
         stagingProp.userData['originalProp'] =
             JSON.parse(JSON.stringify(prop.userData.prop));
@@ -301,11 +302,15 @@ class PropsSelector {
     }
   }
 
-  /** Commit changes to server and clear selected props list */
-  commitAndClear() {
+  /**
+   * Commit changes to server and clear selected props list
+   * @param {boolean} notify - True (default) to notify changes via the onChange
+   *                           callback function.
+   */
+  commitAndClear(notify = true) {
     this.commit();
     this.clear();
-    this.notifyChange(this.props.length);
+    if (notify) this.notifyChange(this.props.length);
   }
 
   /**
@@ -313,8 +318,10 @@ class PropsSelector {
    * props list
    * @param {integer} id - Index at which the prop sits in the selected prop
    *                       list.
+   * @param {boolean} notify - True (default) to notify changes via the onChange
+   *                           callback function.
    */
-  commitAndClearSingle(id) {
+  commitAndClearSingle(id, notify = true) {
     if (this.props[id] === undefined) return;
 
     const {prop, stagingProp, boundingBox} = this.props[id];
@@ -340,7 +347,7 @@ class PropsSelector {
     stagingProp.removeFromParent();
 
     this.props.splice(id, 1); // Remove this entry from the list
-    this.notifyChange(this.props.length);
+    if (notify) this.notifyChange(this.props.length);
   }
 
   /**
