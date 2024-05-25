@@ -57,7 +57,6 @@ const defaultConfig = {
     runByDefault: false,
     walkSpeed: speeds.walk,
     runSpeed: speeds.run,
-    legacyCoordinates: true,
   },
   network: {
     imageService: 'https://images.weserv.nl/?url=',
@@ -79,7 +78,9 @@ const defaultConfig = {
   physics: {
     colliderInterpolation: true,
   },
-  interface: {},
+  interface: {
+    legacyCoordinates: true,
+  },
 };
 
 /** Wrapper around a configuration entry */

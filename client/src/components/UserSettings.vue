@@ -237,7 +237,7 @@ const setColliderInterpolation = (event) => {
 };
 
 const setlegacyCoordinates = (event) => {
-  props.userConfig.at('controls')
+  props.userConfig.at('interface')
       .at('legacyCoordinates').set(event.target.checked);
 };
 
@@ -394,7 +394,7 @@ onUnmounted(() => {
   <tr><td colspan="2">
   <input type="checkbox" id="legacyCoordinates"
     :checked=
-    "props.userConfig.at('controls').at('legacyCoordinates').value()"
+    "props.userConfig.at('interface').at('legacyCoordinates').value()"
     @change="setlegacyCoordinates" />
     <label for="legacyCoordinates">
       {{legacyCoordinatesText}}
