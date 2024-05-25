@@ -23,7 +23,7 @@ const symbols = 'N|||||||E|||||||S|||||||W|||||||';
 
 const atToText = (position) => {
   const {x, y, z} = position;
-  const legacyCoordinates = props.userConfig.at('controls')
+  const legacyCoordinates = props.userConfig.at('interface')
       .at('legacyCoordinates').value();
 
   const latitudeDir = z < 0 ? 'N' : 'S';
