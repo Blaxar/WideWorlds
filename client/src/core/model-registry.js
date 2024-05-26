@@ -29,6 +29,7 @@ const defaultBoxHelper = new BoxHelper(new Group(), defaultBoundingBoxColor);
 /* Assume .rwx file extension if none is provided */
 const normalizePropName = (name) =>
   name.match(/.+\.([a-zA-Z0-9]+)$/) ? name : name + '.rwx';
+const isUrl = (str) => /https?:\/\//.test(str);
 
 /**
  * Set bounding box on the input prop
@@ -317,6 +318,7 @@ class ModelRegistry {
 
           case 'opacity':
             opacity = action;
+
             break;
 
           default:
@@ -326,8 +328,17 @@ class ModelRegistry {
       }
 
       if (texture) {
-        rwxMaterial.texture = texture.texture;
-        rwxMaterial.mask = texture.mask;
+        if (texture?.resource) {
+          rwxMaterial.texture = isUrl(texture.resource) ? this.imageService +
+              texture.resource : texture.resource;
+        }
+
+        if (texture?.mask) {
+          rwxMaterial.mask = isUrl(texture.mask) ? this.imageService +
+              texture.mask : texture.mask;
+        }
+
+        materialChanged = true;
       } else if (color) {
         rwxMaterial.color = color;
         rwxMaterial.texture = null;
@@ -342,7 +353,7 @@ class ModelRegistry {
         boundingBox.material = scaledBoundingBoxMaterial;
       }
 
-      if (opacity) rwxMaterial.opacity = opacity.opacity;
+      if (opacity) rwxMaterial.opacity = opacity.value;
 
 
       obj3d.userData.rwx.solid = solid;
@@ -356,6 +367,7 @@ class ModelRegistry {
 
       // Check if we need to apply a picture
       // and if said picture can be applied here to begin with...
+
       if (picture?.resource && obj3d.userData.taggedMaterials[pictureTag]
           ?.includes(lastMatId)) {
         const url = this.imageService + picture.resource;
@@ -366,7 +378,6 @@ class ModelRegistry {
         rwxMaterial.texture = url;
         materialChanged = true;
       }
-
       const newSignature = rwxMaterial.getMatSignature();
 
       if (newSignature != originalSignature) materialChanged = true;
