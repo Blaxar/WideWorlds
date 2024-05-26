@@ -3,7 +3,7 @@
  */
 
 import RWXLoader, {
-  RWXMaterialManager, pictureTag, signTag,
+  RWXMaterialManager, pictureTag, signTag, defaultAlphaTest,
 } from 'three-rwx-loader';
 import {Mesh, Group, BufferGeometry, BufferAttribute, MeshBasicMaterial,
   SRGBColorSpace, TextureLoader, Color, CanvasTexture, BoxHelper,
@@ -87,9 +87,11 @@ class ModelRegistry {
     this.textureColorSpace = SRGBColorSpace;
 
     this.materialManager = new RWXMaterialManager(resourcePath,
-        '.jpg', '.zip', fflate, false, this.textureColorSpace);
+        '.jpg', '.zip', fflate, false, this.textureColorSpace,
+        defaultAlphaTest, true);
     this.basicMaterialManager = new RWXMaterialManager(resourcePath,
-        '.jpg', '.zip', fflate, true, this.textureColorSpace);
+        '.jpg', '.zip', fflate, true, this.textureColorSpace,
+        defaultAlphaTest, true);
 
     this.tmpMaterials = [];
     this.imageService = '';
@@ -350,18 +352,7 @@ class ModelRegistry {
         obj3d.userData.say = say.text;
       }
 
-      const newSignature = rwxMaterial.getMatSignature();
-
-      if (newSignature != originalSignature) materialChanged = true;
-
-      if (!this.materialManager.hasThreeMaterialPack(newSignature)) {
-        // Material with those properties does not exist yet, we create it
-        this.materialManager.addRWXMaterial(rwxMaterial, newSignature);
-      }
-
       const lastMatId = materials.length;
-      materials.push(this.materialManager.getThreeMaterialPack(newSignature)
-          .threeMat);
 
       // Check if we need to apply a picture
       // and if said picture can be applied here to begin with...
@@ -371,21 +362,22 @@ class ModelRegistry {
         // Doing the above ensures us the new array of materials
         // will be updated, so if a picture is applied:
         // it will actually be visible
+
+        rwxMaterial.texture = url;
         materialChanged = true;
-
-        this.pictureLoader.load(url, (image) => {
-          image.colorSpace = SRGBColorSpace;
-          image.wrapS = RepeatWrapping;
-          image.wrapT = RepeatWrapping;
-
-          materials[lastMatId] = materials[lastMatId].clone();
-          materials[lastMatId].color = new Color(1.0, 1.0, 1.0);
-          materials[lastMatId].map = image;
-          materials[lastMatId].transparent = true;
-          materials[lastMatId].needsUpdate = true;
-          this.tmpMaterials.push(materials[lastMatId]);
-        });
       }
+
+      const newSignature = rwxMaterial.getMatSignature();
+
+      if (newSignature != originalSignature) materialChanged = true;
+
+      if (!this.materialManager.hasThreeMaterialPack(newSignature)) {
+        // Material with those properties does not exist yet, we create it
+        this.materialManager.addRWXMaterial(rwxMaterial, newSignature);
+      }
+
+      materials.push(this.materialManager.getThreeMaterialPack(newSignature)
+          .threeMat);
 
       // Check if we need to apply a sign
       // and if said sign can be applied here to begin with...
