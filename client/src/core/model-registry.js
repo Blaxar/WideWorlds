@@ -224,16 +224,107 @@ class ModelRegistry {
    * @param {string} actionString - Content of the action string.
    */
   applyActionString(obj3d, actionString) {
-    this.applyActionsRecursive(obj3d, this.actionParser.parse(actionString));
+    const {actions, scenerySignature} =
+      this.parseActions(actionString, obj3d.userData.prop?.description);
+    this.applyActionsRecursive(obj3d, actions);
+    obj3d.userData.scenerySignature = scenerySignature;
+    return;
+  }
+
+  /**
+   * Parse action string into an action dictionary
+   * @param {string} actionString - Content of the action string.
+   * @param {string} description - Content of the descritpion string.
+   * @return {Object} Dictionary holding actions, scenerySignature and
+   *                  sceneryTransform properties.
+   */
+  parseActions(actionString, description = null) {
+    const create = {
+      texture: null,
+      color: null,
+      solid: true,
+      visible: true,
+      picture: null,
+      sign: null,
+      scale: null,
+      opacity: null,
+      say: null,
+    };
+
+    let scenerySignature = '';
+
+    const actionParserData = this.actionParser.parse(actionString);
+
+    // We only care for 'create' actions for the moment.
+    if (!actionParserData.create) return {actions: {}, scenerySignature};
+
+    const createActions = actionParserData.create;
+
+    for (const action of createActions) {
+      switch (action.commandType) {
+        case 'color':
+          create.color = [action.color.r / 255.0,
+            action.color.g / 255.0,
+            action.color.b / 255.0];
+          scenerySignature +=
+            `${action.color.r}${action.color.g}${action.color.b}`;
+          break;
+
+        case 'texture':
+          create.texture = action;
+          scenerySignature += action.resource;
+          scenerySignature += action.mask;
+          break;
+
+        case 'visible':
+          create.visible = action.value;
+          break;
+
+        case 'solid':
+          create.solid = action.value;
+          break;
+
+        case 'picture':
+          create.picture = action;
+          scenerySignature += action.resource;
+          break;
+
+        case 'say':
+          create.say = action;
+          break;
+
+        case 'sign':
+          create.sign = action;
+          create.sign.text = action.text || description;
+          break;
+
+        case 'scale':
+          create.scale = action;
+          break;
+
+        case 'opacity':
+          create.opacity = action;
+          break;
+
+        default:
+        // No action, we do nothing.
+          break;
+      }
+    }
+
+    return {actions: {create}, scenerySignature};
   }
 
   /**
    * Recursively apply parsed action commands to the given 3D prop,
    * for internal use by {@link applyActionString}
    * @param {Object3D} obj3d - 3D asset to apply the action string to.
-   * @param {string} actions - Parsed action commands.
+   * @param {Object} actions - Parsed action commands.
    */
   applyActionsRecursive(obj3d, actions) {
+    // Only deal with 'create' actions for the moment
+    if (!actions.create) return;
+
     const boundingBox = obj3d.getObjectByName(boundingBoxName);
     if (obj3d instanceof Group) {
       // We are dealing with a group, this means we must
@@ -249,17 +340,15 @@ class ModelRegistry {
       throw new Error('Invalid object type provided for action parsing');
     }
 
-
-    // We only care for 'create' actions for the moment.
-    const createActions = actions.create ? actions.create : [];
-
-    if (!actions.create) return;
     const materials = [];
 
     let materialChanged = false;
 
     // This is a placeholder object, nothing to do
     if (obj3d.name === unknownObjectName) return;
+
+    const {texture, color, solid, visible, picture, sign, scale, opacity, say} =
+      actions.create;
 
     for (const material of obj3d.material) {
       if (!material.userData.rwx) {
@@ -268,64 +357,6 @@ class ModelRegistry {
 
       const rwxMaterial = material.userData.rwx.material.clone();
       const originalSignature = material.name;
-
-      let texture = null;
-      let color = null;
-      let solid = true;
-      let visible = true;
-      let picture = null;
-      let sign = null;
-      let scale = null;
-      let opacity = null;
-      let say = null;
-
-      for (const action of createActions) {
-        switch (action.commandType) {
-          case 'color':
-            color = [action.color.r / 255.0,
-              action.color.g / 255.0,
-              action.color.b / 255.0];
-            break;
-
-          case 'texture':
-            texture = action;
-            break;
-
-          case 'visible':
-            visible = action.value;
-            break;
-
-          case 'solid':
-            solid = action.value;
-            break;
-
-          case 'picture':
-            picture = action;
-            break;
-
-          case 'say':
-            say = action;
-            break;
-
-          case 'sign':
-            sign = action;
-            sign.text = action.text || obj3d.userData.prop?.description;
-            break;
-
-          case 'scale':
-            scale = action;
-            break;
-
-          case 'opacity':
-            opacity = action;
-
-            break;
-
-          default:
-            // No action, we do nothing.
-            break;
-        }
-      }
 
       if (texture) {
         if (texture?.resource) {

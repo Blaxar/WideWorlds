@@ -84,14 +84,14 @@ class BackgroundSceneryUpdater {
     for (const {obj3d, maskKey} of this.batch[setRead]) {
       if (obj3d.visible) {
         obj3d.updateMatrixWorld(true);
-        this.scenery.set(obj3d, maskKey);
+        this.scenery.set(obj3d, maskKey, obj3d.userData.scenerySignature);
       } else {
         this.scenery.unset(obj3d);
       }
     }
 
     for (const obj3d of this.batch[unsetRead]) {
-      this.scenery.unset(obj3d);
+      this.scenery.unset(obj3d, obj3d.userData.scenerySignature);
     }
 
     this.batch[setRead] = [];
@@ -1176,8 +1176,6 @@ class WorldManager {
 
     this.props.set(prop.id, obj3d);
 
-    // TODO: use hashing based on actions to distinguish different object
-    // variants
     this.sceneryUpdater.set(obj3d,
         this.chunkKeys.get(obj3d.userData.chunkNodeHandle));
   }
