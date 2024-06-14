@@ -149,3 +149,56 @@ tools/elev2terrain.js import ./elevworld.txt -o ./worlds/1/terrain
 ```
 
 This will result in PNG files generated in `./worlds/1/terrain/` to store both elevation data (`*_*.elev.png`) and texture data (`*_*.tex.png`).
+
+### doc
+
+`doc` is the documentation generation tool, it will print out a `.yaml` file describing the HTTP server API per _OpenAPI_ version `3.0.0` specification.
+
+This file can then be used by various UI generators to synthetize a readable API documentation.
+
+#### Usage:
+
+`doc.js`
+
+#### Example:
+
+```bash
+tools/doc.js
+
+openapi: 3.0.0
+info:
+  title: Wide Worlds
+  version: 1.0.0
+paths:
+  /api/login:
+    post:
+      description: Authenticate a user based on the provided credentials
+      summary: Submit credentials to get an authentication token
+      operationId: login
+      requestBody:
+        description: Credentials for user authentication
+        required: true
+        content:
+          application/json:
+            schema:
+              properties:
+                username:
+                  description: Username in plain text
+                password:
+                  description: Password in plain text
+      responses:
+        "200":
+          description: Successful authentication
+          content:
+            application/json:
+              schema:
+                properties:
+                  token:
+                    description: Authentication token
+        "401":
+          description: Invalid credentials
+        "500":
+          description: Internal error
+components: {}
+tags: []
+```

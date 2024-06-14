@@ -69,6 +69,38 @@ const spawnHttpServer = async (path, port, secret, worldFolder, userCache,
           }
         }); // TODO: handle error (if any)
 
+    /**
+     * @openapi
+     * /api/login:
+     *   post:
+     *     description: Authenticate a user based on the provided credentials
+     *     summary: Submit credentials to get an authentication token
+     *     operationId: login
+     *     requestBody:
+     *       description: Credentials for user authentication
+     *       required: true
+     *       content:
+     *         application/json:
+     *           schema:
+     *             properties:
+     *               username:
+     *                 description: Username in plain text
+     *               password:
+     *                 description: Password in plain text
+     *     responses:
+     *       200:
+     *         description: Successful authentication
+     *         content:
+     *           application/json:
+     *             schema:
+     *               properties:
+     *                 token:
+     *                   description: Authentication token
+     *       401:
+     *         description: Invalid credentials
+     *       500:
+     *         description: Internal error
+     */
     app.post('/api/login', (req, res) => {
       res.setHeader('Content-Type', 'application/json');
 
