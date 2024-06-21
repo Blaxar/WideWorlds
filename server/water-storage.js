@@ -8,6 +8,11 @@ import {Image} from 'image-js';
 import {join} from 'node:path';
 import * as fs from 'fs';
 
+/**
+ * @typedef WaterPage
+ * @type {ElevationData}
+ */
+
 /** Takes care of server-side water level storage for each world */
 class WaterStorage {
   /**
@@ -33,7 +38,7 @@ class WaterStorage {
    * @param {integer} x - X coordinate of the point.
    * @param {integer} z - Z coordinate of the point.
    * @param {integer} elevation - Elevation of the point.
-   * @param {boolean} save - Whether or not to commit the changes to
+   * @param {Promise<boolean>} save - Whether or not to commit the changes to
    *                         PNG files (false by default).
    */
   async setPoint(x, z, elevation, save = false) {
@@ -51,7 +56,7 @@ class WaterStorage {
    * Get page at given coordinates
    * @param {integer} pageX - X coordinate of the page.
    * @param {integer} pageZ - Z coordinate of the page.
-   * @return {Object} Page at those given coordinates
+   * @return {Promise<WaterPage>} Page at those given coordinates
    */
   async getPage(pageX, pageZ) {
     const pageName = getPageName(pageX, pageZ);
@@ -68,7 +73,7 @@ class WaterStorage {
    * absolute point coordinates
    * @param {integer} x - X coordinate of the point.
    * @param {integer} z - Z coordinate of the point.
-   * @return {Object} Page with relative point coordinates
+   * @return {PageCoordinates} Page with relative point coordinates
    */
   getPagePosFromPoint(x, z) {
     const radius = this.pageDiameter / 2;
@@ -92,7 +97,7 @@ class WaterStorage {
    * available
    * @param {integer} pageX - X coordinate of the page.
    * @param {integer} pageZ - Z coordinate of the page.
-   * @return {Object} Page loaded from storage
+   * @return {Promise<WaterPage>} Page loaded from storage
    */
   async loadPage(pageX, pageZ) {
     const pageName = getPageName(pageX, pageZ);
@@ -183,7 +188,7 @@ class WaterStorage {
 
   /**
    * Make a default flat page
-   * @return {Object} Default flat page.
+   * @return {ElevationData} Default flat page.
    */
   makeDefaultPage() {
     const length = this.pageDiameter * this.pageDiameter;

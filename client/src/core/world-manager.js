@@ -303,8 +303,8 @@ class WorldManager {
    * Takes in a world json description, parse it and set the 3D scene
    * accordingly
    * @param {world} world - World data object.
-   * @return {Promise} Promise of an object describing the content of
-   *                   the parsed avatars.dat file for this world.
+   * @return {Promise<Object>} Promise of an object describing the content of
+   *                           the parsed avatars.dat file for this world.
    */
   async load(world) {
     if (this.currentWorld) this.unload();
@@ -814,7 +814,7 @@ class WorldManager {
   /**
    * Get a 3D avatar asset from the current world registry
    * @param {string} name - Name of the 3D asset for the avatar.
-   * @return {Promise} Promise of a three.js 3D asset.
+   * @return {Promise<Object3D>} Promise of a three.js 3D asset.
    */
   async getAvatar(name) {
     const modelRegistry = this.currentModelRegistry;
@@ -1017,7 +1017,7 @@ class WorldManager {
   /**
    * Create props on the server
    * @param {Array<Object3D>} props - Staged props to update.
-   * @return {Array<Object3D>} - Props that could not be created.
+   * @return {Promise<Array<Object3D>>} - Props that could not be created.
    */
   async createProps(props) {
     const propsNotCreated = [];
@@ -1052,8 +1052,8 @@ class WorldManager {
   /**
    * Update props on the server
    * @param {Array<Object3D>} props - Staged props to update.
-   * @return {Array<Object3D>} - Original props to revert in case of
-   *                         failure.
+   * @return {Promise<Array<Object3D>>} - Original props to revert in case of
+   *                                      failure.
    */
   async updateProps(props) {
     const propsToBeReset = [];
@@ -1091,8 +1091,8 @@ class WorldManager {
   /**
    * Remove props on the server
    * @param {Array<Object3D>} props - Staged props to remove.
-   * @return {Array<Object3D>} - Original props to revert in case of
-   *                         failure.
+   * @return {Promise<Array<Object3D>>} - Original props to revert in case of
+   *                                      failure.
    */
   async removeProps(props) {
     const propsToBeReset = [];

@@ -8,6 +8,17 @@ import {Image} from 'image-js';
 import {join} from 'node:path';
 import * as fs from 'fs';
 
+/**
+ * @typedef TerrainPage
+ * @type {object}
+ * @property {ElevationData} elevationData - Raw elevation data: each element in
+ *                                           the array encodes the height of a
+ *                                           single terrain handle point.
+ * @property {TextureData} textureData - Raw texture data: each element in the
+ *                                       array encodes the texture information
+ *                                       of a single terrain handle point.
+ */
+
 /** Takes care of server-side terrain storage for each world */
 class TerrainStorage {
   /**
@@ -37,21 +48,13 @@ class TerrainStorage {
    * @param {integer} rotation - Rotation of the texture for the point.
    * @param {integer} enabled - Is the point enabled or not, false
    *                            means it's a hole.
-   * @param {boolean} save - Whether or not to commit the changes to
+   * @param {Promise<boolean>} save - Whether or not to commit the changes to
    *                         PNG files (false by default).
    */
   async setPoint(x, z, elevation, texture = 0, rotation = 0, enabled = true,
       save = false) {
     const {pageX, pageZ, offsetX, offsetZ} = this.getPagePosFromPoint(x, z);
     const page = await this.getPage(pageX, pageZ);
-
-    // In the original AW elevation dump file format: a single point texture,
-    // its rotation and its enabling are all encoded in a single byte.
-    // The highest two order bits encode the rotation this makes it 4 possible
-    // values (going counter-clockwise, rotating left).
-    // The remaining amount of bits (6 of them) simply encode the ID of the
-    // texture.
-    // When a point is disabled (hole): the whole byte is set to 254
 
     if (texture > 0x3f || texture < 0) {
       throw new Error(
@@ -65,6 +68,7 @@ class TerrainStorage {
       );
     }
 
+    // Assume a hole by default
     let textureEntry = 254;
 
     if (enabled) {
@@ -86,8 +90,8 @@ class TerrainStorage {
    * @param {integer} offsetX - Starting X coordinate of the point.
    * @param {integer} offsetZ - starting Z coordinate of the point.
    * @param {integer} width - Width of the node to set.
-   * @param {Array} elevationData - Elevation data.
-   * @param {Array} textureData - Texture data.
+   * @param {ElevationData} elevationData - Elevation data.
+   * @param {TextureData} textureData - Texture data.
    * @param {boolean} save - Whether or not to commit the changes to
    *                         PNG files (false by default).
    */
@@ -118,7 +122,7 @@ class TerrainStorage {
    * Get page at given coordinates
    * @param {integer} pageX - X coordinate of the page.
    * @param {integer} pageZ - Z coordinate of the page.
-   * @return {Object} Page at those given coordinates
+   * @return {Promise<TerrainPage>} Page at those given coordinates
    */
   async getPage(pageX, pageZ) {
     const pageName = getPageName(pageX, pageZ);
@@ -135,7 +139,7 @@ class TerrainStorage {
    * absolute point coordinates
    * @param {integer} x - X coordinate of the point.
    * @param {integer} z - Z coordinate of the point.
-   * @return {Object} Page with relative point coordinates
+   * @return {PageCoordinates} Page coordinates
    */
   getPagePosFromPoint(x, z) {
     const radius = this.pageDiameter / 2;
@@ -159,7 +163,7 @@ class TerrainStorage {
    * available
    * @param {integer} pageX - X coordinate of the page.
    * @param {integer} pageZ - Z coordinate of the page.
-   * @return {Object} Page loaded from storage
+   * @return {Promise<TerrainPage>} Page loaded from storage
    */
   async loadPage(pageX, pageZ) {
     const pageName = getPageName(pageX, pageZ);
@@ -301,7 +305,7 @@ class TerrainStorage {
 
   /**
    * Make a default flat page
-   * @return {Object} Default flat page.
+   * @return {TerrainPage} Default flat page.
    */
   makeDefaultPage() {
     const length = this.pageDiameter * this.pageDiameter;

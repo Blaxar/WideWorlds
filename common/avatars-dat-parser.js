@@ -97,8 +97,8 @@ function parseAvatarsDat(fileContent) {
  * @param {string} uri - URI of the avatars.dat file.
  * @param {boolean} cors - True to enable CORS policy for the request,
  *                         false (default) otherwise.
- * @return {Promise} Promise of an object describing the content of
- *                   the avatars.dat file.
+ * @return {Promise<AvatarDat>} Promise of an object describing the content of
+ *                           the avatars.dat file.
  */
 async function loadAvatarsDat(uri, cors = false) {
   const request = new Request(uri, {
@@ -119,8 +119,8 @@ async function loadAvatarsDat(uri, cors = false) {
  * @param {string} uri - URI of the avatars.zip file.
  * @param {boolean} cors - True to enable CORS policy for the request,
  *                         false (default) otherwise.
- * @return {Promise} Promise of an object describing the content of
- *                   the avatars.dat file.
+ * @return {Promise<AvatarDat>} Promise of an object describing the content of
+ *                           the avatars.dat file.
  */
 async function loadAvatarsZip(uri, cors = false) {
   const request = new Request(uri, {

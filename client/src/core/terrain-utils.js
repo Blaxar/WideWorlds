@@ -293,8 +293,8 @@ function syncActualPageNormals(wireframeNormals, actualNormals, nbSegments) {
 /**
  * Make 3D asset for a single terrain page from provided elevation and texture
  * data
- * @param {Uint16array} elevationData - Raw elevation data for the whole page.
- * @param {Uint8array} textureData - Raw texture data for the whole page.
+ * @param {ElevationData} elevationData - Raw elevation data for the whole page.
+ * @param {TextureData} textureData - Raw texture data for the whole page.
  * @param {integer} sideSize - Length of the page side in real space.
  * @param {integer} nbSegments - Number of segments on both X and Z axis.
  * @param {Array<Array<Material>>} terrainMaterials - Terrain materials.
@@ -507,14 +507,14 @@ function makePagePlane(elevationData, textureData, sideSize, nbSegments,
  * Adjust edges for the page and its surroundings
  * @param {Object3D} pagePlane - 3D plane for the page, as built by
  *                               makePagePlane.
- * @param {Uint16array} elevationData - Elevation data for the target page.
+ * @param {ElevationData} elevationData - Elevation data for the target page.
  * @param {Object3D} left - 3D plane for the left page (if any).
  * @param {Object3D} topLeft - 3D plane for the top-left page (if any).
  * @param {Object3D} top - 3D plane for the top page (if any).
- * @param {Uint16array} right - Elevation data for the right page (if any).
- * @param {Uint16array} bottomRight - Elevation data for the bottom-right page
+ * @param {ElevationData} right - Elevation data for the right page (if any).
+ * @param {ElevationData} bottomRight - Elevation data for the bottom-right page
  *                                    (if any).
- * @param {Uint16array} bottom - Elevation data for the bottom page (if any).
+ * @param {ElevationData} bottom - Elevation data for the bottom page (if any).
  * @param {integer} nbSegments - Number of segments on both X and Z axis.
  */
 function adjustPageEdges(pagePlane, elevationData, left, topLeft, top, right,

@@ -12,6 +12,16 @@ const stepHeight = 0.65; // in meters
 const centralRayId = 4;
 const avatarSpan = 0.6; // in meters
 
+/**
+ * @typedef ColliderResult
+ * @type {object}
+ * @property {boolean} topCollision - True if the top box is colliding,
+ *                                    false otherwise.
+ * @property {number} heightCorrection - Height correction (in meters)
+ *                                       to apply for the avatar to stand
+ *                                       on the surface below.
+ */
+
 /** Class to handle local user collisions with the world geometry */
 class UserCollider {
   /**
@@ -208,7 +218,7 @@ class UserCollider {
    * @param {number} y - Y coordinate, in meters.
    * @param {number} z - Z coordinate, in meters.
    * @param {Vector3} direction - Movement direction.
-   * @return {Object} topCollision and heightCorrection values.
+   * @return {ColliderResult} topCollision and heightCorrection values.
    */
   putColliderBox(x, y, z, direction = null) {
     const {min, max} = this.colliderBox;

@@ -15,6 +15,62 @@ const wireframeAssetName = 'wireframe';
 const actualAssetName = 'actual';
 
 /**
+ * @typedef PageCoordinates
+ * @type {object}
+ * @property {number} pageX - X-axis index for the page.
+ * @property {number} pageZ - Z-axis index for the page.
+ * @property {integer} offsetX - Offset to target a specific entry in the data
+ *                               array along the X-axis.
+ * @property {integer} offsetZ - Offset to target a specific entry in the data
+ *                               array along the Z-axis.
+ */
+
+/**
+ * @typedef ElevationData
+ * @type {Uint16Array}
+ *
+ * @description
+ * The elevation data array encodes the whole elevation for a single
+ * terrain page.
+ *
+ * By default (and per AW specifications): a terrain page contains
+ * 128*128 nodes with 10 meters spacing between them along each axis,
+ * so a whole terrain page is meant to be 1280 meters long (Z-axis)
+ * and 1280 meters large (X-axis).
+ *
+ * The height is encoded on 16 bits (unsigned), and is expressed in
+ * centimeters, the base level (altitude 0m relative to this page)
+ * is half the maximum value a 16-bit unsigned integer can hold:
+ * 0x7fff in hexadecimal, which is 32767 in decimal.
+ *
+ * Going below this value means going under altitude 0m: 32766
+ * is -1cm, 32765 is -2cm, etc.
+ *
+ * Going above means going over altitude 0m: 32768 is +1cm,
+ * 32769 is +2cm, etc.
+ */
+
+/**
+ * @typedef TextureData
+ * @type {Uint16Array}
+ *
+ * @description
+ * The texture data array encodes the whole texture information for a
+ * single terrain page, it matches the dimensions of {@link ElevationData}.
+ *
+ * Matching the original AW elevation dump file format: a single point texture,
+ * its rotation and its enabling are all encoded in a single byte.
+ *
+ * The highest two order bits encode the rotation this makes it 4 possible
+ * values (going counter-clockwise, rotating left).
+ * The remaining amount of bits (6 of them) simply encode the ID of the
+ * texture.
+ *
+ * When a point is disabled (hole): the whole byte is set to 254.
+ */
+
+
+/**
   * Get page name for given coordinates
   * @param {integer} pageX - X coordinate of the page.
   * @param {integer} pageZ - Z coordinate of the page.
@@ -115,7 +171,7 @@ function validateElevationData(packedElevationData,
 /**
  * Unpack elevation values from binary payload
  * @param {Uint8Array} packedElevationData - Elevation data binary payload.
- * @return {Uint16Array} Unpacked elevation values, 16-bit entries
+ * @return {ElevationData} Unpacked elevation values, 16-bit entries
  */
 function unpackElevationData(packedElevationData) {
   // Get rid of the endianess cue
@@ -126,7 +182,7 @@ function unpackElevationData(packedElevationData) {
 /**
  * Pack elevation values into binary payload
  * @param {Uint16Array} elevationData - Unpacked elevation values, 16-bit each.
- * @return {Uint8Array} Elevation data binary payload
+ * @return {TextureData} Elevation data binary payload
  */
 function packElevationData(elevationData) {
   const packedElevationData = new Uint8Array(elevationData.length * 2 + 2);

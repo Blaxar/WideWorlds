@@ -164,7 +164,8 @@ class WsClient {
   /**
    * Spawn a new world chat connection
    * @param {integer} id - ID of the world to connect to.
-   * @return {Promise} Promise of an already-opened WorldChat connection.
+   * @return {Promise<WorldChat>} Promise of an already-opened WorldChat
+   *                              connection.
    */
   worldChatConnect(id) {
     return new Promise((resolve, err) => {
@@ -185,7 +186,8 @@ class WsClient {
   /**
    * Spawn a new user chat connection
    * @param {integer} id - ID of the user to connect to.
-   * @return {Promise} Promise of an already-opened UserChat connection.
+   * @return {Promise<UserChat>} Promise of an already-opened UserChat
+   *                             connection.
    */
   userChatConnect(id) {
     return new Promise((resolve, err) => {
@@ -206,7 +208,8 @@ class WsClient {
   /**
    * Spawn a new world state connection
    * @param {integer} id - ID of the world to connect to.
-   * @return {Promise} Promise of an already-opened WorldState connection.
+   * @return {Promise<WorldState>} Promise of an already-opened WorldState
+   *                               connection.
    */
   worldStateConnect(id) {
     return new Promise((resolve, err) => {
@@ -228,7 +231,8 @@ class WsClient {
   /**
    * Spawn a new world update connection
    * @param {integer} id - ID of the world to connect to.
-   * @return {Promise} Promise of an already-opened WorldUpdate connection.
+   * @return {Promise<WorldUpdate>} Promise of an already-opened WorldUpdate
+   *                                connection.
    */
   worldUpdateConnect(id) {
     return new Promise((resolve, err) => {

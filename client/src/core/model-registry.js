@@ -135,7 +135,7 @@ class ModelRegistry {
    * (using light-sensitive materials) and generate a bounding box
    * for it, use placeholder if not found
    * @param {string} rawName - Name of the 3D object to load.
-   * @return {Promise} Promise of a three.js Object3D asset.
+   * @return {Promise<Object3D>} Promise of a three.js Object3D asset.
    */
   async get(rawName) {
     const name = normalizePropName(rawName);
@@ -160,7 +160,7 @@ class ModelRegistry {
    * Fetch an object from the registry, load it first if necessary and
    * use placeholder if not found, all using light-agnostic materials
    * @param {string} rawName - Name of the 3D object to load.
-   * @return {Promise} Promise of a three.js Object3D asset.
+   * @return {Promise<Object3D>} Promise of a three.js Object3D asset.
    */
   async getBasic(rawName) {
     const name = normalizePropName(rawName);
@@ -179,7 +179,7 @@ class ModelRegistry {
    * Fetch an avatar from the registry, load it first if necessary and
    * use placeholder if not found, all using light-sensitive materials
    * @param {string} rawName - Name of the 3D avatar to load.
-   * @return {Promise} Promise of a three.js Object3D asset.
+   * @return {Promise<Object3D>} Promise of a three.js Object3D asset.
    */
   async getAvatar(rawName) {
     const name = normalizePropName(rawName);

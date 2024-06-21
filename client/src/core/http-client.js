@@ -4,6 +4,14 @@
 
 import {unpackElevationData} from '../../../common/terrain-utils.js';
 
+/**
+ * @typedef AuthToken
+ * @type {object}
+ * @property {string} id - ID of the user account bound to this token.
+ * @property {string} token - Authorization token, to be included in
+ *                            subsequent HTTP requests.
+ */
+
 /** HTTP client utility to interact with the server API */
 class HttpClient {
   /**
@@ -42,7 +50,7 @@ class HttpClient {
    * of success
    * @param {string} username - Name of the user.
    * @param {string} password - Password of the user.
-   * @return {Object} Valid authorization token.
+   * @return {Promise<AuthToken>} Valid authorization token.
    */
   async login(username, password) {
     const request = new Request(this.url + '/login', {
@@ -68,7 +76,7 @@ class HttpClient {
 
   /**
    * Get a list of available worlds to connect to
-   * @return {Array<World>} List of worlds.
+   * @return {Promise<Array<World>>} List of worlds.
    */
   async getWorlds() {
     const request = new Request(`${this.url}/worlds`, {
@@ -92,7 +100,7 @@ class HttpClient {
    * @param {integer} maxY - Maximum Y coordinate value (in meters).
    * @param {integer} minZ - Minimum Z coordinate value (in meters).
    * @param {integer} maxZ - Maximum Z coordinate value (in meters).
-   * @return {Array<Prop>} List of props.
+   * @return {Promise<Array<Prop>>} List of props.
    */
   async getProps(wid, minX, maxX, minY, maxY, minZ, maxZ) {
     let params = [];
@@ -128,10 +136,11 @@ class HttpClient {
    * @param {Object} props - Map of props to be updated, indexed by their ID
    *                         and holding all meaningful properties in an object
    *                         as value.
-   * @return {Object} Map of results for props to be updated, indexed by their
-   *                  ID, value is true in case of success, false in case of
-   *                  failure (because of privilege/ownership) and null when
-   *                  the prop wasn't found.
+   * @return {Promise<Object>} Map of results for props to be updated, indexed
+   *                           by their ID, value is true in case of success,
+   *                           false in case of failure (privilege or
+   *                           ownership restriction) and null when the prop
+   *                           wasn't found.
    */
   async putProps(wid, props) {
     const request = new Request(`${this.url}/worlds/${wid}/props`, {
@@ -152,10 +161,10 @@ class HttpClient {
    * @param {integer} wid - ID of the world to create props on.
    * @param {Array} props - List props to be updated, holding all meaningful
    *                        properties in objects as individual items.
-   * @return {Array} List of results for props to be created, item is true in
-   *                 case of success, false in case of failure (because of
-   *                 privilege/ownership) and null if provided data was invalid
-   *                 or incomplete.
+   * @return {Promise<Array<boolean|null>>}
+   * List of results for props to be created, item is true in case of success,
+   * false in case of failure (privilege or ownership restriction) and null if
+   * provided data was invalid or incomplete.
    */
   async postProps(wid, props) {
     const request = new Request(`${this.url}/worlds/${wid}/props`, {
@@ -198,7 +207,7 @@ class HttpClient {
    * @param {integer} wid - ID of the world to get the URLs from.
    * @param {integer} pageX - Index of the page on the X axis.
    * @param {integer} pageZ - Index of the page on the Z axis.
-   * @return {Object} Object storing elevation and texture data.
+   * @return {Promise<Object>} Object storing elevation and texture data.
    */
   async getTerrainPage(wid, pageX, pageZ) {
     const pageURI = `${this.url}/worlds/${wid}/terrain/${pageX}/${pageZ}/`;
@@ -246,7 +255,7 @@ class HttpClient {
    * @param {integer} wid - ID of the world to get the URLs from.
    * @param {integer} pageX - Index of the page on the X axis.
    * @param {integer} pageZ - Index of the page on the Z axis.
-   * @return {Uint16Array} Array storing water elevation data.
+   * @return {Promise<Uint16Array>} Array storing water elevation data.
    */
   async getWaterPage(wid, pageX, pageZ) {
     const pageURI = `${this.url}/worlds/${wid}/water/${pageX}/${pageZ}/`;
