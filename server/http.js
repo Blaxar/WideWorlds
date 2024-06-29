@@ -129,6 +129,60 @@ const spawnHttpServer = async (path, port, secret, worldFolder, userCache,
           });
     });
 
+    /**
+     * @openapi
+     * components:
+     *   securitySchemes:
+     *     bearerAuth:
+     *       type: http
+     *       scheme: bearer
+     *       bearerFormat: JWT
+     *
+     *   schemas:
+     *     World:
+     *       type: object
+     *       properties:
+     *         id:
+     *           description: ID of the world
+     *           type: integer
+     *         name:
+     *           description: Displayable name for the world
+     *           type: string
+     *         data:
+     *           description: Data dictionary of the world
+     *           type: object
+     *
+     *     AllWorlds:
+     *       type: array
+     *       description: List of available worlds to connect to
+     *       items:
+     *         $ref: '#/components/schemas/World'
+     *
+     */
+
+
+    /**
+     * @openapi
+     * /api/worlds:
+     *   get:
+     *     description: Get the list of available worlds
+     *     operationId: get-worlds
+     *     security:
+     *       - bearerAuth: []
+     *     responses:
+     *       200:
+     *         description: Successful request listing all available worlds
+     *         content:
+     *           application/json:
+     *             schema:
+     *               $ref: '#/components/schemas/AllWorlds'
+     *       401:
+     *         description: Authentication required
+     *       403:
+     *         description: Action not allowed for this user
+     *       500:
+     *         description: Internal error
+     */
     app.get('/api/worlds', authenticate, (req, res) => {
       res.setHeader('Content-Type', 'application/json');
       // Get a list of all existing worlds
@@ -141,6 +195,38 @@ const spawnHttpServer = async (path, port, secret, worldFolder, userCache,
           });
     });
 
+    /**
+     * @openapi
+     * /api/worlds/{worldId}:
+     *   get:
+     *     description: Get information about a single world
+     *     operationId: get-world
+     *     security:
+     *       - bearerAuth: []
+     *     parameters:
+     *       - in: path
+     *         name: worldId
+     *         schema:
+     *           type: integer
+     *         required: true
+     *         description: Numeric ID of the world to get
+     *     responses:
+     *       200:
+     *         description: Successful request getting information about
+     *                      a single world
+     *         content:
+     *           application/json:
+     *             schema:
+     *               $ref: '#/components/schemas/World'
+     *       401:
+     *         description: Authentication required
+     *       403:
+     *         description: Action not allowed for this user
+     *       404:
+     *         description: No world found matching this ID
+     *       500:
+     *         description: Internal error
+     */
     app.get('/api/worlds/:id', authenticate, (req, res) => {
       res.setHeader('Content-Type', 'application/json');
       // Get a single world using its id (return 404 if not found)
@@ -162,6 +248,51 @@ const spawnHttpServer = async (path, port, secret, worldFolder, userCache,
 
     registerPropsEndpoints(app, authenticate, connection, ctx);
 
+    /**
+     * @openapi
+     * /api/worlds/{worldId}/{x}/{z}/elevation:
+     *   get:
+     *     description: Get terrain elevation data for a single page
+     *                  a of a single world
+     *     operationId: get-world-elevation
+     *     security:
+     *       - bearerAuth: []
+     *     parameters:
+     *       - in: path
+     *         name: worldId
+     *         schema:
+     *           type: integer
+     *         required: true
+     *         description: Numeric ID of the world to get
+     *       - in: path
+     *         name: x
+     *         schema:
+     *           type: integer
+     *         required: true
+     *         description: Page position along the X axis
+     *       - in: path
+     *         name: z
+     *         schema:
+     *           type: integer
+     *         required: true
+     *         description: Page position along the Z axis
+     *     responses:
+     *       200:
+     *         description: Binary payload for elevation data
+     *         content:
+     *           application/octet-stream:
+     *             schema:
+     *               type: string
+     *               format: binary
+     *       401:
+     *         description: Authentication required
+     *       403:
+     *         description: Action not allowed for this user
+     *       404:
+     *         description: No world found matching this ID
+     *       500:
+     *         description: Internal error
+     */
     app.get('/api/worlds/:id/terrain/:x/:z/elevation', authenticate,
         (req, res) => {
           res.setHeader('Content-Type', 'application/octet-stream');
@@ -190,6 +321,51 @@ const spawnHttpServer = async (path, port, secret, worldFolder, userCache,
               });
         });
 
+    /**
+     * @openapi
+     * /api/worlds/{worldId}/{x}/{z}/elevation:
+     *   get:
+     *     description: Get terrain texture data for a single page
+     *                  a of a single world
+     *     operationId: get-world-texture
+     *     security:
+     *       - bearerAuth: []
+     *     parameters:
+     *       - in: path
+     *         name: worldId
+     *         schema:
+     *           type: integer
+     *         required: true
+     *         description: Numeric ID of the world to get
+     *       - in: path
+     *         name: x
+     *         schema:
+     *           type: integer
+     *         required: true
+     *         description: Page position along the X axis
+     *       - in: path
+     *         name: z
+     *         schema:
+     *           type: integer
+     *         required: true
+     *         description: Page position along the Z axis
+     *     responses:
+     *       200:
+     *         description: Binary payload for texture data
+     *         content:
+     *           application/octet-stream:
+     *             schema:
+     *               type: string
+     *               format: binary
+     *       401:
+     *         description: Authentication required
+     *       403:
+     *         description: Action not allowed for this user
+     *       404:
+     *         description: No world found matching this ID
+     *       500:
+     *         description: Internal error
+     */
     app.get('/api/worlds/:id/terrain/:x/:z/texture', authenticate,
         (req, res) => {
           res.setHeader('Content-Type', 'application/octet-stream');
@@ -216,6 +392,51 @@ const spawnHttpServer = async (path, port, secret, worldFolder, userCache,
               });
         });
 
+    /**
+     * @openapi
+     * /api/worlds/{worldId}/{x}/{z}/water:
+     *   get:
+     *     description: Get water elevation data for a single page
+     *                  a of a single world
+     *     operationId: get-world-water
+     *     security:
+     *       - bearerAuth: []
+     *     parameters:
+     *       - in: path
+     *         name: worldId
+     *         schema:
+     *           type: integer
+     *         required: true
+     *         description: Numeric ID of the world to get
+     *       - in: path
+     *         name: x
+     *         schema:
+     *           type: integer
+     *         required: true
+     *         description: Page position along the X axis
+     *       - in: path
+     *         name: z
+     *         schema:
+     *           type: integer
+     *         required: true
+     *         description: Page position along the Z axis
+     *     responses:
+     *       200:
+     *         description: Binary payload for elevation data
+     *         content:
+     *           application/octet-stream:
+     *             schema:
+     *               type: string
+     *               format: binary
+     *       401:
+     *         description: Authentication required
+     *       403:
+     *         description: Action not allowed for this user
+     *       404:
+     *         description: No world found matching this ID
+     *       500:
+     *         description: Internal error
+     */
     app.get('/api/worlds/:id/water/:x/:z', authenticate,
         (req, res) => {
           res.setHeader('Content-Type', 'application/octet-stream');
