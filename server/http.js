@@ -465,6 +465,57 @@ const spawnHttpServer = async (path, port, secret, worldFolder, userCache,
               });
         });
 
+    /**
+     * @openapi
+     * components:
+     *   schemas:
+     *     User:
+     *       type: object
+     *       properties:
+     *         id:
+     *           description: ID of the user
+     *           type: integer
+     *         name:
+     *           description: Displayable name of the user
+     *           type: string
+     *         email:
+     *           description: Email address bound to this user account
+     *           type: string
+     *         role:
+     *           description: Role of the user, can be on of `admin`,
+     *                        `citizen` or `tourist`
+     *
+     *     AllUsers:
+     *       type: array
+     *       description: List of existing users
+     *       items:
+     *         $ref: '#/components/schemas/User'
+     *
+     */
+
+    /**
+     * @openapi
+     * /api/users:
+     *   get:
+     *     description: Get the list of all users
+     *     operationId: get-users
+     *     security:
+     *       - bearerAuth: []
+     *     responses:
+     *       200:
+     *         description: Successful request listing all existing users
+     *         content:
+     *           application/json:
+     *             schema:
+     *               $ref: '#/components/schemas/AllUsers'
+     *       401:
+     *         description: Authentication required
+     *       403:
+     *         description: Action not allowed for this user, admin level
+     *                      required
+     *       500:
+     *         description: Internal error
+     */
     app.get('/api/users', authenticate, forbiddenOnFalse(hasUserRole('admin')),
         (req, res) => {
           res.setHeader('Content-Type', 'application/json');
@@ -495,6 +546,38 @@ const spawnHttpServer = async (path, port, secret, worldFolder, userCache,
               });
         });
 
+    /**
+     * @openapi
+     * /api/users/{userId}:
+     *   get:
+     *     description: Get information about a single user
+     *     operationId: get-user
+     *     security:
+     *       - bearerAuth: []
+     *     parameters:
+     *       - in: path
+     *         name: userId
+     *         schema:
+     *           type: integer
+     *         required: true
+     *         description: Numeric ID of the user to get
+     *     responses:
+     *       200:
+     *         description: Successful request getting information about
+     *                      a single user
+     *         content:
+     *           application/json:
+     *             schema:
+     *               $ref: '#/components/schemas/User'
+     *       401:
+     *         description: Authentication required
+     *       403:
+     *         description: Action not allowed for this user, admin level
+     *                      required or the user ID needs to match the one
+     *                      from the user issuing the request
+     *       500:
+     *         description: Internal error
+     */
     app.get('/api/users/:id', authenticate, forbiddenOnFalse(
         middleOr(hasUserRole('admin'), hasUserIdInParams('id'))),
     (req, res) => {

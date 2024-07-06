@@ -18,7 +18,7 @@
     "client-dev": "vite client",
     "client-build": "vite build client",
     "client-preview": "vite preview --port 4173 client",
-    "doc": "node tools/doc.js > ./doc/api/v1.yaml"
+    "doc": "node tools/doc.js > ./doc/api/v1.yaml && npx @redocly/cli build-docs ./doc/api/v1.yaml -o ./doc/api/v1.html"
   },
   "repository": {
     "type": "git",
@@ -64,6 +64,7 @@
     "yargs": "^17.7.2"
   },
   "devDependencies": {
+    "@redocly/cli": "^1.17.1",
     "@vitejs/plugin-vue": "^5.0.4",
     "eslint": "^8.56.0",
     "eslint-config-google": "^0.14.0",
