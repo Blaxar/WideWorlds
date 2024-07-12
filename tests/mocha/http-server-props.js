@@ -54,7 +54,7 @@ describe('http server props', () => {
           // Assert second prop fields
           assert.equal(body[1].worldId, base.worldId);
           assert.equal(body[1].userId, base.adminId);
-          assert.equal(body[1].date, base.now);
+          assert.equal(body[1].date, base.now - 1000);
           assert.equal(body[1].x, 100);
           assert.equal(body[1].y, -200);
           assert.equal(body[1].z, 300);
@@ -86,7 +86,7 @@ describe('http server props', () => {
           // Assert prop fields
           assert.equal(body[0].worldId, base.worldId);
           assert.equal(body[0].userId, base.adminId);
-          assert.equal(body[0].date, base.now);
+          assert.equal(body[0].date, base.now - 1000);
           assert.equal(body[0].x, 100);
           assert.equal(body[0].y, -200);
           assert.equal(body[0].z, 300);
@@ -130,6 +130,105 @@ describe('http server props', () => {
   });
 
   it('GET /api/worlds/id/props - Not found', (done) => {
+    request(base.server)
+        .get('/api/worlds/66666/props')
+        .set('Authorization', 'Bearer ' + base.adminBearerToken)
+        .set('Accept', 'application/json')
+        .expect('Content-Type', /json/)
+        .expect(404, done);
+  });
+
+  it('GET /api/worlds/id/props-date - OK', (done) => {
+    request(base.server)
+        .get('/api/worlds/' + base.worldId + '/props-date')
+        .set('Authorization', 'Bearer ' + base.adminBearerToken)
+        .set('Accept', 'application/json')
+        .expect('Content-Type', /json/)
+        .expect(200).then((response) => {
+          // Get the body (json content) of the request
+          const body = response.body;
+
+          // We expect one single key
+          assert.equal(Object.keys(body).length, 1);
+
+          // Assert date field
+          assert.equal(body.date, base.now);
+
+          done();
+        })
+        .catch((err) => done(err));
+  });
+
+  it('GET /api/worlds/id/props-date with filters - OK', (done) => {
+    request(base.server)
+        .get('/api/worlds/' + base.worldId + '/props-date?minX=50&maxX=150&minY=-240&maxY=-160&minZ=270&maxZ=330')
+        .set('Authorization', 'Bearer ' + base.adminBearerToken)
+        .set('Accept', 'application/json')
+        .expect('Content-Type', /json/)
+        .expect(200).then((response) => {
+          // Get the body (json content) of the request
+          const body = response.body;
+
+          // We expect one single key
+          assert.equal(Object.keys(body).length, 1);
+
+          // Assert date field
+          assert.equal(body.date, base.now - 1000);
+
+          done();
+        })
+        .catch((err) => done(err));
+  });
+
+  it('GET /api/worlds/id/props-date with filters - None', (done) => {
+    request(base.server)
+        .get('/api/worlds/' + base.worldId + '/props-date?minX=500&maxX=1050&minY=-2040&maxY=-1060&minZ=2070&maxZ=3030')
+        .set('Authorization', 'Bearer ' + base.adminBearerToken)
+        .set('Accept', 'application/json')
+        .expect('Content-Type', /json/)
+        .expect(200).then((response) => {
+          // Get the body (json content) of the request
+          const body = response.body;
+
+          // We expect one single key
+          assert.equal(Object.keys(body).length, 1);
+
+          // Assert date field
+          assert.strictEqual(body.date, null);
+
+          done();
+        })
+        .catch((err) => done(err));
+  });
+
+  it('GET /api/worlds/id/props-date with filters - Bad Request', (done) => {
+    request(base.server)
+        .get('/api/worlds/' + base.worldId + '/props-date?minX=sdgdsgsdg&maxX=150&minY=-240&maxY=-160&minZ=270&maxZ=330')
+        .set('Authorization', 'Bearer ' + base.adminBearerToken)
+        .set('Accept', 'application/json')
+        .expect('Content-Type', /json/)
+        .expect(400, done);
+  });
+
+  it('GET /api/worlds/id/props-date - Unauthorized', (done) => {
+    request(base.server)
+        .get('/api/worlds/' + base.worldId + '/props-date')
+        .set('Authorization', 'gibberish')
+        .set('Accept', 'application/json')
+        .expect('Content-Type', /json/)
+        .expect(401, done);
+  });
+
+  it('GET /api/worlds/id/props-date - Forbidden', (done) => {
+    request(base.server)
+        .get('/api/worlds/' + base.worldId + '/props-date')
+        .set('Authorization', 'Bearer iNvAlId')
+        .set('Accept', 'application/json')
+        .expect('Content-Type', /json/)
+        .expect(403, done);
+  });
+
+  it('GET /api/worlds/id/props-date - Not found', (done) => {
     request(base.server)
         .get('/api/worlds/66666/props')
         .set('Authorization', 'Bearer ' + base.adminBearerToken)

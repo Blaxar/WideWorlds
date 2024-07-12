@@ -7,6 +7,91 @@ import World from '../common/db/model/World.js';
 import Prop from '../common/db/model/Prop.js';
 
 const isNullOrUndefined = (value) => value === null || value === undefined;
+const badRequest = 400;
+const ok = 200;
+
+/**
+ * Add filters to props database query
+ *
+ * @param {QueryBuilder} queryBuilder - Instance of the TypeORM query builder.
+ * @param {integer} wid - ID of the world holding the props.
+ * @param {integer} minX - Minimum (including) X coordinate to filter props by.
+ * @param {integer} maxX - Maximum (exluding) X coordinate to filter props by.
+ * @param {integer} minY - Minimum (including) Y coordinate to filter props by.
+ * @param {integer} maxY - Maximum (exluding) Y coordinate to filter props by.
+ * @param {integer} minZ - Minimum (including) Z coordinate to filter props by.
+ * @param {integer} maxZ - Maximum (exluding) Z coordinate to filter props by.
+ *
+ * @return {integer} HTTP status code to respond with.
+ */
+function filterPropsQuery(queryBuilder, wid,
+    {minX, maxX, minY, maxY, minZ, maxZ}) {
+  queryBuilder.where('prop.worldId = :wid', {wid});
+
+  // Get chunked list of props by filtering with provided XYZ
+  // boundaries (if any)
+  if (minX) {
+    minX = parseInt(minX);
+
+    if (!isFinite(minX)) {
+      return badRequest;
+    }
+
+    queryBuilder.andWhere('prop.x >= :minX', {minX});
+  }
+
+  if (maxX) {
+    maxX = parseInt(maxX);
+
+    if (!isFinite(maxX)) {
+      return badRequest;
+    }
+
+    queryBuilder.andWhere('prop.x < :maxX', {maxX});
+  }
+
+  if (minY) {
+    minY = parseInt(minY);
+
+    if (!isFinite(minY)) {
+      return badRequest;
+    }
+
+    queryBuilder.andWhere('prop.y >= :minY', {minY});
+  }
+
+  if (maxY) {
+    maxY = parseInt(maxY);
+
+    if (!isFinite(maxY)) {
+      return badRequest;
+    }
+
+    queryBuilder.andWhere('prop.y < :maxY', {maxY});
+  }
+
+  if (minZ) {
+    minZ = parseInt(minZ);
+
+    if (!isFinite(minZ)) {
+      return badRequest;
+    }
+
+    queryBuilder.andWhere('prop.z >= :minZ', {minZ});
+  }
+
+  if (maxZ) {
+    maxZ = parseInt(maxZ);
+
+    if (!isFinite(maxZ)) {
+      return badRequest;
+    }
+
+    queryBuilder.andWhere('prop.z < :maxZ', {maxZ});
+  }
+
+  return ok;
+}
 
 /**
  * Register props-related endpoints into the expressjs app
@@ -21,12 +106,12 @@ function registerPropsEndpoints(app, authenticate, connection, ctx) {
     res.setHeader('Content-Type', 'application/json');
     const wid = req.params.id;
 
-    let minX = req.query.minX;
-    let maxX = req.query.maxX;
-    let minY = req.query.minY;
-    let maxY = req.query.maxY;
-    let minZ = req.query.minZ;
-    let maxZ = req.query.maxZ;
+    const minX = req.query.minX;
+    const maxX = req.query.maxX;
+    const minY = req.query.minY;
+    const maxY = req.query.maxY;
+    const minZ = req.query.minZ;
+    const maxZ = req.query.maxZ;
 
     // Get prop of single world using its id (return 404 if not found)
     connection.manager.createQueryBuilder(World, 'world')
@@ -38,83 +123,60 @@ function registerPropsEndpoints(app, authenticate, connection, ctx) {
 
           // World has been found, filter props using world ID
           const queryBuilder =
-              connection.manager.createQueryBuilder(Prop, 'prop')
-                  .where('prop.worldId = :wid', {wid});
+                connection.manager.createQueryBuilder(Prop, 'prop');
 
-          // Get chunked list of props by filtering with provided XYZ
-          // boundaries (if any)
-          if (minX) {
-            minX = parseInt(minX);
+          const status = filterPropsQuery(queryBuilder, wid,
+              {minX, maxX, minY, maxY, minZ, maxZ});
 
-            if (!isFinite(minX)) {
-              res.status(400).json({});
-              return;
-            }
-
-            queryBuilder.andWhere('prop.x >= :minX', {minX});
+          if (status === ok) {
+            // Respond with list of props
+            queryBuilder.getMany().then((props) => res.send(props));
+          } else {
+            res.status(status).json({});
           }
-
-          if (maxX) {
-            maxX = parseInt(maxX);
-
-            if (!isFinite(maxX)) {
-              res.status(400).json({});
-              return;
-            }
-
-            queryBuilder.andWhere('prop.x < :maxX', {maxX});
-          }
-
-          if (minY) {
-            minY = parseInt(minY);
-
-            if (!isFinite(minY)) {
-              res.status(400).json({});
-              return;
-            }
-
-            queryBuilder.andWhere('prop.y >= :minY', {minY});
-          }
-
-          if (maxY) {
-            maxY = parseInt(maxY);
-
-            if (!isFinite(maxY)) {
-              res.status(400).json({});
-              return;
-            }
-
-            queryBuilder.andWhere('prop.y < :maxY', {maxY});
-          }
-
-          if (minZ) {
-            minZ = parseInt(minZ);
-
-            if (!isFinite(minZ)) {
-              res.status(400).json({});
-              return;
-            }
-
-            queryBuilder.andWhere('prop.z >= :minZ', {minZ});
-          }
-
-          if (maxZ) {
-            maxZ = parseInt(maxZ);
-
-            if (!isFinite(maxZ)) {
-              res.status(400).json({});
-              return;
-            }
-
-            queryBuilder.andWhere('prop.z < :maxZ', {maxZ});
-          }
-
-          // Respond with list of props
-          queryBuilder.getMany().then((props) => res.send(props));
         })
         .catch((e) => {
           logger.fatal('Critical DB access error while trying to get props ' +
-                       `for world #${wid}: ` + e);
+              `for world #${wid}: ` + e);
+          return res.status(500).json({});
+        });
+  });
+
+  app.get('/api/worlds/:id/props-date', authenticate, (req, res) => {
+    res.setHeader('Content-Type', 'application/json');
+    const wid = req.params.id;
+
+    const minX = req.query.minX;
+    const maxX = req.query.maxX;
+    const minY = req.query.minY;
+    const maxY = req.query.maxY;
+    const minZ = req.query.minZ;
+    const maxZ = req.query.maxZ;
+
+    connection.manager.createQueryBuilder(World, 'world')
+        .where('world.id = :wid', {wid}).getOne().then((world) => {
+          if (!world) {
+            res.status(404).json({});
+            return;
+          }
+
+          // World has been found, filter props using world ID
+          const queryBuilder =
+                connection.manager.createQueryBuilder(Prop, 'prop')
+                    .select('MAX(prop.date)', 'date');
+
+          const status = filterPropsQuery(queryBuilder, wid,
+              {minX, maxX, minY, maxY, minZ, maxZ});
+
+          if (status === ok) {
+            queryBuilder.getRawOne().then(({date}) => res.send({date}));
+          } else {
+            res.status(status).json({});
+          }
+        })
+        .catch((e) => {
+          logger.fatal('Critical DB access error while trying to get props ' +
+              `for world #${wid}: ` + e);
           return res.status(500).json({});
         });
   });

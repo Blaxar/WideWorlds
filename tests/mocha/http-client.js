@@ -101,7 +101,7 @@ describe('http client', () => {
         // Assert second prop fields
         assert.equal(body[1].worldId, base.worldId);
         assert.equal(body[1].userId, base.adminId);
-        assert.equal(body[1].date, base.now);
+        assert.equal(body[1].date, base.now - 1000);
         assert.equal(body[1].x, 100);
         assert.equal(body[1].y, -200);
         assert.equal(body[1].z, 300);

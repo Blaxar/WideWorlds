@@ -118,7 +118,7 @@ const makeHttpTestBase = (port = 62931, dbFile = 'mocha-http-test-db.sqlite3', s
         base.adminId, base.now, 0, 0, 0, 0, 0, 0, 'wall01.rwx',
         'Some description.', 'create color red;');
     base.secondPropId = await makeTestProp(TypeORM.getConnection(), base.worldId,
-        base.adminId, base.now, 100, -200, 300, 450, 900, 1350, 'wall02.rwx',
+        base.adminId, base.now - 1000, 100, -200, 300, 450, 900, 1350, 'wall02.rwx',
         'Some other description.', 'create color blue;');
   };
 
