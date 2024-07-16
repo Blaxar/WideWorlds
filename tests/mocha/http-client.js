@@ -155,6 +155,60 @@ describe('http client', () => {
       });
   });
 
+  it('getPropsDate - OK (all)', (done) => {
+    login().then(() => {
+      httpClient.getPropsDate(
+        base.worldId,
+        -10000, 10000,
+        -10000, 10000,
+        -10000, 10000
+      ).then((date) => {
+        // Assert date value
+        assert.equal(date, base.now);
+
+        done();
+      });
+    }).catch((err) => done(err));
+  });
+
+  it('getPropsDate - OK (none)', (done) => {
+    login().then(() => {
+      httpClient.getPropsDate(
+        base.worldId,
+        20000, 30000,
+        20000, 30000,
+        20000, 30000
+      ).then((date) => {
+        // Assert date value
+        assert.strictEqual(date, null);
+
+        done();
+      });
+    }).catch((err) => done(err));
+  });
+
+  it('getPropsDate - Not found', (done) => {
+    login().then(() => {
+      httpClient.getPropsDate(
+        base.worldId + 3000,
+      ).then(() => done('Getting props date should not work here'))
+        .catch((err) => {
+          if (err.message == 404) done();
+          else done(err);
+        });
+    });
+  });
+
+  it('getPropsDate - Unauthorized', (done) => {
+    httpClient.getPropsDate(
+      base.worldId,
+    ).then(() => done('Getting props date should not work here'))
+      .catch((err) => {
+        if (err.message == 401) done();
+        else done(err);
+      });
+  });
+
   it('putProps - OK', (done) => {
     const unknownPropId = 66666;
 

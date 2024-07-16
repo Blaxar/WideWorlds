@@ -92,14 +92,14 @@ class HttpClient {
   }
 
   /**
-   * Get a list of props from a given worlds within a defined area
+   * Get a list of props from a given world within a defined area
    * @param {integer} wid - ID of the world to get props from.
-   * @param {integer} minX - Minimum X coordinate value (in meters).
-   * @param {integer} maxX - Maximum X coordinate value (in meters).
-   * @param {integer} minY - Minimum Y coordinate value (in meters).
-   * @param {integer} maxY - Maximum Y coordinate value (in meters).
-   * @param {integer} minZ - Minimum Z coordinate value (in meters).
-   * @param {integer} maxZ - Maximum Z coordinate value (in meters).
+   * @param {integer|null} minX - Minimum X coordinate value (in meters).
+   * @param {integer|null} maxX - Maximum X coordinate value (in meters).
+   * @param {integer|null} minY - Minimum Y coordinate value (in meters).
+   * @param {integer|null} maxY - Maximum Y coordinate value (in meters).
+   * @param {integer|null} minZ - Minimum Z coordinate value (in meters).
+   * @param {integer|null} maxZ - Maximum Z coordinate value (in meters).
    * @return {Promise<Array<Prop>>} List of props.
    */
   async getProps(wid, minX, maxX, minY, maxY, minZ, maxZ) {
@@ -127,6 +127,50 @@ class HttpClient {
     return await fetch(request).then((response) => {
       if (response.ok) return response.json();
       else throw new Error(response.status);
+    });
+  }
+
+  /**
+   * Get the most recent prop date on a given world within a defined area
+   * @param {integer} wid - ID of the world to get props from.
+   * @param {integer|null} minX - Minimum X coordinate value (in meters).
+   * @param {integer|null} maxX - Maximum X coordinate value (in meters).
+   * @param {integer|null} minY - Minimum Y coordinate value (in meters).
+   * @param {integer|null} maxY - Maximum Y coordinate value (in meters).
+   * @param {integer|null} minZ - Minimum Z coordinate value (in meters).
+   * @param {integer|null} maxZ - Maximum Z coordinate value (in meters).
+   * @return {integer|null} Most recent prop timestamp (if any).
+   */
+  async getPropsDate(wid, minX, maxX, minY, maxY, minZ, maxZ) {
+    let params = [];
+
+    if (minX) params.push(`minX=${minX}`);
+    if (maxX) params.push(`maxX=${maxX}`);
+    if (minY) params.push(`minY=${minY}`);
+    if (maxY) params.push(`maxY=${maxY}`);
+    if (minZ) params.push(`minZ=${minZ}`);
+    if (maxZ) params.push(`maxZ=${maxZ}`);
+
+    if (params.length) {
+      params = '?' + params.join('&');
+    } else {
+      params = '';
+    }
+
+    const request =
+        new Request(`${this.url}/worlds/${wid}/props-date${params}`, {
+          method: 'GET',
+          headers: this.headers,
+          mode: this.cors ? 'cors' : undefined,
+        });
+
+    return await fetch(request).then(async (response) => {
+      if (response.ok) {
+        const {date} = await response.json();
+        return date;
+      } else {
+        throw new Error(response.status);
+      }
     });
   }
 
