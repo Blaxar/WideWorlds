@@ -2,6 +2,8 @@
  * @author Julien 'Blaxar' Bardagi <blaxar.waldarax@gmail.com>
  */
 
+import {localEndiannessCue, otherEndiannessCue} from './endian.js';
+
 const entityType = {
   unknown: 0,
   user: 1,
@@ -16,9 +18,6 @@ const updateType = {
 };
 
 const entityStateSize = 0x34;
-const localEndiannessCue = 0x11223344;
-const otherEndiannessCue = 0x44332211;
-
 
 /*
  * Entity state data block is a binary sequence holding the following data:
@@ -154,7 +153,7 @@ function flipEntityStateEndian(state) {
 }
 
 /**
- * Validate binary payload of entity state, performs endianness
+ * Validate binary payload of entity state pack, performs endianness
  * conversion if needed, throws if invalid
  * @param {Uint8Array} state - Entity state binary payload.
  * @param {integer} expectedEndiannessCue - Expected endianness cue.
@@ -193,7 +192,7 @@ function validateEntityState(state,
 /**
  * Deserialize binary payload of entity state
  * @param {Uint8Array} state - Entity state binary payload.
- * @return {object} Entity state in object form
+ * @return {Object} Entity state in object form
  */
 function deserializeEntityState(state) {
   const validState = validateEntityState(state);
@@ -252,7 +251,7 @@ function forwardEntityState(entityType, entityId, state) {
 
 /**
  * Pack several entity state payloads into a single payload
- * @param {array} entityStates - Array of entity state payloads.
+ * @param {Array<Uint8Array>} entityStates - Array of entity state payloads.
  * @return {Uint8Array} Entity state binary payload pack
  */
 function packEntityStates(entityStates) {
@@ -274,7 +273,7 @@ function packEntityStates(entityStates) {
  * return endian-correct number of entries in the pack
  * @param {Uint8Array} statePack - Entity state pack binary payload.
  * @param {integer} expectedEndiannessCue - Expected endianness cue.
- * @param {integer} oppositeEndiannessCue - opposite endianness cue.
+ * @param {integer} oppositeEndiannessCue - Opposite endianness cue.
  * @return {integer} Number of entries in the pack
  */
 function validateEntityStatePack(statePack,
@@ -311,7 +310,7 @@ function validateEntityStatePack(statePack,
 /**
  * Unpack entity state payload bundle into an array of individual payloads
  * @param {Uint8Array} entityStatePack - Entity state binary payload pack
- * @return {array} Array of entity state payloads.
+ * @return {Array<Uint8Array>} Array of entity state payloads.
  */
 function unpackEntityStates(entityStatePack) {
   const nbEntityStates = validateEntityStatePack(entityStatePack);
@@ -354,5 +353,5 @@ function simpleStringHash(str, mask = 0xffff) {
 
 export {formatUserMessage, serializeEntityState, deserializeEntityState,
   forwardEntityState, packEntityStates, unpackEntityStates, entityType,
-  updateType, entityStateSize, localEndiannessCue, otherEndiannessCue,
-  validateEntityState, validateEntityStatePack, simpleStringHash};
+  updateType, entityStateSize, validateEntityState,
+  validateEntityStatePack, simpleStringHash};
