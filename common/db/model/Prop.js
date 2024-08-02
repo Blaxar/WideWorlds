@@ -10,12 +10,12 @@ class Prop {
    * @param {integer} wid - ID of the world the prop belongs to.
    * @param {integer} uid - ID of the user the prop belongs to.
    * @param {timestamp} date - Creation/modification date of the prop.
-   * @param {integer} x - X coordinate of the prop (in meters).
-   * @param {integer} y - Y coordinate of the prop (in meters).
-   * @param {integer} z - Z coordinate of the prop (in meters).
-   * @param {integer} ya - Yaw of the prop (in radians).
-   * @param {integer} pi - Pitch of the prop (in radians).
-   * @param {integer} ro - Roll of the prop (in radians).
+   * @param {number} x - X coordinate of the prop (in meters).
+   * @param {number} y - Y coordinate of the prop (in meters).
+   * @param {number} z - Z coordinate of the prop (in meters).
+   * @param {number} ya - Yaw of the prop (in radians).
+   * @param {number} pi - Pitch of the prop (in radians).
+   * @param {number} ro - Roll of the prop (in radians).
    * @param {string} name - Model name of the prop.
    * @param {string} desc - Description of the prop.
    * @param {string} act - Action field of the prop.

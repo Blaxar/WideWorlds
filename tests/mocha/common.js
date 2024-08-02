@@ -3,6 +3,7 @@
  */
 
 import parseAvatarsDat from '../../common/avatars-dat-parser.js';
+import Prop from '../../common/db/model/Prop.js';
 import {localEndiannessCue, otherEndiannessCue} from '../../common/endian.js';
 import {serializeEntityState, deserializeEntityState, forwardEntityState,
   packEntityStates, unpackEntityStates, entityStateSize,
@@ -118,7 +119,7 @@ const dummySerializeEntityState = (offset = 0) => {
 };
 
 const dummySerializeProp = (offset = 0) => {
-  const propId = 1337 + offset;
+  const id = 1337 + offset;
   const worldId = 42 + offset;
   const userId = 666 + offset;
   const date = 1721471167013 + offset;
@@ -132,8 +133,8 @@ const dummySerializeProp = (offset = 0) => {
   const description = `Welcome! Here we pay using ${offset}€`;
   const action = `create solid off; create name ${offset}`;
 
-  return serializeProp({propId, worldId, userId, date, x, y, z,
-    yaw, pitch, roll, name, description, action});
+  return serializeProp(new Prop(id, worldId, userId, date, x, y, z,
+      yaw, pitch, roll, name, description, action));
 };
 
 // Testing common utils
@@ -393,7 +394,7 @@ describe('common', () => {
   });
 
   it('(de)serializeProp', () => {
-    const propId = 1337;
+    const id = 1337;
     const worldId = 42;
     const userId = 666;
     const date = 1721471167013;
@@ -412,8 +413,8 @@ describe('common', () => {
     const encodedDescription = encoder.encode(description);
     const encodedAction = encoder.encode(action);
 
-    const prop = serializeProp({propId, worldId, userId, date, x, y, z,
-        yaw, pitch, roll, name, description, action});
+    const prop = serializeProp(new Prop(id, worldId, userId, date, x, y, z,
+        yaw, pitch, roll, name, description, action));
 
     const uCharArray = new Uint8Array(prop.buffer);
     const uShortArray = new Uint16Array(prop.buffer, 0, 33);
@@ -423,7 +424,7 @@ describe('common', () => {
     const doubleArray = new Float64Array(prop.buffer, 0, 8);
 
     assert.strictEqual(uIntArray[0], localEndiannessCue);
-    assert.strictEqual(uIntArray[1], propId);
+    assert.strictEqual(uIntArray[1], id);
     assert.strictEqual(uIntArray[2], worldId);
     assert.strictEqual(uIntArray[3], userId);
     assert.strictEqual(uLongArray[2], BigInt(date));
@@ -441,7 +442,8 @@ describe('common', () => {
 
     const dictProp = deserializeProp(prop);
 
-    assert.strictEqual(dictProp.propId, propId);
+    assert.ok(dictProp instanceof Prop);
+    assert.strictEqual(dictProp.id, id);
     assert.strictEqual(dictProp.worldId, worldId);
     assert.strictEqual(dictProp.userId, userId);
     assert.strictEqual(dictProp.date, BigInt(date));

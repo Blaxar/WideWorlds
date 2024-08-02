@@ -2,6 +2,7 @@
  * @author Julien 'Blaxar' Bardagi <blaxar.waldarax@gmail.com>
  */
 
+import Prop from './db/model/Prop.js';
 import {localEndiannessCue, otherEndiannessCue} from './endian.js';
 
 const propDataMinSize = 0x42;
@@ -28,7 +29,7 @@ const propDataMinSize = 0x42;
 
 const propDataSchema = {
   propCue: [0x00, 0x04],
-  propId: [0x04, 0x04],
+  id: [0x04, 0x04],
   worldId: [0x08, 0x04],
   userId: [0x0c, 0x04],
   date: [0x10, 0x08],
@@ -46,7 +47,7 @@ const propDataSchema = {
 
 /**
  * Serialize binary payload of prop
- * @param {integer} propId - ID of the prop.
+ * @param {integer} id - ID of the prop.
  * @param {integer} worldId - ID of the world.
  * @param {integer} userId - ID of the owner.
  * @param {float} x - World position on the X axis (in meters).
@@ -58,7 +59,7 @@ const propDataSchema = {
  * @param {string} name - Name of the prop.
  * @return {Uint8Array} Prop data binary payload
  */
-function serializeProp({propId, worldId, userId, date, x, y, z,
+function serializeProp({id, worldId, userId, date, x, y, z,
   yaw, pitch, roll, name, description = '', action = ''}) {
   const encoder = new TextEncoder();
   const encodedName = encoder.encode(name);
@@ -77,7 +78,7 @@ function serializeProp({propId, worldId, userId, date, x, y, z,
   const doubleArray = new Float64Array(prop.buffer, 0, 8);
 
   uIntArray[0] = localEndiannessCue;
-  uIntArray[1] = propId;
+  uIntArray[1] = id;
   uIntArray[2] = worldId;
   uIntArray[3] = userId;
   uLongArray[2] = BigInt(date);
@@ -168,7 +169,7 @@ function validatePropData(prop,
 /**
  * Deserialize binary payload of prop data
  * @param {Uint8Array} prop - Prop data binary payload.
- * @return {Object} Prop data in object form
+ * @return {Prop} Prop data in object form
  */
 function deserializeProp(prop) {
   const validProp = validatePropData(prop);
@@ -180,7 +181,7 @@ function deserializeProp(prop) {
   const floatArray = new Float32Array(validProp.buffer, 0, 16);
   const doubleArray = new Float64Array(validProp.buffer, 0, 8);
 
-  const propId = uIntArray[1];
+  const id = uIntArray[1];
   const worldId = uIntArray[2];
   const userId = uIntArray[3];
   const date = uLongArray[2];
@@ -200,8 +201,8 @@ function deserializeProp(prop) {
   const action = encoder.decode(validProp.slice(propDataSchema.data[0] +
       nameLength + descriptionLength));
 
-  return {propId, worldId, userId, date, x, y, z,
-    yaw, pitch, roll, name, description, action};
+  return new Prop(id, worldId, userId, date, x, y, z,
+      yaw, pitch, roll, name, description, action);
 }
 
 /**
