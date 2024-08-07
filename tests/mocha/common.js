@@ -475,7 +475,6 @@ describe('common', () => {
 
     assert.strictEqual(endiannessCue, localEndiannessCue);
     assert.strictEqual(nbEntityStates, 3);
-    //assert.strictEqual(pack.length, 8 + 3 * entityStateSize);
 
     /* Try unpacking and validating equality */
     const unpacked = unpackPropData(pack);
