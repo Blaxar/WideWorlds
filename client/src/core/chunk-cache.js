@@ -7,6 +7,14 @@ import {serializeProp, deserializeProp, packPropData, unpackPropData}
 
 const makeChunkTag = (worldId, x, z) => `${worldId}_${x}_${z}`;
 
+/**
+ * @typedef ChunkProps
+ * @type {object}
+ * @property {timestamp} date - Timestamp of the most recent prop in the chunk
+ *                              (in milliseconds), null if none.
+ * @property {Array<Prop>} props - List of props from the chunk.
+ */
+
 /** Cache management for chunks of props, powered by IndexedDB */
 class ChunkCache {
   /**
@@ -77,10 +85,8 @@ class ChunkCache {
    * @param {integer} worldId - ID of the world this chunk belongs to.
    * @param {integer} x - Index of this chunk along the X-axis.
    * @param {integer} z - Index of this chunk along the Z-axis.
-   * @return {Promise<Array<Prop>>} Promise of the list of props from
-   *                                this chunk, will be empty if the
-   *                                chunk was never stored to begin
-   *                                with.
+   * @return {Promise<ChunkProps>} Promise of the list of props from
+   *                               this chunk.
    */
   get(worldId, x, z) {
     return new Promise((resolve, reject) => {
@@ -96,16 +102,26 @@ class ChunkCache {
         get.onerror = (event) => reject(event);
         get.onsuccess = (event) => {
           if (!event.target.result || !event.target.result.data) {
-            resolve([]);
+            resolve(null);
             return;
           }
 
           event.target.result.data.arrayBuffer()
               .then((pack) => {
+                let date = null;
                 const props =
                     unpackPropData(new Uint8Array(pack))
-                        .map((arr) => deserializeProp(arr));
-                resolve(props);
+                        .map((arr) => {
+                          const p = deserializeProp(arr);
+
+                          // Find the most recent prop
+                          if (date === null || date < p.date) {
+                            date = p.date;
+                          }
+
+                          return p;
+                        });
+                resolve({date, props});
               }).catch((err) => reject(err));
         };
       };

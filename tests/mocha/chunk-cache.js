@@ -48,60 +48,69 @@ describe('chunk-cache', () => {
     await cache.put(1, -4, 13, props);
     let res = await cache.get(1, -4, 13);
 
-    assert.equal(res.length, 2);
+    assert.equal(res.date, props[1].date);
+    assert.equal(res.props.length, 2);
 
-    assert.equal(res[0].id, props[0].id);
-    assert.equal(res[0].worldId, props[0].worldId);
-    assert.equal(res[0].userId, props[0].userId);
-    assert.equal(res[0].date, props[0].date);
-    assert.ok(epsEqual(res[0].x, props[0].x));
-    assert.ok(epsEqual(res[0].y, props[0].y));
-    assert.ok(epsEqual(res[0].z, props[0].z));
-    assert.ok(epsEqual(res[0].yaw, props[0].yaw));
-    assert.ok(epsEqual(res[0].pitch, props[0].pitch));
-    assert.ok(epsEqual(res[0].roll, props[0].roll));
-    assert.equal(res[0].name, props[0].name);
-    assert.equal(res[0].description, props[0].description);
-    assert.equal(res[0].action, props[0].action);
+    assert.equal(res.props[0].id, props[0].id);
+    assert.equal(res.props[0].worldId, props[0].worldId);
+    assert.equal(res.props[0].userId, props[0].userId);
+    assert.equal(res.props[0].date, props[0].date);
+    assert.ok(epsEqual(res.props[0].x, props[0].x));
+    assert.ok(epsEqual(res.props[0].y, props[0].y));
+    assert.ok(epsEqual(res.props[0].z, props[0].z));
+    assert.ok(epsEqual(res.props[0].yaw, props[0].yaw));
+    assert.ok(epsEqual(res.props[0].pitch, props[0].pitch));
+    assert.ok(epsEqual(res.props[0].roll, props[0].roll));
+    assert.equal(res.props[0].name, props[0].name);
+    assert.equal(res.props[0].description, props[0].description);
+    assert.equal(res.props[0].action, props[0].action);
 
-    assert.equal(res[1].id, props[1].id);
-    assert.equal(res[1].worldId, props[1].worldId);
-    assert.equal(res[1].userId, props[1].userId);
-    assert.equal(res[1].date, props[1].date);
-    assert.ok(epsEqual(res[1].x, props[1].x));
-    assert.ok(epsEqual(res[1].y, props[1].y));
-    assert.ok(epsEqual(res[1].z, props[1].z));
-    assert.ok(epsEqual(res[1].yaw, props[1].yaw));
-    assert.ok(epsEqual(res[1].pitch, props[1].pitch));
-    assert.ok(epsEqual(res[1].roll, props[1].roll));
-    assert.equal(res[1].name, props[1].name);
-    assert.equal(res[1].description, props[1].description);
-    assert.equal(res[1].action, props[1].action);
+    assert.equal(res.props[1].id, props[1].id);
+    assert.equal(res.props[1].worldId, props[1].worldId);
+    assert.equal(res.props[1].userId, props[1].userId);
+    assert.equal(res.props[1].date, props[1].date);
+    assert.ok(epsEqual(res.props[1].x, props[1].x));
+    assert.ok(epsEqual(res.props[1].y, props[1].y));
+    assert.ok(epsEqual(res.props[1].z, props[1].z));
+    assert.ok(epsEqual(res.props[1].yaw, props[1].yaw));
+    assert.ok(epsEqual(res.props[1].pitch, props[1].pitch));
+    assert.ok(epsEqual(res.props[1].roll, props[1].roll));
+    assert.equal(res.props[1].name, props[1].name);
+    assert.equal(res.props[1].description, props[1].description);
+    assert.equal(res.props[1].action, props[1].action);
 
     // Update chunk in cache
     const prop = dummyMakeProp(3);
     await cache.put(1, -4, 13, [prop]);
     res = await cache.get(1, -4, 13);
 
-    assert.equal(res.length, 1);
+    assert.equal(res.props.length, 1);
 
-    assert.equal(res[0].id, prop.id);
-    assert.equal(res[0].worldId, prop.worldId);
-    assert.equal(res[0].userId, prop.userId);
-    assert.equal(res[0].date, prop.date);
-    assert.ok(epsEqual(res[0].x, prop.x));
-    assert.ok(epsEqual(res[0].y, prop.y));
-    assert.ok(epsEqual(res[0].z, prop.z));
-    assert.ok(epsEqual(res[0].yaw, prop.yaw));
-    assert.ok(epsEqual(res[0].pitch, prop.pitch));
-    assert.ok(epsEqual(res[0].roll, prop.roll));
-    assert.equal(res[0].name, prop.name);
-    assert.equal(res[0].description, prop.description);
-    assert.equal(res[0].action, prop.action);
+    assert.equal(res.date, prop.date);
+    assert.equal(res.props[0].id, prop.id);
+    assert.equal(res.props[0].worldId, prop.worldId);
+    assert.equal(res.props[0].userId, prop.userId);
+    assert.equal(res.props[0].date, prop.date);
+    assert.ok(epsEqual(res.props[0].x, prop.x));
+    assert.ok(epsEqual(res.props[0].y, prop.y));
+    assert.ok(epsEqual(res.props[0].z, prop.z));
+    assert.ok(epsEqual(res.props[0].yaw, prop.yaw));
+    assert.ok(epsEqual(res.props[0].pitch, prop.pitch));
+    assert.ok(epsEqual(res.props[0].roll, prop.roll));
+    assert.equal(res.props[0].name, prop.name);
+    assert.equal(res.props[0].description, prop.description);
+    assert.equal(res.props[0].action, prop.action);
 
-    // Get chunk without any props in it
+    // Get unregistered chunk
     res = await cache.get(1, -3, 9);
-    assert.equal(res.length, 0);
+    assert.strictEqual(res, null);
+
+    // Insert chunk without any prop
+    await cache.put(1, -5, 13, []);
+    res = await cache.get(1, -5, 13);
+
+    assert.strictEqual(res.date, null);
+    assert.equal(res.props.length, 0);
   });
 
   it('delete', async () => {
@@ -112,17 +121,17 @@ describe('chunk-cache', () => {
     // Populate the chunk with dummy data
     await cache.put(2, 20, -4, props);
     let res = await cache.get(2, 20, -4);
-    assert.equal(2, res.length);
+    assert.equal(res.props.length, 2);
 
     // Delete the chunk from the cache
     await cache.delete(2, 20, -4);
     res = await cache.get(2, 20, -4);
-    assert.equal(res.length, 0);
+    assert.strictEqual(res, null);
 
     // Delete unregistered chunk from the cache
     await cache.delete(2, 21, -3);
     res = await cache.get(2, 21, -3);
-    assert.equal(res.length, 0);
+    assert.strictEqual(res, null);
   });
 
   it('wipeWorld', async () => {
@@ -131,28 +140,28 @@ describe('chunk-cache', () => {
     // Populate chunks with dummy data
     await cache.put(3, 19, -4, [dummyMakeProp(1), dummyMakeProp(2)]);
     let res = await cache.get(3, 19, -4);
-    assert.equal(res.length, 2);
+    assert.equal(res.props.length, 2);
 
     await cache.put(3, 20, 15, [dummyMakeProp(3), dummyMakeProp(4)]);
     res = await cache.get(3, 20, 15);
-    assert.equal(res.length, 2);
+    assert.equal(res.props.length, 2);
 
     // Add chunk to another world
     await cache.put(4, 19, -4, [dummyMakeProp(5)]);
     res = await cache.get(4, 19, -4);
-    assert.equal(res.length, 1);
+    assert.equal(res.props.length, 1);
 
     // Delete chunks from the cache using the world ID
     await cache.wipeWorld(3);
     res = await cache.get(3, 19, -4);
-    assert.equal(res.length, 0);
+    assert.strictEqual(res, null);
 
     res = await cache.get(3, 20, 15);
-    assert.equal(res.length, 0);
+    assert.strictEqual(res, null);
 
     // Check that the chunk from the other world didn't get wiped out
     res = await cache.get(4, 19, -4);
-    assert.equal(res.length, 1);
+    assert.equal(res.props.length, 1);
   });
 
   it('clear', async () => {
@@ -161,18 +170,18 @@ describe('chunk-cache', () => {
     // Populate chunks with dummy data
     await cache.put(4, 19, -4, [dummyMakeProp(1), dummyMakeProp(2)]);
     let res = await cache.get(4, 19, -4);
-    assert.equal(res.length, 2);
+    assert.equal(res.props.length, 2);
 
     await cache.put(4, 20, 15, [dummyMakeProp(3), dummyMakeProp(4)]);
     res = await cache.get(4, 20, 15);
-    assert.equal(res.length, 2);
+    assert.equal(res.props.length, 2);
 
     // Wipe chunk cache
     await cache.clear();
     res = await cache.get(4, 19, -4);
-    assert.equal(res.length, 0);
+    assert.strictEqual(res, null);
 
     res = await cache.get(4, 20, 15);
-    assert.equal(res.length, 0);
+    assert.strictEqual(res, null);
   });
 });
