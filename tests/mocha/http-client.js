@@ -3,6 +3,7 @@
  */
 
 import makeHttpTestBase, {epsEqual} from '../utils.js';
+import {hashProps} from '../../common/props-data-format.js';
 import HttpClient from '../../client/src/core/http-client.js';
 import WsClient from '../../client/src/core/ws-client.js';
 import {defaultPageDiameter, unpackElevationData}
@@ -155,41 +156,41 @@ describe('http client', () => {
       });
   });
 
-  it('getPropsDate - OK (all)', (done) => {
+  it('getPropsHash - OK (all)', (done) => {
     login().then(() => {
-      httpClient.getPropsDate(
+      httpClient.getPropsHash(
         base.worldId,
         -10000, 10000,
         -10000, 10000,
         -10000, 10000
-      ).then((date) => {
+      ).then((hash) => {
         // Assert date value
-        assert.equal(date, base.now);
+        assert.equal(hash, hashProps([base.firstProp, base.secondProp]));
 
         done();
       });
     }).catch((err) => done(err));
   });
 
-  it('getPropsDate - OK (none)', (done) => {
+  it('getPropsHash - OK (none)', (done) => {
     login().then(() => {
-      httpClient.getPropsDate(
+      httpClient.getPropsHash(
         base.worldId,
         20000, 30000,
         20000, 30000,
         20000, 30000
-      ).then((date) => {
+      ).then((hash) => {
         // Assert date value
-        assert.strictEqual(date, null);
+        assert.strictEqual(hash, 0);
 
         done();
       });
     }).catch((err) => done(err));
   });
 
-  it('getPropsDate - Not found', (done) => {
+  it('getPropsHash - Not found', (done) => {
     login().then(() => {
-      httpClient.getPropsDate(
+      httpClient.getPropsHash(
         base.worldId + 3000,
       ).then(() => done('Getting props date should not work here'))
         .catch((err) => {
@@ -199,8 +200,8 @@ describe('http client', () => {
     });
   });
 
-  it('getPropsDate - Unauthorized', (done) => {
-    httpClient.getPropsDate(
+  it('getPropsHash - Unauthorized', (done) => {
+    httpClient.getPropsHash(
       base.worldId,
     ).then(() => done('Getting props date should not work here'))
       .catch((err) => {
@@ -215,7 +216,7 @@ describe('http client', () => {
     // Ready payload
     const payload = {};
 
-    payload[base.firstPropId] = {
+    payload[base.firstProp.id] = {
       x: 1.23,
       y: -4.56,
       z: 0.2,
@@ -224,7 +225,7 @@ describe('http client', () => {
       roll: 5.2,
     };
 
-    payload[base.secondPropId] = {
+    payload[base.secondProp.id] = {
       name: 'door02.rwx',
       description: "Some renewed description.",
       action: 'create color green;',
@@ -243,7 +244,7 @@ describe('http client', () => {
       assert.equal(props.length, 2);
 
       // Assert first prop fields
-      assert.equal(props[0].id, base.firstPropId);
+      assert.equal(props[0].id, base.firstProp.id);
       assert.equal(props[0].worldId, base.worldId);
       assert.equal(props[0].userId, base.adminId);
       assert.ok(epsEqual(props[0].x, 1.23));
@@ -257,7 +258,7 @@ describe('http client', () => {
       assert.equal(props[0].action, 'create color red;');
 
       // Assert second prop fields
-      assert.strictEqual(props[1].id, base.secondPropId);
+      assert.strictEqual(props[1].id, base.secondProp.id);
       assert.equal(props[1].worldId, base.worldId);
       assert.equal(props[1].userId, base.adminId);
       assert.equal(props[1].x, 100);
@@ -299,10 +300,10 @@ describe('http client', () => {
           assert.equal(Object.entries(body).length, 3);
 
           // Assert first prop status
-          assert.strictEqual(body[base.firstPropId], true);
+          assert.strictEqual(body[base.firstProp.id], true);
 
           // Assert second prop status
-          assert.strictEqual(body[base.secondPropId], true);
+          assert.strictEqual(body[base.secondProp.id], true);
 
           // Assert unknown prop status
           assert.strictEqual(body[unknownPropId], null);
@@ -317,7 +318,7 @@ describe('http client', () => {
     // Ready payload
     const payload = {};
 
-    payload[base.firstPropId] = {
+    payload[base.firstProp.id] = {
       x: 1.23,
       y: -4.56,
       z: 0.2,
@@ -326,7 +327,7 @@ describe('http client', () => {
       roll: 5.2,
     };
 
-    payload[base.secondPropId] = {
+    payload[base.secondProp.id] = {
       name: 'door02.rwx',
       description: "Some renewed description.",
       action: 'create color green;',
@@ -355,7 +356,7 @@ describe('http client', () => {
     // Ready payload
     const payload = {};
 
-    payload[base.firstPropId] = {
+    payload[base.firstProp.id] = {
       x: 1.23,
       y: -4.56,
       z: 0.2,
@@ -364,7 +365,7 @@ describe('http client', () => {
       roll: 5.2,
     };
 
-    payload[base.secondPropId] = {
+    payload[base.secondProp.id] = {
       name: 'door02.rwx',
       description: "Some renewed description.",
       action: 'create color green;',
@@ -424,8 +425,8 @@ describe('http client', () => {
       assert.equal(props.length, 2);
 
       // Assert first prop fields
-      assert.notEqual(props[0].id, base.firstPropId);
-      assert.notEqual(props[0].id, base.secondPropId);
+      assert.notEqual(props[0].id, base.firstProp.id);
+      assert.notEqual(props[0].id, base.secondProp.id);
       assert.notEqual(props[0].id, props[1].id);
       assert.equal(props[0].worldId, base.worldId);
       assert.equal(props[0].userId, base.adminId);
@@ -440,8 +441,8 @@ describe('http client', () => {
       assert.equal(props[0].action, 'create color red;');
 
       // Assert second prop fields
-      assert.notEqual(props[1].id, base.firstPropId);
-      assert.notEqual(props[1].id, base.secondPropId);
+      assert.notEqual(props[1].id, base.firstProp.id);
+      assert.notEqual(props[1].id, base.secondProp.id);
       assert.notEqual(props[1].id, props[0].id);
       assert.equal(props[1].worldId, base.worldId);
       assert.equal(props[1].userId, base.adminId);
@@ -582,7 +583,7 @@ describe('http client', () => {
 
   it('deleteProps - OK', (done) => {
     // Ready payload
-    const payload = [base.firstPropId, base.secondPropId, 66666];
+    const payload = [base.firstProp.id, base.secondProp.id, 66666];
 
     const propsDeleteCb = (actual) => {
       const data = actual;
@@ -592,10 +593,10 @@ describe('http client', () => {
       assert.equal(props.length, 2);
 
       // Assert first prop ID
-      assert.strictEqual(props[0], base.firstPropId);
+      assert.strictEqual(props[0], base.firstProp.id);
 
       // Assert second prop ID
-      assert.strictEqual(props[1], base.secondPropId);
+      assert.strictEqual(props[1], base.secondProp.id);
     };
 
     const adminClient = new WsClient(`ws://127.0.0.1:${base.port}/api`, base.adminBearerToken);
@@ -640,7 +641,7 @@ describe('http client', () => {
 
   it('deleteProps - Not found', (done) => {
     // Ready payload
-    const payload = [base.firstPropId, base.secondPropId, 66666];
+    const payload = [base.firstProp.id, base.secondProp.id, 66666];
 
     login().then(() => {
       httpClient.deleteProps(
@@ -656,7 +657,7 @@ describe('http client', () => {
 
   it('deleteProps - Unauthorized', (done) => {
     // Ready payload
-    const payload = [base.firstPropId, base.secondPropId, 66666];
+    const payload = [base.firstProp.id, base.secondProp.id, 66666];
 
     httpClient.deleteProps(
       base.worldId,

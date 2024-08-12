@@ -4,6 +4,7 @@
 
 import * as assert from 'assert';
 import Prop from '../../common/db/model/Prop.js';
+import {hashProps} from '../../common/props-data-format.js';
 import {epsEqual} from '../utils.js';
 import ChunkCache from '../../client/src/core/chunk-cache.js';
 import "fake-indexeddb/auto";
@@ -48,7 +49,7 @@ describe('chunk-cache', () => {
     await cache.put(1, -4, 13, props);
     let res = await cache.get(1, -4, 13);
 
-    assert.equal(res.date, props[1].date);
+    assert.equal(res.hash, hashProps(props));
     assert.equal(res.props.length, 2);
 
     assert.equal(res.props[0].id, props[0].id);
@@ -86,7 +87,7 @@ describe('chunk-cache', () => {
 
     assert.equal(res.props.length, 1);
 
-    assert.equal(res.date, prop.date);
+    assert.equal(res.hash, hashProps([prop]));
     assert.equal(res.props[0].id, prop.id);
     assert.equal(res.props[0].worldId, prop.worldId);
     assert.equal(res.props[0].userId, prop.userId);
@@ -109,7 +110,7 @@ describe('chunk-cache', () => {
     await cache.put(1, -5, 13, []);
     res = await cache.get(1, -5, 13);
 
-    assert.strictEqual(res.date, null);
+    assert.strictEqual(res.hash, 0);
     assert.equal(res.props.length, 0);
   });
 

@@ -5,6 +5,7 @@
 import logger from './logger.js';
 import World from '../common/db/model/World.js';
 import Prop from '../common/db/model/Prop.js';
+import {hashProps} from '../common/props-data-format.js';
 
 const isNullOrUndefined = (value) => value === null || value === undefined;
 const badRequest = 400;
@@ -142,7 +143,7 @@ function registerPropsEndpoints(app, authenticate, connection, ctx) {
         });
   });
 
-  app.get('/api/worlds/:id/props-date', authenticate, (req, res) => {
+  app.get('/api/worlds/:id/props-hash', authenticate, (req, res) => {
     res.setHeader('Content-Type', 'application/json');
     const wid = req.params.id;
 
@@ -162,14 +163,16 @@ function registerPropsEndpoints(app, authenticate, connection, ctx) {
 
           // World has been found, filter props using world ID
           const queryBuilder =
-                connection.manager.createQueryBuilder(Prop, 'prop')
-                    .select('MAX(prop.date)', 'date');
+                connection.manager.createQueryBuilder(Prop, 'prop');
 
           const status = filterPropsQuery(queryBuilder, wid,
               {minX, maxX, minY, maxY, minZ, maxZ});
 
           if (status === ok) {
-            queryBuilder.getRawOne().then(({date}) => res.send({date}));
+            // Respond with hash of props
+            queryBuilder.getMany().then((props) => {
+              res.send({hash: hashProps(props)});
+            });
           } else {
             res.status(status).json({});
           }

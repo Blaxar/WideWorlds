@@ -3,6 +3,7 @@
  */
 
 import * as db from '../common/db/utils.js';
+import {hashProps} from '../common/props-data-format.js';
 import {spawnHttpServer} from '../server/http.js';
 import {spawnWsServer} from '../server/ws.js';
 import World from '../common/db/model/World.js';
@@ -30,7 +31,7 @@ const makeTestUser = async (connection, name, password, email, role) => {
 const makeTestProp = async (connection, worldId, userId, date, x, y, z, yaw,
     pitch, roll, name, description, action) => {
   return (await connection.manager.save([new Prop(undefined, worldId, userId, date, x, y, z,
-      yaw, pitch, roll, name, description, action)]))[0].id;
+      yaw, pitch, roll, name, description, action)]))[0];
 };
 
 const makeHttpTestBase = (port = 62931, dbFile = 'mocha-http-test-db.sqlite3', secret = crypto.randomBytes(64).toString('hex')) => {
@@ -46,8 +47,8 @@ const makeHttpTestBase = (port = 62931, dbFile = 'mocha-http-test-db.sqlite3', s
     adminId: 0,
     citizenId: 0,
     now: 0,
-    firstPropId: null,
-    secondPropId: null,
+    firstProp: null,
+    secondProp: null,
     adminBearerToken: '',
     citizenBearerToken: '',
     worldFolder: join(tmpdir(), `base${Date.now()}`),
@@ -114,10 +115,10 @@ const makeHttpTestBase = (port = 62931, dbFile = 'mocha-http-test-db.sqlite3', s
     base.now = Date.now();
 
     // Fill-in database with a few props belonging to the world right above
-    base.firstPropId = await makeTestProp(TypeORM.getConnection(), base.worldId,
+    base.firstProp = await makeTestProp(TypeORM.getConnection(), base.worldId,
         base.adminId, base.now, 0, 0, 0, 0, 0, 0, 'wall01.rwx',
         'Some description.', 'create color red;');
-    base.secondPropId = await makeTestProp(TypeORM.getConnection(), base.worldId,
+    base.secondProp = await makeTestProp(TypeORM.getConnection(), base.worldId,
         base.adminId, base.now - 1000, 100, -200, 300, 450, 900, 1350, 'wall02.rwx',
         'Some other description.', 'create color blue;');
   };

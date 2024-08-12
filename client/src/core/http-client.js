@@ -141,7 +141,7 @@ class HttpClient {
    * @param {integer|null} maxZ - Maximum Z coordinate value (in meters).
    * @return {integer|null} Most recent prop timestamp in milliseconds (if any).
    */
-  async getPropsDate(wid, minX, maxX, minY, maxY, minZ, maxZ) {
+  async getPropsHash(wid, minX, maxX, minY, maxY, minZ, maxZ) {
     let params = [];
 
     if (minX) params.push(`minX=${minX}`);
@@ -158,7 +158,7 @@ class HttpClient {
     }
 
     const request =
-        new Request(`${this.url}/worlds/${wid}/props-date${params}`, {
+        new Request(`${this.url}/worlds/${wid}/props-hash${params}`, {
           method: 'GET',
           headers: this.headers,
           mode: this.cors ? 'cors' : undefined,
@@ -166,8 +166,8 @@ class HttpClient {
 
     return await fetch(request).then(async (response) => {
       if (response.ok) {
-        const {date} = await response.json();
-        return date;
+        const {hash} = await response.json();
+        return hash;
       } else {
         throw new Error(response.status);
       }

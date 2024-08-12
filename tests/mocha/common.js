@@ -10,7 +10,7 @@ import {serializeEntityState, deserializeEntityState, forwardEntityState,
   validateEntityState, validateEntityStatePack,
   simpleStringHash} from '../../common/ws-data-format.js';
 import {serializeProp, deserializeProp, packPropData, unpackPropData,
-  propDataMinSize, validatePropData, validatePropDataPack}
+  propDataMinSize, validatePropData, validatePropDataPack, hashProps}
   from '../../common/props-data-format.js';
 import {epsEqual} from '../utils.js';
 import * as assert from 'assert';
@@ -497,5 +497,15 @@ describe('common', () => {
     const badPack = new Uint8Array(pack.length + 1);
     badPack.set(pack, 0);
     assert.throws(() => unpackPropData(badPack), Error);
+  });
+
+  it('hashProps', () => {
+    const firstProp = {id: 1, date: 12345};
+    const secondProp = {id: 4, date: BigInt(12346)};
+
+    assert.strictEqual(hashProps([]), 0); // Empty list
+
+    assert.strictEqual(hashProps([firstProp, secondProp]), hashProps([secondProp, firstProp])); // Consistent hash
+    assert.notEqual(hashProps([firstProp, secondProp]), hashProps([firstProp])); // No collision
   });
 });

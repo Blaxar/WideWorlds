@@ -2,7 +2,7 @@
  * @author Julien 'Blaxar' Bardagi <blaxar.waldarax@gmail.com>
  */
 
-import {serializeProp, deserializeProp, packPropData, unpackPropData}
+import {serializeProp, deserializeProp, packPropData, unpackPropData, hashProps}
   from '../../../common/props-data-format.js';
 
 const makeChunkTag = (worldId, x, z) => `${worldId}_${x}_${z}`;
@@ -10,8 +10,7 @@ const makeChunkTag = (worldId, x, z) => `${worldId}_${x}_${z}`;
 /**
  * @typedef ChunkProps
  * @type {object}
- * @property {timestamp} date - Timestamp of the most recent prop in the chunk
- *                              (in milliseconds), null if none.
+ * @property {timestamp} hash - Hash of the props the chunk, zero (0) if none.
  * @property {Array<Prop>} props - List of props from the chunk.
  */
 
@@ -108,20 +107,10 @@ class ChunkCache {
 
           event.target.result.data.arrayBuffer()
               .then((pack) => {
-                let date = null;
                 const props =
                     unpackPropData(new Uint8Array(pack))
-                        .map((arr) => {
-                          const p = deserializeProp(arr);
-
-                          // Find the most recent prop
-                          if (date === null || date < p.date) {
-                            date = p.date;
-                          }
-
-                          return p;
-                        });
-                resolve({date, props});
+                        .map((arr) => deserializeProp(arr));
+                resolve({hash: hashProps(props), props});
               }).catch((err) => reject(err));
         };
       };

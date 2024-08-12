@@ -3,6 +3,7 @@
  */
 
 import Prop from '../../common/db/model/Prop.js';
+import {hashProps} from '../../common/props-data-format.js';
 import makeHttpTestBase, {epsEqual} from '../utils.js';
 import TypeORM from 'typeorm';
 import request from 'superwstest';
@@ -38,6 +39,7 @@ describe('http server props', () => {
           assert.equal(body.length, 2);
 
           // Assert first prop fields
+          assert.equal(body[0].id, base.firstProp.id);
           assert.equal(body[0].worldId, base.worldId);
           assert.equal(body[0].userId, base.adminId);
           assert.equal(body[0].date, base.now);
@@ -52,6 +54,7 @@ describe('http server props', () => {
           assert.equal(body[0].action, 'create color red;');
 
           // Assert second prop fields
+          assert.equal(body[1].id, base.secondProp.id);
           assert.equal(body[1].worldId, base.worldId);
           assert.equal(body[1].userId, base.adminId);
           assert.equal(body[1].date, base.now - 1000);
@@ -84,6 +87,7 @@ describe('http server props', () => {
           assert.equal(body.length, 1);
 
           // Assert prop fields
+          assert.equal(body[0].id, base.secondProp.id);
           assert.equal(body[0].worldId, base.worldId);
           assert.equal(body[0].userId, base.adminId);
           assert.equal(body[0].date, base.now - 1000);
@@ -138,9 +142,53 @@ describe('http server props', () => {
         .expect(404, done);
   });
 
-  it('GET /api/worlds/id/props-date - OK', (done) => {
+  it('GET /api/worlds/id/props-hash - OK', (done) => {
     request(base.server)
-        .get('/api/worlds/' + base.worldId + '/props-date')
+        .get('/api/worlds/' + base.worldId + '/props-hash')
+        .set('Authorization', 'Bearer ' + base.adminBearerToken)
+        .set('Accept', 'application/json')
+        .expect('Content-Type', /json/)
+        .expect(200).then((response) => {
+          // Get the body (json content) of the request
+          const body = response.body;
+          const hash = hashProps([base.firstProp, base.secondProp]);
+
+          // We expect one single key
+          assert.equal(Object.keys(body).length, 1);
+
+          // Assert hash field
+          assert.equal(body.hash, hash);
+
+          done();
+        })
+        .catch((err) => done(err));
+  });
+
+  it('GET /api/worlds/id/props-hash with filters - OK', (done) => {
+    request(base.server)
+        .get('/api/worlds/' + base.worldId + '/props-hash?minX=50&maxX=150&minY=-240&maxY=-160&minZ=270&maxZ=330')
+        .set('Authorization', 'Bearer ' + base.adminBearerToken)
+        .set('Accept', 'application/json')
+        .expect('Content-Type', /json/)
+        .expect(200).then((response) => {
+          // Get the body (json content) of the request
+          const body = response.body;
+          const hash = hashProps([base.secondProp]);
+
+          // We expect one single key
+          assert.equal(Object.keys(body).length, 1);
+
+          // Assert hash field
+          assert.equal(body.hash, hash);
+
+          done();
+        })
+        .catch((err) => done(err));
+  });
+
+  it('GET /api/worlds/id/props-hash with filters - None', (done) => {
+    request(base.server)
+        .get('/api/worlds/' + base.worldId + '/props-hash?minX=500&maxX=1050&minY=-2040&maxY=-1060&minZ=2070&maxZ=3030')
         .set('Authorization', 'Bearer ' + base.adminBearerToken)
         .set('Accept', 'application/json')
         .expect('Content-Type', /json/)
@@ -151,86 +199,44 @@ describe('http server props', () => {
           // We expect one single key
           assert.equal(Object.keys(body).length, 1);
 
-          // Assert date field
-          assert.equal(body.date, base.now);
+          // Assert hash field
+          assert.strictEqual(body.hash, 0);
 
           done();
         })
         .catch((err) => done(err));
   });
 
-  it('GET /api/worlds/id/props-date with filters - OK', (done) => {
+  it('GET /api/worlds/id/props-hash with filters - Bad Request', (done) => {
     request(base.server)
-        .get('/api/worlds/' + base.worldId + '/props-date?minX=50&maxX=150&minY=-240&maxY=-160&minZ=270&maxZ=330')
-        .set('Authorization', 'Bearer ' + base.adminBearerToken)
-        .set('Accept', 'application/json')
-        .expect('Content-Type', /json/)
-        .expect(200).then((response) => {
-          // Get the body (json content) of the request
-          const body = response.body;
-
-          // We expect one single key
-          assert.equal(Object.keys(body).length, 1);
-
-          // Assert date field
-          assert.equal(body.date, base.now - 1000);
-
-          done();
-        })
-        .catch((err) => done(err));
-  });
-
-  it('GET /api/worlds/id/props-date with filters - None', (done) => {
-    request(base.server)
-        .get('/api/worlds/' + base.worldId + '/props-date?minX=500&maxX=1050&minY=-2040&maxY=-1060&minZ=2070&maxZ=3030')
-        .set('Authorization', 'Bearer ' + base.adminBearerToken)
-        .set('Accept', 'application/json')
-        .expect('Content-Type', /json/)
-        .expect(200).then((response) => {
-          // Get the body (json content) of the request
-          const body = response.body;
-
-          // We expect one single key
-          assert.equal(Object.keys(body).length, 1);
-
-          // Assert date field
-          assert.strictEqual(body.date, null);
-
-          done();
-        })
-        .catch((err) => done(err));
-  });
-
-  it('GET /api/worlds/id/props-date with filters - Bad Request', (done) => {
-    request(base.server)
-        .get('/api/worlds/' + base.worldId + '/props-date?minX=sdgdsgsdg&maxX=150&minY=-240&maxY=-160&minZ=270&maxZ=330')
+        .get('/api/worlds/' + base.worldId + '/props-hash?minX=sdgdsgsdg&maxX=150&minY=-240&maxY=-160&minZ=270&maxZ=330')
         .set('Authorization', 'Bearer ' + base.adminBearerToken)
         .set('Accept', 'application/json')
         .expect('Content-Type', /json/)
         .expect(400, done);
   });
 
-  it('GET /api/worlds/id/props-date - Unauthorized', (done) => {
+  it('GET /api/worlds/id/props-hash - Unauthorized', (done) => {
     request(base.server)
-        .get('/api/worlds/' + base.worldId + '/props-date')
+        .get('/api/worlds/' + base.worldId + '/props-hash')
         .set('Authorization', 'gibberish')
         .set('Accept', 'application/json')
         .expect('Content-Type', /json/)
         .expect(401, done);
   });
 
-  it('GET /api/worlds/id/props-date - Forbidden', (done) => {
+  it('GET /api/worlds/id/props-hash - Forbidden', (done) => {
     request(base.server)
-        .get('/api/worlds/' + base.worldId + '/props-date')
+        .get('/api/worlds/' + base.worldId + '/props-hash')
         .set('Authorization', 'Bearer iNvAlId')
         .set('Accept', 'application/json')
         .expect('Content-Type', /json/)
         .expect(403, done);
   });
 
-  it('GET /api/worlds/id/props-date - Not found', (done) => {
+  it('GET /api/worlds/id/props-hash - Not found', (done) => {
     request(base.server)
-        .get('/api/worlds/66666/props')
+        .get('/api/worlds/66666/props-hash')
         .set('Authorization', 'Bearer ' + base.adminBearerToken)
         .set('Accept', 'application/json')
         .expect('Content-Type', /json/)
@@ -245,7 +251,7 @@ describe('http server props', () => {
     // Ready payload
     const payload = {};
 
-    payload[base.firstPropId] = {
+    payload[base.firstProp.id] = {
       x: 1.23,
       y: -4.56,
       z: 0.2,
@@ -254,7 +260,7 @@ describe('http server props', () => {
       roll: 5.2,
     };
 
-    payload[base.secondPropId] = {
+    payload[base.secondProp.id] = {
       name: 'door02.rwx',
       description: 'Some renewed description.',
       action: 'create color green;',
@@ -273,7 +279,7 @@ describe('http server props', () => {
       assert.equal(props.length, 2);
 
       // Assert first prop fields
-      assert.equal(props[0].id, base.firstPropId);
+      assert.equal(props[0].id, base.firstProp.id);
       assert.equal(props[0].worldId, base.worldId);
       assert.equal(props[0].userId, base.adminId);
       assert.ok(epsEqual(props[0].x, 1.23));
@@ -287,7 +293,7 @@ describe('http server props', () => {
       assert.equal(props[0].action, 'create color red;');
 
       // Assert second prop fields
-      assert.strictEqual(props[1].id, base.secondPropId);
+      assert.strictEqual(props[1].id, base.secondProp.id);
       assert.equal(props[1].worldId, base.worldId);
       assert.equal(props[1].userId, base.adminId);
       assert.equal(props[1].x, 100);
@@ -323,10 +329,10 @@ describe('http server props', () => {
           assert.equal(Object.entries(body).length, 3);
 
           // Assert first prop status
-          assert.strictEqual(body[base.firstPropId], true);
+          assert.strictEqual(body[base.firstProp.id], true);
 
           // Assert second prop status
-          assert.strictEqual(body[base.secondPropId], true);
+          assert.strictEqual(body[base.secondProp.id], true);
 
           // Assert unknown prop status
           assert.strictEqual(body[unknownPropId], null);
@@ -338,7 +344,7 @@ describe('http server props', () => {
                 assert.equal(props.length, 2);
 
                 // Assert first prop fields
-                assert.equal(props[0].id, base.firstPropId);
+                assert.equal(props[0].id, base.firstProp.id);
                 assert.equal(props[0].worldId, base.worldId);
                 assert.equal(props[0].userId, base.adminId);
                 assert.ok(epsEqual(props[0].x, 1.23));
@@ -352,7 +358,7 @@ describe('http server props', () => {
                 assert.equal(props[0].action, 'create color red;');
 
                 // Assert second prop fields
-                assert.strictEqual(props[1].id, base.secondPropId);
+                assert.strictEqual(props[1].id, base.secondProp.id);
                 assert.equal(props[1].worldId, base.worldId);
                 assert.equal(props[1].userId, base.adminId);
                 assert.equal(props[1].x, 100);
@@ -385,7 +391,7 @@ describe('http server props', () => {
     // Ready payload
     const payload = {};
 
-    payload[base.firstPropId] = {
+    payload[base.firstProp.id] = {
       x: 1.23,
       y: -4.56,
       z: 0.2,
@@ -407,7 +413,7 @@ describe('http server props', () => {
     // Ready payload
     const payload = {};
 
-    payload[base.firstPropId] = {
+    payload[base.firstProp.id] = {
       x: 1.23,
       y: -4.56,
       z: 0.2,
@@ -429,7 +435,7 @@ describe('http server props', () => {
     // Ready payload
     const payload = {};
 
-    payload[base.firstPropId] = {
+    payload[base.firstProp.id] = {
       x: 1.23,
       y: -4.56,
       z: 0.2,
@@ -488,8 +494,8 @@ describe('http server props', () => {
       assert.equal(props.length, 2);
 
       // Assert first prop fields
-      assert.notEqual(props[0].id, base.firstPropId);
-      assert.notEqual(props[0].id, base.secondPropId);
+      assert.notEqual(props[0].id, base.firstProp.id);
+      assert.notEqual(props[0].id, base.secondProp.id);
       assert.notEqual(props[0].id, props[1].id);
       assert.equal(props[0].worldId, base.worldId);
       assert.equal(props[0].userId, base.adminId);
@@ -504,8 +510,8 @@ describe('http server props', () => {
       assert.equal(props[0].action, 'create color red;');
 
       // Assert second prop fields
-      assert.notEqual(props[1].id, base.firstPropId);
-      assert.notEqual(props[1].id, base.secondPropId);
+      assert.notEqual(props[1].id, base.firstProp.id);
+      assert.notEqual(props[1].id, base.secondProp.id);
       assert.notEqual(props[1].id, props[0].id);
       assert.equal(props[1].worldId, base.worldId);
       assert.equal(props[1].userId, base.adminId);
@@ -558,8 +564,8 @@ describe('http server props', () => {
                 assert.equal(props.length, 4);
 
                 // Assert third prop fields
-                assert.notEqual(props[2].id, base.firstPropId);
-                assert.notEqual(props[2].id, base.secondPropId);
+                assert.notEqual(props[2].id, base.firstProp.id);
+                assert.notEqual(props[2].id, base.secondProp.id);
                 assert.notEqual(props[2].id, props[3].id);
                 assert.ok(epsEqual(props[2].x, 1.23));
                 assert.ok(epsEqual(props[2].y, -4.56));
@@ -572,8 +578,8 @@ describe('http server props', () => {
                 assert.equal(props[2].action, 'create color red;');
 
                 // Assert fourth prop fields
-                assert.notEqual(props[3].id, base.firstPropId);
-                assert.notEqual(props[3].id, base.secondPropId);
+                assert.notEqual(props[3].id, base.firstProp.id);
+                assert.notEqual(props[3].id, base.secondProp.id);
                 assert.notEqual(props[3].id, props[2].id);
                 assert.equal(props[3].worldId, base.worldId);
                 assert.equal(props[3].userId, base.adminId);
@@ -682,7 +688,7 @@ describe('http server props', () => {
 
   it('DELETE /api/worlds/id/props - OK', (done) => {
     // Ready payload
-    const payload = [base.firstPropId, base.secondPropId, 66666];
+    const payload = [base.firstProp.id, base.secondProp.id, 66666];
 
     const propsDeleteCb = (actual) => {
       const data = JSON.parse(actual);
@@ -692,10 +698,10 @@ describe('http server props', () => {
       assert.equal(props.length, 2);
 
       // Assert first prop ID
-      assert.strictEqual(props[0], base.firstPropId);
+      assert.strictEqual(props[0], base.firstProp.id);
 
       // Assert second prop ID
-      assert.strictEqual(props[1], base.secondPropId);
+      assert.strictEqual(props[1], base.secondProp.id);
     };
 
     Promise.all([
@@ -751,7 +757,7 @@ describe('http server props', () => {
     });
 
   it('DELETE /api/worlds/id/props - Duplicated IDs', (done) => {
-    const payload = [base.firstPropId, base.firstPropId];
+    const payload = [base.firstProp.id, base.firstProp.id];
 
     request(base.server)
         .delete('/api/worlds/' + base.worldId + '/props')
@@ -764,7 +770,7 @@ describe('http server props', () => {
 
   it('DELETE /api/worlds/id/props - Unauthorized', (done) => {
     // Ready payload
-    const payload = [base.firstPropId, base.secondPropId, 66666];
+    const payload = [base.firstProp.id, base.secondProp.id, 66666];
 
     request(base.server)
         .delete('/api/worlds/' + base.worldId + '/props')
@@ -777,7 +783,7 @@ describe('http server props', () => {
 
   it('DELETE /api/worlds/id/props - Forbidden', (done) => {
     // Ready payload
-    const payload = [base.firstPropId, base.secondPropId, 66666];
+    const payload = [base.firstProp.id, base.secondProp.id, 66666];
 
     request(base.server)
         .delete('/api/worlds/' + base.worldId + '/props')
@@ -790,7 +796,7 @@ describe('http server props', () => {
 
   it('DELETE /api/worlds/id/props - Not found', (done) => {
     // Ready payload
-    const payload = [base.firstPropId, base.secondPropId, 66666];
+    const payload = [base.firstProp.id, base.secondProp.id, 66666];
 
     request(base.server)
         .delete('/api/worlds/77777/props')

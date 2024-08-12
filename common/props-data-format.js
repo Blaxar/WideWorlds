@@ -309,6 +309,27 @@ function unpackPropData(propDataPack) {
   return propEntries;
 }
 
+/**
+ * Get the hash of a list of props
+ * @param {Array<Prop>} props - List of props to hash.
+ * @return {integer} Hash of the prop list (32 bits).
+ */
+function hashProps(props) {
+  const mask = 0xffffffff; // 32 bits
+  let hash = 0;
+
+  const sorted =
+      [...props].sort((a, b) => (a.id < b.id) ? -1 :
+      ((a.id > b.id) ? 1 : 0));
+
+  for (const {date} of sorted) {
+    hash = (hash << 5) - hash + parseInt(date);
+    hash = hash & hash; // Prevent overflow
+  }
+
+  return hash & mask;
+}
+
 export {serializeProp, deserializeProp, packPropData,
   unpackPropData, propDataMinSize, validatePropData,
-  validatePropDataPack};
+  validatePropDataPack, hashProps};
