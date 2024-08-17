@@ -16,16 +16,19 @@ const toFixed = (value) => Number(value.toFixed(3));
 class CommandParser {
   /**
    * @constructor
-   * @param {Engine3D} engine3d - The 3D engine
-   * @param {String} worldData - The current world's attributes
+   * @param {WorldManager} worldManager - The World Manager
+   * @param {String} world - The current world's attributes
    * @param {UserFeed} userFeed - The user feed for publishing messages.
    * @param {object} configsNode - the 'controls' node in the user configs
+   * @param {HttpClient} httpClient - client-server API
    */
-  constructor(engine3d, worldData, userFeed, configsNode) {
-    this.engine3d = engine3d;
-    this.worldData = worldData;
+  constructor(worldManager, world, userFeed, configsNode, httpClient) {
+    this.worldManager = worldManager;
+    this.engine3d = worldManager?.engine3d;
+    this.world = world;
     this.userFeed = userFeed;
     this.configsNode = configsNode;
+    this.httpClient = httpClient;
   }
 
   /**
@@ -38,13 +41,13 @@ class CommandParser {
     const cmdArray = msg.replace(/^\//, '').split(' ');
     const [cmd, ...args] = cmdArray;
     let result = [];
-    if (typeof this.worldData === 'string') {
-      this.worldData = JSON.parse(this.worldData);
+    if (typeof this.world.data === 'string') {
+      this.world.data = JSON.parse(this.world.data);
     }
 
     switch (cmd.toLowerCase()) {
       case 'lz':
-        const entryPoint = this.worldData.entryPoint;
+        const entryPoint = this.world.data.entryPoint;
         const {x, y, z, yaw} = this.engine3d.teleportUser(
             entryPoint, entryPoint.yaw);
         this.userFeed.publish(`You have been teleported to the Landing Zone ` +
@@ -58,11 +61,20 @@ class CommandParser {
       case 'tp':
         result = this.handleTPCommand(cmdArray);
         break;
+      case 'seed':
+        // We "seed" a prop at the user's location
+        const seedModel = cmdArray[1] && cmdArray[1].length > 0 ? cmdArray[1] :
+        'unknown.rwx';
+
+        result = this.buildProps([
+          {model: seedModel},
+        ]);
+        break;
       case 'getpos':
         this.showUserPosition();
         break;
       case 'worlddata':
-        console.log(this.worldData);
+        console.log(this.world.data);
         break;
       case 'walk':
       case 'run':
@@ -133,6 +145,68 @@ class CommandParser {
       return {error: 'ERR_TOO_FEW_ARGUMENTS'};
     }
   }
+
+  /**
+   * Builds given props at their given locations
+   *
+   * @param {Array} propDetails - A list of props to build
+   * @return {Array} props - Returns props that could not be created.
+   */
+  async buildProps(propDetails = []) {
+    // This can be used later for more complex generation,
+    //  such as forests and mazes
+    const props = propDetails.map((
+        {
+          model, description, action,
+          x, y, z,
+          yaw, pitch, roll,
+        },
+    ) => ({
+      userData: {
+        prop: {
+          x: x ?? this.engine3d.user.position.x,
+          y: y ?? this.engine3d.user.position.y,
+          z: z ?? this.engine3d.user.position.z,
+          yaw: yaw ?? 0,
+          pitch: pitch ?? 0,
+          roll: roll ?? 0,
+          name: model || 'unknown.rwx',
+          description: description ?? '',
+          action: action ?? '',
+        },
+      },
+    }));
+
+    try {
+      // Attempt to create multiple props
+      const propsNotCreated = await this.worldManager.createProps(props);
+
+      if (propsNotCreated.length > 0) {
+        this.userFeed.publish(
+            'Some props could not be created.',
+            'Building Inspector',
+            userFeedPriority.warning,
+        );
+      } else {
+        this.userFeed.publish(
+            `Created props at user coordinates`,
+            null,
+            userFeedPriority.info,
+        );
+      }
+
+      return propsNotCreated;
+    } catch (error) {
+      this.userFeed.publish(
+          `Could not create props: ${error}`,
+          'Building Inspector',
+          userFeedPriority.error,
+      );
+
+      return props; // Return the original props in case of error
+    }
+  }
+
 
   /**
    * Displays the user's current position and yaw angle.
