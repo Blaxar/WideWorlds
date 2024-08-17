@@ -263,8 +263,8 @@ const handleWorldSelection = (id) => {
       null, userFeedPriority.info);
 
   worldManager.load(world).then(async ({avatars, path}) => {
-    commands = new CommandParser(engine3d, world.data, userFeed,
-        userConfig.at('controls'));
+    commands = new CommandParser(worldManager, world, userFeed,
+        userConfig.at('controls'), httpClient);
     // Mark this world as default choice for the world selection
     // screen
     defaultWorldId = id;
