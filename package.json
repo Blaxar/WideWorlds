@@ -40,7 +40,7 @@
   },
   "homepage": "https://github.com/Blaxar/WideWorlds#readme",
   "dependencies": {
-    "aw-action-parser": "npm:@_nekohime_/aw-action-parser@^1.1.12",
+    "aw-action-parser": "npm:@blaxar/aw-action-parser@^1.1.12",
     "aw-sequence-parser": "^0.4.2",
     "awcoordinates": "^0.5.5",
     "cors": "^2.8.5",
