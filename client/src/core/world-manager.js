@@ -573,13 +573,59 @@ class WorldManager {
     this.elapsed += delta;
     if (!(this.currentWorld && this.currentModelRegistry)) return;
 
+    this.updateTextures(delta);
+    this.updateWater(delta);
+
+    const {cX, cZ} = this.getChunkCoordinates(pos.x, pos.z);
+    const {pX, pZ} = this.getPageCoordinates(pos.x, pos.z);
+    const now = Date.now();
+
+    this.updateScenery(cX, cZ, pX, pZ, now);
+    if (this.previousCX !== cX || this.previousCZ !== cZ) {
+      this.resetIdleChunksLoading(now);
+      this.updateChunks(cX, cZ);
+
+      this.previousCX = cX;
+      this.previousCZ = cZ;
+    } else if (this.idlePropsLoading.distance > 0 &&
+        this.idleChunksLoading.radius < this.idlePropsLoading.distance &&
+        (now - this.idleChunksLoading.start) > this.idlePropsLoading.downtime &&
+        (now - this.idleChunksLoading.last) > this.idlePropsLoading.cooldown) {
+      // 4 conditions need to be met to go on with idle chunk loading:
+      // - Be enabled via the distance being set above 0;
+      // - Have the current radius to load be inferior to the maximum allowed
+      //   distance (it won't ever stop on its own otherwise);
+      // - Have enough time elapsed since the user went "idle" chunk-wise, this
+      //   ensures that it stops when the user starts significantly moving;
+      // - Have enough time elapsed since the last loaded piece, this ensures
+      //   a reasonable pace to load props (not overworking the web browser).
+
+      this.updateIdleChunksLoading(pos, now);
+    }
+
+    this.updateCollider(cX, cZ, pX, pZ);
+    this.updatePages(pX, pZ);
+  }
+
+  /**
+   * Update animated textures, for internal use by {@link update}
+   * @param {number} delta - Elapsed number of seconds since last update.
+   */
+  updateTextures(delta) {
     if (this.lastTextureUpdate > this.textureUpdatePeriod) {
       this.currentModelRegistry.texturesNextFrame();
       this.lastTextureUpdate = 0;
     } else {
       this.lastTextureUpdate += delta;
     }
+  }
 
+  /**
+   * Update water animation and tune underwater rendering, for internal
+   * use by {@link update}
+   * @param {number} delta - Elapsed number of seconds since last update.
+   */
+  updateWater(delta) {
     if (this.currentWaterMaterials) {
       this.currentWaterMaterials.waterMaterial.step(delta);
       this.currentWaterMaterials.bottomMaterial.step(delta);
@@ -613,31 +659,48 @@ class WorldManager {
         this.engine3d.resetFog();
       }
     }
+  }
 
-    const {cX, cZ} = this.getChunkCoordinates(pos.x, pos.z);
-    const {pX, pZ} = this.getPageCoordinates(pos.x, pos.z);
-    const now = Date.now();
-
+  /**
+   * Update background scenery by committing pending props changes, for internal
+   * use by {@link update}
+   * @param {timestamp} now - Current timestamp (in milliseconds).
+   */
+  updateScenery(now) {
     if (now - this.lastSceneryUpdate > sceneryUpdateCooldown) {
       this.lastSceneryUpdate = now;
       this.sceneryUpdater.commit();
     }
+  }
 
-    if (this.previousCX !== cX || this.previousCZ !== cZ) {
-      // Reset idle chunk loading state
-      this.idleChunksLoading.start = now;
-      this.idleChunksLoading.radius = 0;
-      this.idleChunksLoading.progress = 0;
-      const lodCamera = this.engine3d.camera.clone();
-      lodCamera.position.setY(0.0);
+  /**
+   * Reset idle chunks loading state, for internal use by {@link update}
+   * @param {timestamp} now - Current timestamp (in milliseconds).
+   */
+  resetIdleChunksLoading(now) {
+    // Reset idle chunk loading state
+    this.idleChunksLoading.start = now;
+    this.idleChunksLoading.radius = 0;
+    this.idleChunksLoading.progress = 0;
+  }
 
-      for (const [x, z] of this.chunkLoadingPattern) {
-        this.loadChunk(cX + x, cZ + z);
-      }
+  /**
+   * Update chunks and background scenery props visbility, for internal use
+   * by {@link update}
+   * @param {integer} cX - Index of the chunk on the X axis.
+   * @param {integer} cZ - Index of the chunk on the Z axis.
+   */
+  updateChunks(cX, cZ) {
+    const lodCamera = this.engine3d.camera.clone();
+    lodCamera.position.setY(0.0);
 
-      // We notify the 3D engine that we want to update the current
-      // chunks around the camera
-      const {visible, turnedInvisible} =
+    for (const [x, z] of this.chunkLoadingPattern) {
+      this.loadChunk(cX + x, cZ + z);
+    }
+
+    // We notify the 3D engine that we want to update the current
+    // chunks around the camera
+    const {visible, turnedInvisible} =
           this.engine3d.updateLODs(new Set(this.chunkLoadingPattern.map(
               ([x, z]) => {
                 const chunkId = `${cX + x}_${cZ + z}`;
@@ -646,61 +709,61 @@ class WorldManager {
           ).filter((nodeId) => nodeId !== undefined)),
           lodCamera);
 
-      // Update background scenery
-      visible.forEach((id) => {
-        this.scenery.mask(this.chunkKeys.get(id));
-      });
-      turnedInvisible.forEach((id) => {
-        this.scenery.unmask(this.chunkKeys.get(id));
-      });
+    // Update background scenery
+    visible.forEach((id) => {
+      this.scenery.mask(this.chunkKeys.get(id));
+    });
+    turnedInvisible.forEach((id) => {
+      this.scenery.unmask(this.chunkKeys.get(id));
+    });
+  }
 
-      this.previousCX = cX;
-      this.previousCZ = cZ;
-    } else if (this.idlePropsLoading.distance > 0 &&
-        this.idleChunksLoading.radius < this.idlePropsLoading.distance &&
-        (now - this.idleChunksLoading.start) > this.idlePropsLoading.downtime &&
-        (now - this.idleChunksLoading.last) > this.idlePropsLoading.cooldown) {
-      // 4 conditions need to be met to go on with idle chunk loading:
-      // - Be enabled via the distance being set above 0;
-      // - Have the current radius to load be inferior to the maximum allowed
-      //   distance (it won't ever stop on its own otherwise);
-      // - Have enough time elapsed since the user went "idle" chunk-wise, this
-      //   ensures that it stops when the user starts significantly moving;
-      // - Have enough time elapsed since the last loaded piece, this ensures
-      //   a reasonable pace to load props (not overworking the web browser).
-      this.idleChunksLoading.last = now;
+  /**
+   * Update idle chunks loading, for internal use by {@link update}
+   * @param {Vector3} pos - Ground camera position.
+   * @param {timestamp} now - Current timestamp (in millisceonds).
+   */
+  updateIdleChunksLoading(pos, now) {
+    this.idleChunksLoading.last = now;
 
-      let cX = 0;
-      let cZ = 0;
-      let i = 0;
+    let cX = 0;
+    let cZ = 0;
+    let i = 0;
+    do {
+      let {radius, progress} = this.idleChunksLoading;
 
-      do {
-        let {radius, progress} = this.idleChunksLoading;
+      const coordinates = this.getChunkCoordinates(
+          pos.x + Math.cos(progress) * radius,
+          pos.z + Math.sin(progress) * radius);
 
-        const coordinates = this.getChunkCoordinates(
-            pos.x + Math.cos(progress) * radius,
-            pos.z + Math.sin(progress) * radius);
+      cX = coordinates.cX;
+      cZ = coordinates.cZ;
 
-        cX = coordinates.cX;
-        cZ = coordinates.cZ;
+      const perimeter = twoPi*radius;
+      const nbSteps = parseInt(perimeter / this.chunkSide) * 2;
+      const radStep = twoPi / nbSteps;
 
-        const perimeter = twoPi*radius;
-        const nbSteps = parseInt(perimeter / this.chunkSide) * 2;
-        const radStep = twoPi / nbSteps;
+      progress += radStep;
+      if (progress > twoPi) {
+        // Past full circle: restart with a bigger radius
+        this.idleChunksLoading.progress = 0;
+        this.idleChunksLoading.radius += this.chunkSide;
+      } else {
+        this.idleChunksLoading.progress = progress;
+      }
+    } while (this.isChunkLoaded(cX, cZ) && ++i < maxLoadingAttempts);
 
-        progress += radStep;
-        if (progress > twoPi) {
-          // Past full circle: restart with a bigger radius
-          this.idleChunksLoading.progress = 0;
-          this.idleChunksLoading.radius += this.chunkSide;
-        } else {
-          this.idleChunksLoading.progress = progress;
-        }
-      } while (this.isChunkLoaded(cX, cZ) && ++i < maxLoadingAttempts);
+    this.loadChunk(cX, cZ, true);
+  }
 
-      this.loadChunk(cX, cZ, true);
-    }
-
+  /**
+   * Update user collider state, for internal use by {@link update}
+   * @param {integer} cX - Index of the current chunk on the X axis.
+   * @param {integer} cZ - Index of the current chunk on the Z axis.
+   * @param {integer} pX - Index of the current terrain page on the X axis.
+   * @param {integer} pZ - Index of the current terrain page on the Z axis.
+   */
+  updateCollider(cX, cZ, pX, pZ) {
     // Test props and terrain collision with user
     this.userCollider.update(this.chunkCollisionPattern.map(
         ([x, z]) => {
@@ -713,7 +776,14 @@ class WorldManager {
           return this.pages.get(pageId);
         },
     ) : []));
+  }
 
+  /**
+   * Update terrain and water pages, for internal use by {@link update}
+   * @param {integer} pX - Index of the current page on the X axis.
+   * @param {integer} pZ - Index of the current page on the Z axis.
+   */
+  updatePages(pX, pZ) {
     if (this.terrainEnabled && !this.loadingPages) {
       this.loadingPages = true;
       // Unlike chunks, pages cannot be loaded independently so trivially,
