@@ -580,7 +580,7 @@ class WorldManager {
     const {pX, pZ} = this.getPageCoordinates(pos.x, pos.z);
     const now = Date.now();
 
-    this.updateScenery(cX, cZ, pX, pZ, now);
+    this.updateScenery(now);
     if (this.previousCX !== cX || this.previousCZ !== cZ) {
       this.resetIdleChunksLoading(now);
       this.updateChunks(cX, cZ);
