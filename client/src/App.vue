@@ -34,6 +34,7 @@ import rasterizeHTML from 'rasterizehtml';
 import CommandParser from './core/command-parser.js';
 import AnimationManager, {animateEntityImp, animateEntityExp}
   from './core/animation-manager.js';
+import ChunkCache from './core/chunk-cache.js';
 
 // Three.js context-related settings
 let commands = null;
@@ -46,6 +47,7 @@ let worldState = null;
 let entityManager = null;
 const tmpVec2 = new Vector2;
 const animationManager = new AnimationManager();
+const chunkCache = new ChunkCache();
 
 const userState = {flying: false, onGround: true, running: false, idle: true,
   explicit: {name: '', start: 0, duration: 0}};
@@ -54,6 +56,9 @@ const userState = {flying: false, onGround: true, running: false, idle: true,
 const storedKeyBindings = JSON.parse(JSON.stringify(qwertyBindings));
 const isTextSelected = () => !!window.getSelection()?.toString();
 const unselectText = () => window.getSelection()?.removeAllRanges();
+
+// Find out if we are targeting part of the overlay over the 3D rendering
+// canvas
 const isOverlay3D = (target) =>
   target.tagName == 'DIV' &&
         !['surface', 'window', 'window-body', 'title-bar', 'title-text']
@@ -424,8 +429,8 @@ onMounted(() => {
   resetBehavior();
 
   // Ready world path registry for object caching
-  worldManager = new WorldManager(engine3d, worldPathRegistry, httpClient,
-      wsClient, userFeed, userCollider,
+  worldManager = new WorldManager(engine3d, chunkCache, worldPathRegistry,
+      httpClient, wsClient, userFeed, userCollider,
       userConfig.at('graphics'));
   propsSelector = new PropsSelector(engine3d, worldManager,
       onPropsSelectionChange, userConfig.at('graphics')
@@ -575,7 +580,7 @@ document.addEventListener('mousemove', (event) => {
     <CentralOverlay v-if="displayEdgebars">
     <template v-slot:left v-if="main.displayUserSettings">
     <UserSettings :listener="inputListener"
-    :userConfig="userConfig" />
+    :chunkCache="chunkCache" :userConfig="userConfig" :feed="userFeed" />
     </template>
     <template v-slot:right v-if="main.displayPropSettings">
     <PropSettings :key="main.propSettingsTrigger" :propsSelector="propsSelector"

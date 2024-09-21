@@ -4,10 +4,13 @@
  */
 
 import {onMounted, onUnmounted, ref} from 'vue';
+import ChunkCache from '../core/chunk-cache.js';
 import UserInput, {UserInputListener, qwertyBindings}
   from '../core/user-input.js';
 import {renderingDistance, propsLoadingDistance, idlePropsLoading}
   from '../core/user-config.js';
+import UserConfig from '../core/user-config.js';
+import UserFeed, {userFeedPriority} from '../core/user-feed.js';
 
 const componentKey = 0;
 
@@ -68,6 +71,10 @@ const props = defineProps({
     type: String,
     default: 'Enable Legacy (AW) Coordinates',
   },
+  clearChunkCacheText: {
+    type: String,
+    default: 'Clear Chunk Cache',
+  },
   userInputs: {
     type: Array,
     default: UserInput,
@@ -76,8 +83,20 @@ const props = defineProps({
     type: Object,
     default: new UserInputListener,
   },
-  userConfig: {
+  chunkCache: {
     type: Object,
+    default: new ChunkCache,
+  },
+  userConfig: {
+    type: UserConfig,
+  },
+  feed: {
+    type: UserFeed,
+    required: true,
+  },
+  chunksClearedMessage: {
+    type: String,
+    default: 'Cleared every chunk of props from local cache',
   },
 });
 
@@ -174,7 +193,7 @@ const saveIdlePropsLoadingDistance = (event) => {
       .at('distance').set(value);
 };
 
-// Idle props loading downtime: how long to before starting
+// Idle props loading downtime: how long to wait before starting
 // once user stopped moving
 
 const getIdlePropsLoadingDowntime = () => {
@@ -241,6 +260,11 @@ const setlegacyCoordinates = (event) => {
       .at('legacyCoordinates').set(event.target.checked);
 };
 
+const clearChunkCache = () => {
+  props.feed.publish(props.chunksClearedMessage, 'Client',
+      userFeedPriority.info);
+  props.chunkCache.clear();
+};
 
 const localRenderingDistance = ref(getRenderingDistance());
 const localPropsLoadingDistance = ref(getPropsLoadingDistance());
@@ -400,7 +424,11 @@ onUnmounted(() => {
       {{legacyCoordinatesText}}
     </label>
   </td></tr>
-
+  <tr><td colspan="2">
+    <button @click="clearChunkCache">
+      {{clearChunkCacheText}}
+    </button>
+  </td></tr>
 </table>
 </div>
 </div>

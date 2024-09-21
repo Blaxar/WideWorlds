@@ -130,7 +130,7 @@ const dummySerializeProp = (offset = 0) => {
   const pitch = 1.2 + offset;
   const roll = 2.5 + offset;
   const name = `door0${offset}.rwx`;
-  const description = `Welcome! Here we pay using ${offset}€`;
+  const description = `Welcome! Here we pay with ${offset}€`;
   const action = `create solid off; create name ${offset}`;
 
   return serializeProp(new Prop(id, worldId, userId, date, x, y, z,

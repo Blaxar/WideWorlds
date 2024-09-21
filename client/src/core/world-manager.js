@@ -114,6 +114,7 @@ class WorldManager {
   /**
    * @constructor
    * @param {Engine3D} engine3d - Instance of the main 3D engine.
+   * @param {ChunkCache} chunkCache - Instance of the chunk cache.
    * @param {WorldPathRegistry} worldPathRegistry - world-path registry for
    *                                                3D assets loading.
    * @param {HttpClient} httpClient - HTTP client managing API requests to
@@ -129,14 +130,15 @@ class WorldManager {
    *                                       before moving animated textures to
    *                                       their next frame.
    */
-  constructor(engine3d, worldPathRegistry, httpClient, wsClient, userFeed,
-      userCollider, graphicsNode = null, chunkSide = 20,
+  constructor(engine3d, chunkCache, worldPathRegistry, httpClient, wsClient,
+      userFeed, userCollider, graphicsNode = null, chunkSide = 20,
       textureUpdatePeriod = 0.20) {
     this.elapsed = 0;
     this.chunkLoadingPattern = defaultChunkLoadingPattern;
     this.chunkCollisionPattern = defaultChunkLoadingPattern;
     this.pageCollisionPattern = pageLoadingPattern;
     this.engine3d = engine3d;
+    this.chunkCache = chunkCache;
     this.worldPathRegistry = worldPathRegistry;
     this.httpClient = httpClient;
     this.wsClient = wsClient;
@@ -753,7 +755,7 @@ class WorldManager {
       }
     } while (this.isChunkLoaded(cX, cZ) && ++i < maxLoadingAttempts);
 
-    this.loadChunk(cX, cZ, true);
+    this.loadChunk(cX, cZ, true, true);
   }
 
   /**
@@ -816,12 +818,17 @@ class WorldManager {
    * @param {integer} x - Index of the chunk on the X axis.
    * @param {integer} z - Index of the chunk on the Z axis.
    * @param {boolean} hide - Whether or not to hide chunk at creation.
+   * @param {boolean} lazy - Whether or not to load the chunk from the cache.
+   *                         If True: Will issue a network call only if not
+   *                                  found in cache;
+   *                         If false (default): Will always issue a network
+   *                                             call.
    */
-  async loadChunk(x, z, hide = false) {
+  async loadChunk(x, z, hide = false, lazy = false) {
     const chunkId = `${x}_${z}`;
     if (this.chunks.has(chunkId)) return;
 
-    await this.reloadChunk(x, z, hide);
+    await this.reloadChunk(x, z, hide, lazy);
   }
 
   /**
@@ -923,8 +930,13 @@ class WorldManager {
    * @param {integer} x - Index of the chunk on the X axis.
    * @param {integer} z - Index of the chunk on the Z axis.
    * @param {boolean} hide - Whether or not to hide chunk at creation.
+   * @param {boolean} lazy - Whether or not to load the chunk from the cache.
+   *                         If true: Will issue a network call only if not
+   *                         found in cache;
+   *                         If false (default): Will always issue a network
+   *                         call.
    */
-  async reloadChunk(x, z, hide = false) {
+  async reloadChunk(x, z, hide = false, lazy = false) {
     const chunkId = `${x}_${z}`;
 
     if (this.chunks.has(chunkId)) {
@@ -938,12 +950,66 @@ class WorldManager {
     const chunkAnchor = this.getChunkAnchor(x, z, hide);
 
     const halfChunkSide = this.chunkSide / 2;
-    const chunk = await this.httpClient.getProps(this.currentWorld.id,
-        x * this.chunkSide - halfChunkSide,
-        (x + 1) * this.chunkSide - halfChunkSide,
-        null, null, // We set no limit on the vertical (y) axis
-        z * this.chunkSide - halfChunkSide,
-        (z + 1) * this.chunkSide - halfChunkSide);
+
+    const loadNetworkProps = () => {
+      return this.httpClient.getProps(this.currentWorld.id,
+          x * this.chunkSide - halfChunkSide,
+          (x + 1) * this.chunkSide - halfChunkSide,
+          null, null, // We set no limit on the vertical (y) axis
+          z * this.chunkSide - halfChunkSide,
+          (z + 1) * this.chunkSide - halfChunkSide);
+    };
+
+    let loadedFromNetwork = false;
+
+    const loadCacheProps = () => {
+      return this.chunkCache.get(this.currentWorld.id, x, z);
+    };
+
+    const deleteCacheProps = () => {
+      return this.chunkCache.delete(this.currentWorld.id, x, z);
+    };
+
+    const chunk = await (async () => {
+      if (lazy) {
+        // try to fetch chunk from the cache first, fallback
+        // on the network if no entry was found
+        return new Promise((resolve) => {
+          loadCacheProps().then((result) => {
+            if (result) {
+              resolve(result.props);
+            } else {
+              loadNetworkProps().then((res) => {
+                loadedFromNetwork = true;
+                resolve(res);
+              });
+            }
+          }, (error) => {
+            // Failed to access the cache, lazy-delete
+            // the chunk from the cache and fall back
+            // to the network request
+            deleteCacheProps();
+            loadNetworkProps().then((res) => {
+              loadedFromNetwork = true;
+              resolve(res);
+            });
+          });
+        });
+      } else {
+        // Ignoring the cache here, aim straight for the newtork request
+        return new Promise((resolve) => {
+          loadNetworkProps().then((res) => {
+            loadedFromNetwork = true;
+            resolve(res);
+          });
+        });
+      }
+    })();
+
+    if (loadedFromNetwork) {
+      // Cache entry needs to be updated for this chunk
+      this.chunkCache.put(this.currentWorld.id, x, z, chunk);
+    }
 
     const modelRegistry = this.currentModelRegistry;
 

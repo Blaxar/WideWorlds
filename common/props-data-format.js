@@ -291,7 +291,7 @@ function unpackPropData(propDataPack) {
 
   for (let i = 0; i < nbPropEntries; i++) {
     const lengthFields = new Uint16Array(propDataPack.slice(begin +
-        propDataSchema.nameLength[0]).buffer);
+        propDataSchema.nameLength[0], begin + propDataSchema.data[0]).buffer);
 
     // The total size of a any single entry needs to be known
     // by inspecting the values from the length fields
@@ -304,6 +304,12 @@ function unpackPropData(propDataPack) {
 
     propEntries.push(validatePropData(prop));
     begin = end;
+  }
+
+  if (begin !== propDataPack.length) {
+    throw new Error(
+        `Invalid amount of parsed data from the payload pack`,
+    );
   }
 
   return propEntries;
