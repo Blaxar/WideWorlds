@@ -80,6 +80,12 @@ describe('chunk-cache', () => {
     assert.equal(res.props[1].description, props[1].description);
     assert.equal(res.props[1].action, props[1].action);
 
+    // Fetch list of coordinates
+    res = await cache.getAvailableCoordinates(1);
+    assert.equal(res.length, 1);
+    assert.equal(res[0].x, -4);
+    assert.equal(res[0].z, 13);
+
     // Update chunk in cache
     const prop = dummyMakeProp(3);
     await cache.put(1, -4, 13, [prop]);
@@ -112,6 +118,12 @@ describe('chunk-cache', () => {
 
     assert.strictEqual(res.hash, 0);
     assert.equal(res.props.length, 0);
+
+    // Fetch list of coordinates
+    res = await cache.getAvailableCoordinates(1);
+    assert.equal(res.length, 2);
+    assert.ok(res.find(({x, z}) => x == -4 && z == 13));
+    assert.ok(res.find(({x, z}) => x == -5 && z == 13));
   });
 
   it('delete', async () => {
@@ -133,6 +145,9 @@ describe('chunk-cache', () => {
     await cache.delete(2, 21, -3);
     res = await cache.get(2, 21, -3);
     assert.strictEqual(res, null);
+
+    res = await cache.getAvailableCoordinates(2);
+    assert.equal(res.length, 0);
   });
 
   it('wipeWorld', async () => {
@@ -160,9 +175,15 @@ describe('chunk-cache', () => {
     res = await cache.get(3, 20, 15);
     assert.strictEqual(res, null);
 
+    res = await cache.getAvailableCoordinates(3);
+    assert.equal(res.length, 0);
+
     // Check that the chunk from the other world didn't get wiped out
     res = await cache.get(4, 19, -4);
     assert.equal(res.props.length, 1);
+
+    res = await cache.getAvailableCoordinates(4);
+    assert.equal(res.length, 1);
   });
 
   it('clear', async () => {
@@ -184,5 +205,8 @@ describe('chunk-cache', () => {
 
     res = await cache.get(4, 20, 15);
     assert.strictEqual(res, null);
+
+    res = await cache.getAvailableCoordinates(4);
+    assert.equal(res.length, 0);
   });
 });

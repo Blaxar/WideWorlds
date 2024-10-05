@@ -14,6 +14,13 @@ const makeChunkTag = (worldId, x, z) => `${worldId}_${x}_${z}`;
  * @property {Array<Prop>} props - List of props from the chunk.
  */
 
+/**
+ * @typedef ChunkCoords
+ * @type {object}
+ * @property {integer} x - Index of the chunk along the X-axis.
+ * @property {integer} z - Index of the chunk along the Z-axis.
+ */
+
 /** Cache management for chunks of props, powered by IndexedDB */
 class ChunkCache {
   /**
@@ -112,6 +119,42 @@ class ChunkCache {
                         .map((arr) => deserializeProp(arr));
                 resolve({hash: hashProps(props), props});
               }).catch((err) => reject(err));
+        };
+      };
+    });
+  }
+
+  /**
+   * Get all available chunks coordinates from the cache for a given world
+   *
+   * @param {integer} worldId - ID of the world the chunks belongs to.
+   * @return {Promise<Array<ChunkCoords>>} Promise of a list of chunk
+   *                                       coordinates.
+   */
+  getAvailableCoordinates(worldId) {
+    return new Promise((resolve, reject) => {
+      const request = this.idb.open(this.dbName, this.version);
+
+      request.onerror = (event) => reject(event);
+      request.onsuccess = (event) => {
+        const store = event.target.result.transaction([this.storeName],
+            'readonly').objectStore(this.storeName);
+        const get = store.index('worldId').getAll(worldId);
+
+        get.onerror = (event) => reject(event);
+        get.onsuccess = (event) => {
+          if (!event.target.result) {
+            resolve(null);
+            return;
+          }
+
+          const coords = [];
+
+          event.target.result.forEach(({x, z}) => {
+            coords.push({x, z});
+          });
+
+          resolve(coords);
         };
       };
     });
