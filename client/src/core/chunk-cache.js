@@ -48,6 +48,7 @@ class ChunkCache {
       objectStore.createIndex('x', 'x');
       objectStore.createIndex('z', 'z');
       objectStore.createIndex('data', 'data');
+      objectStore.createIndex('id', ['worldId', 'x', 'z']);
     };
   }
 
@@ -100,10 +101,9 @@ class ChunkCache {
 
       request.onerror = (event) => reject(event);
       request.onsuccess = (event) => {
-        const tag = makeChunkTag(worldId, x, z);
         const store = event.target.result.transaction([this.storeName],
             'readonly').objectStore(this.storeName);
-        const get = store.get(tag);
+        const get = store.index('id').get([worldId, x, z]);
 
         get.onerror = (event) => reject(event);
         get.onsuccess = (event) => {
