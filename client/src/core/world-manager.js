@@ -16,6 +16,8 @@ import {makePagePlane as makeWaterPagePlane,
 import {Vector3, Color, MathUtils, TextureLoader, Group} from 'three';
 import {userFeedPriority} from './user-feed.js';
 
+const chunkCacheBatchSize = 100;
+
 const defaultChunkLoadingPattern = [[-1, 1], [0, 1], [1, 1],
   [-1, 0], [0, 0], [1, 0],
   [-1, -1], [0, -1], [1, -1]];
@@ -455,6 +457,10 @@ class WorldManager {
       this.engine3d.setSkyBox(model);
     }
 
+    const {cX, cZ} = this.getChunkCoordinates(this.engine3d.user.position.x,
+        this.engine3d.user.position.z);
+    this.loadCachedChunks(cX, cZ);
+
     try {
       // TODO: customizable avatars.zip subpath and CORS disabling?
       return {
@@ -811,6 +817,60 @@ class WorldManager {
         this.loadingWaterPages = false;
       })();
     }
+  }
+
+  /**
+   * Load all the nearby available chunks from the cache when entering the
+   * world, centered around a given position
+   * @param {integer} cX - Index of the central chunk on the X axis.
+   * @param {integer} cZ - Index of the central chunk on the Z axis.
+   */
+  async loadCachedChunks(cX, cZ) {
+    const maxRadius = this.idlePropsLoading.distance /
+        parseFloat(this.chunkSide);
+
+    let coords = await this.chunkCache.getAvailableCoordinates(this.worldId);
+
+    console.debug(`Found ${coords.length} chunks in local cache`);
+
+    // Sort the coordinates to get the closest ones first
+    coords = coords.sort((a, b) => {
+      const sqrdADist = (a.x - cX) * (a.x - cX) + (a.z - cZ) * (a.z - cZ);
+      const sqrdBDist = (b.x - cX) * (b.x - cX) + (b.z - cZ) * (b.z - cZ);
+
+      return sqrdADist - sqrdBDist;
+    });
+
+    let i = 0;
+    let promises = [];
+
+    for (const {x, z} of coords) {
+      // World not loaded, just stop
+      if (this.currentWorld === null) return;
+
+      const sqrdDist = (x - cX) * (x - cX) + (z - cZ) * (z - cZ);
+
+      if (sqrdDist > maxRadius * maxRadius) {
+        // We're past the allowed radius
+        break;
+      }
+
+      promises.push(this.loadChunk(x, z, true, true));
+      i++;
+
+      // Only let a certain amount of chunk-loading promises run
+      // at any given time, this ought to avoid staggering or, worse,
+      // freezing the web browser
+      if (promises.length >= chunkCacheBatchSize) {
+        await Promise.all(promises);
+        promises = [];
+      }
+    }
+
+    // Load remaining amount at the end
+    await Promise.all(promises);
+
+    console.debug(`Loaded ${i} chunks from local cache`);
   }
 
   /**
