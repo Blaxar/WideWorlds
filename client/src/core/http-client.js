@@ -139,7 +139,7 @@ class HttpClient {
    * @param {integer|null} maxY - Maximum Y coordinate value (in meters).
    * @param {integer|null} minZ - Minimum Z coordinate value (in meters).
    * @param {integer|null} maxZ - Maximum Z coordinate value (in meters).
-   * @return {integer|null} Most recent prop timestamp in milliseconds (if any).
+   * @return {integer} Props hash for the whole area.
    */
   async getPropsHash(wid, minX, maxX, minY, maxY, minZ, maxZ) {
     let params = [];

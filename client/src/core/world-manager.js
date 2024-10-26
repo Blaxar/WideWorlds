@@ -3,6 +3,7 @@
  */
 
 import {loadAvatarsZip} from '../../../common/avatars-dat-parser.js';
+import {hashProps} from '../../../common/props-data-format.js';
 import {getPageName, defaultPageDiameter}
   from '../../../common/terrain-utils.js';
 import {flipYawDegrees}
@@ -986,15 +987,31 @@ class WorldManager {
   }
 
   /**
+   * Get the hash of the props within a given chunk
+   * @param {integer} x - Index of the chunk on the X axis.
+   * @param {integer} z - Index of the chunk on the Z axis.
+   * @return {Promise<integer>} Props hash for the whole chunk.
+   */
+  getChunkHash(x, z) {
+    const halfChunkSide = this.chunkSide / 2;
+    return this.httpClient.getPropsHash(this.currentWorld.id,
+        x * this.chunkSide - halfChunkSide,
+        (x + 1) * this.chunkSide - halfChunkSide,
+        null, null, // We set no limit on the vertical (y) axis
+        z * this.chunkSide - halfChunkSide,
+        (z + 1) * this.chunkSide - halfChunkSide);
+  }
+
+  /**
    * Reload a single prop chunk no matter what
    * @param {integer} x - Index of the chunk on the X axis.
    * @param {integer} z - Index of the chunk on the Z axis.
    * @param {boolean} hide - Whether or not to hide chunk at creation.
    * @param {boolean} lazy - Whether or not to load the chunk from the cache.
-   *                         If true: Will issue a network call only if not
-   *                         found in cache;
-   *                         If false (default): Will always issue a network
-   *                         call.
+   *                         If true: Will load remote chunk if not
+   *                         found in cache or if remote chunk as changed;
+   *                         If false (default): Will always load chunk from
+   *                         the network.
    */
   async reloadChunk(x, z, hide = false, lazy = false) {
     const chunkId = `${x}_${z}`;
@@ -1032,11 +1049,16 @@ class WorldManager {
 
     const chunk = await (async () => {
       if (lazy) {
+        const remoteHash = await this.getChunkHash(x, z)
+            .then((res) => res).catch(() => null);
         // try to fetch chunk from the cache first, fallback
         // on the network if no entry was found
         return new Promise((resolve) => {
           loadCacheProps().then((result) => {
-            if (result) {
+            const localHash = hashProps(result.props);
+            if (result && localHash === remoteHash) {
+              // Chunk is in cache and the hash still matches the
+              // remote one: load it.
               resolve(result.props);
             } else {
               loadNetworkProps().then((res) => {
