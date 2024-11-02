@@ -1055,8 +1055,9 @@ class WorldManager {
         // on the network if no entry was found
         return new Promise((resolve) => {
           loadCacheProps().then((result) => {
-            const localHash = hashProps(result.props);
-            if (result && localHash === remoteHash) {
+            const localHash = (result && result.props) ?
+                hashProps(result.props) : null;
+            if (localHash === remoteHash) {
               // Chunk is in cache and the hash still matches the
               // remote one: load it.
               resolve(result.props);
