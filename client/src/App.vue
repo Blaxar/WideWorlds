@@ -13,6 +13,7 @@ import UserSettings from './components/UserSettings.vue';
 import UserCompass from './components/UserCompass.vue';
 import PropSettings from './components/PropSettings.vue';
 import AnimationPicker from './components/AnimationPicker.vue';
+import MovableWindow from './components/MovableWindow.vue';
 import AppState, {AppStates} from './core/app-state.js';
 import WorldPathRegistry from './core/world-path-registry.js';
 import WorldManager from './core/world-manager.js';
@@ -492,6 +493,10 @@ const getViewCoordinates = (event, vec2) => {
   vec2.set(x, y);
 };
 
+const defocus = () => {
+  someInputFocused = false;
+};
+
 // Do not forward key events to the input listener if some html element is being
 // focused
 document.addEventListener('keyup', (event) => {
@@ -579,16 +584,26 @@ document.addEventListener('mousemove', (event) => {
     </TopBar>
     <CentralOverlay v-if="displayEdgebars">
     <template v-slot:left v-if="main.displayUserSettings">
+    <MovableWindow :titleText="'Settings'"
+    @close="main.displayUserSettings = false; defocus();">
+    <template v-slot:body>
     <UserSettings :listener="inputListener"
     :chunkCache="chunkCache" :userConfig="userConfig" :feed="userFeed" />
     </template>
+    </MovableWindow>
+    </template>
     <template v-slot:right v-if="main.displayPropSettings">
+    <MovableWindow :titleText="'Build'"
+    @close="propsSelector.commitAndClear(); defocus();">
+    <template v-slot:body>
     <PropSettings :key="main.propSettingsTrigger" :propsSelector="propsSelector"
     :run="main.propSettings.run"
     :strafe="main.propSettings.strafe"
     :exitKey="inputListener.getExitKey()"
     :duplicateKey="inputListener.getDuplicateKey()"
-    @defocus="() => { someInputFocused = false; }" />
+    @defocus="defocus" />
+    </template>
+    </MovableWindow>
     </template>
     </CentralOverlay>
     <LoginForm v-if="displayLogin" @submit="handleLogin" />
