@@ -83,13 +83,38 @@ const main = reactive({
   worldId: null,
   facing: 0,
   at: {x: 0, y: 0, z: 0},
-  displayUserSettings: false,
+  displayWindow: {title: 'Untitled', component: null},
   displayPropSettings: false,
   propSettingsTrigger: 0,
   animationListTrigger: 0,
   frameTrigger: 0,
   propSettings: {run: false, strafe: false},
 });
+
+
+// Mapping GUI components to human-readable window titles
+const componentTitle = {
+  UserSettings: 'Settings',
+  PropSettings: 'Build',
+};
+
+const isMovableComponent = (name) => main.displayWindow.component === name;
+
+const anyMovableComponent = () => main.displayWindow.component !== null;
+
+const setMovableComponent = (name) => {
+  main.displayWindow.title = componentTitle[name] || 'Untitled';
+  main.displayWindow.component = name;
+};
+
+const resetMovableComponent = () => {
+  main.displayWindow.title = 'Untitled';
+  main.displayWindow.component = null;
+};
+
+const resetIfMovableComponent = (name) => {
+  if (isMovableComponent(name)) resetMovableComponent();
+};
 
 const userFeed = new UserFeed();
 let worldChat = null;
@@ -204,7 +229,6 @@ const resetBehavior = () => {
     configsNode: userConfig.at('controls'),
     physicsNode: userConfig.at('physics'),
   });
-  main.displayPropSettings = false;
   someInputFocused = false;
 };
 
@@ -220,9 +244,9 @@ const onPropsSelectionChange = (nbProps) => {
     worldManager.setBuildMode(true);
     engine3d.revealProps();
     inputListener.setSubject('props', propsSelector);
-    main.displayPropSettings = true;
+    setMovableComponent('PropSettings');
   } else {
-    main.displayPropSettings = false;
+    resetIfMovableComponent('PropSettings');
     resetBehavior();
     engine3d.hideProps();
     worldManager.setBuildMode(false);
@@ -307,6 +331,7 @@ const handleLeave = () => {
   const worldName = main.worlds[main.worldId].name;
   userFeed.publish(`Leaving ${worldName}...`,
       null, userFeedPriority.info);
+  resetMovableComponent();
   resetBehavior();
   propsSelector?.clear();
   worldManager.unload();
@@ -564,6 +589,18 @@ document.addEventListener('mousemove', (event) => {
 
   return false;
 }, false);
+
+const closeMovableWindow = () => {
+  resetMovableComponent();
+  propsSelector.commitAndClear();
+  defocus();
+};
+
+const selectSettings = () => {
+  setMovableComponent('UserSettings');
+  propsSelector.commitAndClear();
+};
+
 </script>
 
 <template>
@@ -571,7 +608,7 @@ document.addEventListener('mousemove', (event) => {
   <div id="overlay">
     <TopBar v-if="displayEdgebars" :avatars="worldAvatars" @leave="handleLeave"
     @camera="updateCamera(true)" @avatar="handleAvatar"
-    @settings="main.displayUserSettings = !main.displayUserSettings" >
+    @settings="selectSettings" >
     <template v-slot:animations>
       <AnimationPicker :key="main.animationListTrigger"
       :animations="animations" @animation="handleAnimation" />
@@ -583,27 +620,24 @@ document.addEventListener('mousemove', (event) => {
     </template>
     </TopBar>
     <CentralOverlay v-if="displayEdgebars">
-    <template v-slot:left v-if="main.displayUserSettings">
-    <MovableWindow :titleText="'Settings'"
-    @close="main.displayUserSettings = false; defocus();">
-    <template v-slot:body>
-    <UserSettings :listener="inputListener"
-    :chunkCache="chunkCache" :userConfig="userConfig" :feed="userFeed" />
-    </template>
-    </MovableWindow>
-    </template>
-    <template v-slot:right v-if="main.displayPropSettings">
-    <MovableWindow :titleText="'Build'"
-    @close="propsSelector.commitAndClear(); defocus();">
-    <template v-slot:body>
-    <PropSettings :key="main.propSettingsTrigger" :propsSelector="propsSelector"
-    :run="main.propSettings.run"
-    :strafe="main.propSettings.strafe"
-    :exitKey="inputListener.getExitKey()"
-    :duplicateKey="inputListener.getDuplicateKey()"
-    @defocus="defocus" />
-    </template>
-    </MovableWindow>
+    <template v-slot:left>
+      <MovableWindow v-if="anyMovableComponent()"
+      :titleText="main.displayWindow.title"
+      @close="closeMovableWindow">
+      <template v-slot:body>
+        <UserSettings v-if="main.displayWindow.component == 'UserSettings'"
+        :listener="inputListener"
+        :chunkCache="chunkCache" :userConfig="userConfig" :feed="userFeed" />
+
+        <PropSettings v-if="isMovableComponent('PropSettings')"
+        :key="main.propSettingsTrigger" :propsSelector="propsSelector"
+        :run="main.propSettings.run"
+        :strafe="main.propSettings.strafe"
+        :exitKey="inputListener.getExitKey()"
+        :duplicateKey="inputListener.getDuplicateKey()"
+        @defocus="defocus" />
+      </template>
+      </MovableWindow>
     </template>
     </CentralOverlay>
     <LoginForm v-if="displayLogin" @submit="handleLogin" />
