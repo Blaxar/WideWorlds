@@ -89,6 +89,8 @@ const main = reactive({
   animationListTrigger: 0,
   frameTrigger: 0,
   propSettings: {run: false, strafe: false},
+  holdingMovableWindow: null,
+  mousePosition: {x: 0, y: 0},
 });
 
 
@@ -376,6 +378,14 @@ const handleAnimation = (name) => {
 const render = () => {
   const delta = engine3d.getDeltaTime();
   inputListener.step(delta);
+
+  if (main.holdingMovableWindow) {
+    const {movableWindow, x, y} = main.holdingMovableWindow;
+
+    movableWindow.style['margin-left'] = `${x + main.mousePosition.x}px`;
+    movableWindow.style['margin-top'] = `${y + main.mousePosition.y}px`;
+  }
+
   worldManager?.update(engine3d.camera.position, delta);
   entityManager?.setLocalUserId(main.userId);
 
@@ -568,7 +578,7 @@ document.addEventListener('focusout', (event) => {
 }, false);
 
 document.addEventListener('contextmenu', (event) => {
-  if (someInputFocused) return true;
+  if (someInputFocused) return;
 
   if (isOverlay3D(event.target)) {
     getViewCoordinates(event, tmpVec2);
@@ -576,18 +586,19 @@ document.addEventListener('contextmenu', (event) => {
     event.preventDefault();
   }
 
-  return false;
+  return;
 }, false);
 
 document.addEventListener('mousemove', (event) => {
-  if (someInputFocused) return true;
+  main.mousePosition.x = event.pageX;
+  main.mousePosition.y = event.pageY;
+
+  if (someInputFocused) return;
 
   if (isOverlay3D(event.target)) {
     getViewCoordinates(event, tmpVec2);
     event.target.title = propsSelector.point(tmpVec2);
   }
-
-  return false;
 }, false);
 
 const closeMovableWindow = () => {
@@ -599,6 +610,10 @@ const closeMovableWindow = () => {
 const selectSettings = () => {
   setMovableComponent('UserSettings');
   propsSelector.commitAndClear();
+};
+
+const holdMovableWindow = (movableWindow, x, y) => {
+  main.holdingMovableWindow = {movableWindow, x, y};
 };
 
 </script>
@@ -620,10 +635,12 @@ const selectSettings = () => {
     </template>
     </TopBar>
     <CentralOverlay v-if="displayEdgebars">
-    <template v-slot:left>
+    <template v-slot:center>
       <MovableWindow v-if="anyMovableComponent()"
       :titleText="main.displayWindow.title"
-      @close="closeMovableWindow">
+      @close="closeMovableWindow"
+      @hold="holdMovableWindow"
+      @release="main.holdingMovableWindow = null">
       <template v-slot:body>
         <UserSettings v-if="main.displayWindow.component == 'UserSettings'"
         :listener="inputListener"

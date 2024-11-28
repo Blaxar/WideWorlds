@@ -19,6 +19,10 @@ body {
   justify-content: space-between;
 }
 
+.title-bar-text {
+  pointer-events: none;
+}
+
 .prompt {
   margin: auto;
 }
@@ -33,15 +37,9 @@ body {
 
 .central-overlay {
   width: 100%;
-  height: min-content;
+  height: 100%;
   display: flex;
   flex-direction: row;
-}
-
-.left-surface, .central-surface, .right-surface {
-  width: 33.333vw;
-  vertical-align: middle;
-  height: 50vh;
 }
 
 .prop-settings {
@@ -54,6 +52,8 @@ body {
 }
 
 .prop-container {
+  width: max-content;
+
   tr th {
     width: 10%;
     vertical-align: top;
@@ -240,11 +240,14 @@ body {
   }
 }
 
-#movable-window {
+.movable-window {
+    position: fixed;
     width: fit-content;
 }
 
 .user-settings {
+  width: max-content;
+
   .controls-container {
     display: flex;
     flex-direction: row;
