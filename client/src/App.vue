@@ -382,8 +382,26 @@ const render = () => {
   if (main.holdingMovableWindow) {
     const {movableWindow, x, y} = main.holdingMovableWindow;
 
-    movableWindow.style['margin-left'] = `${x + main.mousePosition.x}px`;
-    movableWindow.style['margin-top'] = `${y + main.mousePosition.y}px`;
+    const parentRect = movableWindow.parentElement.getBoundingClientRect();
+    const movableRect = movableWindow.getBoundingClientRect();
+
+    // Anticipate movement to avoid weird jittery rollback effects
+    const left = x + main.mousePosition.x + parentRect.x;
+    const right = x + main.mousePosition.x + movableRect.width + parentRect.x;
+    const top = y + main.mousePosition.y + parentRect.y;
+    const bottom = y + main.mousePosition.y + movableRect.height + parentRect.y;
+
+    const xD = ((left < parentRect.left) ? (parentRect.left - left) :
+        ((right > parentRect.right) ? parentRect.right - right : 0));
+
+    const yD = (top < parentRect.top) ? (parentRect.top - top) :
+        ((bottom > parentRect.bottom) ? parentRect.bottom - bottom : 0);
+
+    main.holdingMovableWindow.x += xD;
+    main.holdingMovableWindow.y += yD;
+
+    movableWindow.style['margin-left'] = `${x + xD + main.mousePosition.x}px`;
+    movableWindow.style['margin-top'] = `${y + yD + main.mousePosition.y}px`;
   }
 
   worldManager?.update(engine3d.camera.position, delta);
@@ -589,7 +607,7 @@ document.addEventListener('contextmenu', (event) => {
   return;
 }, false);
 
-document.addEventListener('mousemove', (event) => {
+document.addEventListener('pointermove', (event) => {
   main.mousePosition.x = event.pageX;
   main.mousePosition.y = event.pageY;
 
@@ -598,6 +616,12 @@ document.addEventListener('mousemove', (event) => {
   if (isOverlay3D(event.target)) {
     getViewCoordinates(event, tmpVec2);
     event.target.title = propsSelector.point(tmpVec2);
+  }
+}, false);
+
+document.addEventListener('pointerup', (event) => {
+  if (main.holdingMovableWindow) {
+    main.holdingMovableWindow = null;
   }
 }, false);
 
@@ -636,7 +660,7 @@ const holdMovableWindow = (movableWindow, x, y) => {
     </TopBar>
     <CentralOverlay v-if="displayEdgebars">
     <template v-slot:center>
-      <MovableWindow v-if="anyMovableComponent()"
+      <MovableWindow v-show="anyMovableComponent()"
       :titleText="main.displayWindow.title"
       @close="closeMovableWindow"
       @hold="holdMovableWindow"

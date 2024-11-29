@@ -63,7 +63,7 @@ onUnmounted(() => {
 
 <template>
   <div v-if="display" class="window movable-window">
-  <div class="title-bar" @mousedown="hold" @mouseup="release">
+  <div class="title-bar" @pointerdown="hold" @pointerup="release">
   <div class="title-bar-text">{{titleText}}</div>
     <div class="title-bar-controls">
       <!--
