@@ -126,7 +126,7 @@ const argv = yargs(hideBin(process.argv))
             description: 'Generate place-holder users based on unique user' +
         ' IDs found in props',
             type: 'boolean',
-            default: true,
+            default: false,
           })
           .option('pathOverride', {
             alias: 'po',
@@ -351,7 +351,8 @@ function parseAttrFile(path) {
       worldData[key] = value === 'Y';
     } else if (key === 'path') {
       worldData[key] = argv.pathOverride ? argv.pathOverride : value;
-    } else if (key === 'terrainElevationOffset') {
+    } else if (['terrainElevationOffset', 'fogMinimum', 'fogMaximum']
+        .includes(key)) {
       worldData[key] = parseFloat(value);
     } else {
       worldData[key] = value;
@@ -508,6 +509,12 @@ db.init(argv.sql).then(async (connection) => {
     const props = [];
     const users = [];
     const userIdSet = new Set();
+
+    // Fill the set of user IDs with existing users from the DB, this avoids
+    // overriding them each time the script gets called
+    await connection.manager.createQueryBuilder()
+        .select('user.id').from(User, 'user').getMany()
+        .then((users) => users.forEach((user) => userIdSet.add(user.id)));
 
     for (const p of parsePropFile(argv.prop)) {
       const description = argv.fixEncoding ? fixEncoding(p.description) :

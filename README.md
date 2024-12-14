@@ -96,7 +96,7 @@ Options:
   -b, --batchSize            Maximum amount of props and users to commit to data
                              base a the same time                [default: 2000]
   -u, --autoGenerateUsers    Generate place-holder users based on unique user ID
-                             s found in props          [boolean] [default: true]
+                             s found in props         [boolean] [default: false]
       --pathOverride, --po   Set the object path value for the world to the prov
                              ided string, keep the original value otherwise
                                                         [string] [default: null]
