@@ -8,6 +8,8 @@ import * as utils3D from './utils-3d.js';
 import {MeshBVH} from 'three-mesh-bvh';
 import {flattenGroup} from 'three-rwx-loader';
 import formatSignLines, {makeTagCanvas} from './sign-utils.js';
+import {animateMove} from './animation-manager.js';
+import {chunkNodeColliderFilter} from './world-manager.js';
 
 const defaultUserHeight = 1.80; // In meters
 const defaultLightIntensity = 0.6;
@@ -121,6 +123,11 @@ class Engine3D {
 
     this.helperObjects = new THREE.Group();
     this.foregroundScene.add(this.helperObjects);
+
+    // Pre-allocate data for animations
+    this.startPosition = new THREE.Vector3();
+    this.endPosition = new THREE.Vector3();
+    this.boundTreesToUpdate = new Set();
   }
 
   /**
@@ -377,14 +384,18 @@ class Engine3D {
    * @param {boolean} hide - Whether or not to hide node at creation.
    * @param {boolean} selectable - Whether or not to have this node as part of
    *                               the selection domain (when right clicking).
+   * @param {number} now - Timestamp (ms) of the current point in
+   *                       time.
    * @return {integer} ID of the newly-spawned node.
    */
-  spawnNode(x = 0, y = 0, z = 0, lod = false, hide = false, selectable = true) {
+  spawnNode(x = 0, y = 0, z = 0, lod = false, hide = false, selectable = true,
+      now = Date.now()) {
     const id = this.lastId++;
     this.nodes.set(id, lod ? new THREE.LOD() :
         new THREE.Group());
     const node = this.nodes.get(id);
 
+    node.userData.appeared = now;
     if (selectable) this.selectableNodeIDs.add(id);
 
     if (lod) {
@@ -554,12 +565,15 @@ class Engine3D {
   /**
    * Update dynamic objects
    * @param {number} deltaTime - Elapsed number of seconds since last update.
+   * @param {number} now - Timestamp (ms) of the current point in
+   *                       time.
    */
-  stepDynamicObjects(deltaTime) {
+  stepDynamicObjects(deltaTime, now = Date.now()) {
     // Compute the direction (XZ plane) the camera is facing to
     this.camera.getWorldDirection(this.cameraDirection);
     this.xzDirection.set(this.cameraDirection.x, this.cameraDirection.z);
     const facingAngle = - this.xzDirection.angle() - Math.PI / 2;
+    this.boundTreesToUpdate.clear();
 
     this.visibleLODNodeIDs.forEach((id) => {
       const node = this.nodes.get(id);
@@ -575,9 +589,24 @@ class Engine3D {
           if (obj3d.userData.rwx?.axisAlignment !== 'none') {
             obj3d.rotation.set(0, facingAngle, 0);
             obj3d.updateMatrix();
+          } else if (obj3d.userData.rotate) {
+            // TODO: rotation support
+          }
+
+          // Update objects to move
+          if (obj3d.userData.move) {
+            animateMove(node, obj3d, now, this.startPosition, this.endPosition);
+
+            // TODO: find optimization to not trigger this as often
+            this.boundTreesToUpdate.add(id);
           }
         }
       });
+    });
+
+    this.boundTreesToUpdate.forEach((nodeHandle) => {
+      this.updateNodeBoundsTree(nodeHandle,
+          chunkNodeColliderFilter);
     });
   }
 
@@ -650,10 +679,12 @@ class Engine3D {
    *                                    nodes will be ignored.
    * @param {Camera} camera - Camera to use as a reference to update the
    *                          displayed level of each LOD node.
+   * @param {number} now - Timestamp (ms) of the current point in
+   *                       time.
    * @return {Object} Sets of nodes that turned and stayed visible
    *                  and also nodes that became invisible
    */
-  updateLODs(lodNodeIDs, camera = this.camera) {
+  updateLODs(lodNodeIDs, camera = this.camera, now = Date.now()) {
     const visible = new Set();
     const turnedInvisible = new Set();
 
@@ -691,6 +722,7 @@ class Engine3D {
 
       if (node.getCurrentLevel() <= 0) {
         // Node went visible
+        node.userData.appeared = now;
         this.scene.add(node);
         this.visibleLODNodeIDs.add(id);
         if (this.selectableNodeIDs.has(id)) {
@@ -958,9 +990,11 @@ class Engine3D {
    * Rendering method to be called by the upper context
    * each time we need a new frame
    * @param {number} deltaTime - Elapsed number of seconds since last update.
+   * @param {number} now - Timestamp (ms) of the current point in
+   *                       time.
    * @return {boolean} false if stopping request, true otherwise.
    */
-  render(deltaTime = this.getDeltaTime()) {
+  render(deltaTime = this.getDeltaTime(), now = Date.now()) {
     // Do not render anything: notify the upper window context
     // that we want to stop
     if (this.stopRequested) return false;
@@ -1027,7 +1061,7 @@ class Engine3D {
     this.camera.far = this.renderingDistance;
     this.camera.updateProjectionMatrix();
     this.renderer.clearDepth();
-    this.stepDynamicObjects(deltaTime);
+    this.stepDynamicObjects(deltaTime, now);
     this.renderer.render(this.scene, this.camera);
     this.renderer.clearDepth();
     this.renderer.render(this.foregroundScene, this.camera);

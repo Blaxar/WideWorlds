@@ -1382,7 +1382,8 @@ class WorldManager {
     }
 
     if (!this.engine3d.appendToNode(chunkNodeHandle, obj3d, 0,
-        obj3d.userData.rwx?.axisAlignment !== 'none')) {
+        obj3d.userData.rwx?.axisAlignment !== 'none' ||
+        obj3d.userData.rotate || obj3d.userData.move)) {
       // Could not append object to node, meaning node (chunk) no
       // longer exists, we just silently cancel the whole loading.
       return;
@@ -1438,3 +1439,4 @@ class WorldManager {
 }
 
 export default WorldManager;
+export {chunkNodeColliderFilter};

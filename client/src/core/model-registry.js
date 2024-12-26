@@ -306,6 +306,14 @@ class ModelRegistry {
           create.opacity = action;
           break;
 
+        case 'move':
+          create.move = action;
+          break;
+
+        case 'rotate':
+          create.rotate = action;
+          break;
+
         default:
         // No action, we do nothing.
           break;
@@ -347,8 +355,8 @@ class ModelRegistry {
     // This is a placeholder object, nothing to do
     if (obj3d.name === unknownObjectName) return;
 
-    const {texture, color, solid, visible, picture, sign, scale, opacity, say} =
-      actions.create;
+    const {texture, color, solid, visible, picture, sign, scale, opacity,
+      say, move, rotate} = actions.create;
 
     for (const material of obj3d.material) {
       if (!material.userData.rwx) {
@@ -386,13 +394,16 @@ class ModelRegistry {
 
       if (opacity) rwxMaterial.opacity = opacity.value;
 
-
       obj3d.userData.rwx.solid = solid;
       obj3d.visible = visible;
       obj3d.userData.invisible = !visible;
       if (say) {
         obj3d.userData.say = say.text;
       }
+
+      obj3d.userData.move = move || undefined;
+
+      obj3d.userData.rotate = rotate || undefined;
 
       const lastMatId = materials.length;
 

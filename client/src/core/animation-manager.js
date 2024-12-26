@@ -227,6 +227,127 @@ function animateEntityExp(node, hash, progress, animationManager) {
 }
 
 /**
+ * Compute the progress ratio of an action-based animation
+ * by taking its parameters into account
+ *
+ * @param {Object} data - Parameters for the animation
+ * @param {boolean} data.loop - Whether or not to loop the animation.
+ * @param {boolean} data.sync - Whether or not to sync the animation
+ *                              with the global time.
+ * @param {boolean} data.reset - Whether or not to reset the animation,
+ *                               true means the animation will only play
+ *                               forward and immeditaly wrap back at the
+ *                               begining upon reaching the end.
+ * @param {number} data.time - Number of seconds for the animation to
+ *                             complete one-way.
+ * @param {number} data.wait - Number of seconds for the animation to
+ *                             wait when reaching one end.
+ * @param {number} start - Timestamp (ms) marking the begining
+ *                         of the animation, this will be ignored
+ *                         if sync is set to true.
+ * @param {number} now - Timestamp (ms) of the current point in
+ *                       time.
+ * @return {number} Progress ratio of the animation
+ */
+function computeActionProgress({loop, sync, reset, time, wait},
+    start = 0, now = Date.now()) {
+  loop ??= false;
+  sync ??= false;
+  reset ??= false;
+  wait ??= 0;
+
+  // If sync is on: we deal in absolute time;
+  // If not: the animation will be relative to the time the prop
+  //         appeared in the scene.
+  const elapsed = (now - (sync ? 0 : start)) * 0.001;
+
+  // The progress of the animation will be evaluated based on
+  // the duration, the waiting time and the loop enablement.
+
+  // The 'wait' value means the object will wait at both ends
+  // of the movement, unless we're in a reset setting then it only
+  // waits at the begining, as it will warp back to the begining
+  // when reaching the end (instead of progressively moving back)
+
+  const totalDuration = (wait + time) * (reset ? 1 : 2);
+  let progress = (elapsed / totalDuration);
+
+  // On the whole progression for the movement: some part of it
+  // will potentially be spent on waiting, while the other will be spent
+  // performing the animation, we need to know which one is which
+  const waitingRatio = wait * (reset ? 1 : 2) / totalDuration;
+  const animationRatio = time * (reset ? 1 : 2) / totalDuration;
+  const halfWaitingRatio = waitingRatio / 2;
+  const halfAnimationRatio = animationRatio / 2;
+
+  if (loop) {
+    progress %= 1.0;
+  } else if (progress > 1) {
+    // Cull the progress to full completion, this means the animation
+    // will be at its end state.
+    progress = 1.0;
+  }
+
+  // Determine if the object is meant to be moving right now
+  if (reset) {
+    if (progress < waitingRatio) {
+      // Waiting at the begining
+      progress = 0;
+    } else if (progress < waitingRatio + animationRatio) {
+      // Traveling forward
+      progress -= waitingRatio;
+      progress *= 1 / (1 - waitingRatio);
+    }
+  } else {
+    // Default case: we expect the object to move back and forth,
+    // this means it will wait both at the start and at the end
+    if (progress < halfAnimationRatio) {
+      // Traveling forward
+      progress *= 1 / (1 - waitingRatio - halfAnimationRatio);
+    } else if (progress < halfWaitingRatio + halfAnimationRatio) {
+      // Waiting at the end
+      progress = 1;
+    } else if (progress < halfWaitingRatio + animationRatio) {
+      // Traveling back
+      progress -= halfWaitingRatio + halfAnimationRatio;
+      progress *= 1 / (1 - waitingRatio - halfAnimationRatio);
+      progress = 1 - progress;
+    } else {
+      // Waiting at the begining
+      progress = 0;
+    }
+  }
+
+  return progress;
+}
+
+/**
+ * Animate the action-based move animation.
+ *
+ * @param {Object3D} node - Node holding the target object.
+ * @param {Object3D} obj3d - Target object.
+ * @param {number} now - Timestamp (ms) of the current point in
+ *                       time.
+ * @param {Vector3} startPosition - Starting position of the object.
+ * @param {Vector3} endPosition - Ending position of the object.
+ */
+function animateMove(node, obj3d, now, startPosition, endPosition) {
+  const {x, y, z} = obj3d.userData.move.distance;
+  startPosition.set(obj3d.userData.prop.x - node.position.x,
+      obj3d.userData.prop.y - node.position.y,
+      obj3d.userData.prop.z - node.position.z);
+  endPosition.set(startPosition.x + x, startPosition.y + y,
+      startPosition.z + z);
+
+  const progress = computeActionProgress(obj3d.userData.move,
+      node.userData.appeared, now);
+
+  obj3d.position.copy(startPosition.lerp(endPosition, progress));
+
+  obj3d.updateMatrix();
+}
+
+/**
  * Manage animation of avatars
  */
 class AnimationManager {
@@ -522,4 +643,5 @@ class AnimationManager {
 }
 
 export default AnimationManager;
-export {userStateToImplicit, animateEntityImp, animateEntityExp};
+export {userStateToImplicit, animateEntityImp, animateEntityExp,
+  computeActionProgress, animateMove};
