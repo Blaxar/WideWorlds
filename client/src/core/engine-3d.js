@@ -8,7 +8,7 @@ import * as utils3D from './utils-3d.js';
 import {MeshBVH} from 'three-mesh-bvh';
 import {flattenGroup} from 'three-rwx-loader';
 import formatSignLines, {makeTagCanvas} from './sign-utils.js';
-import {animateMove} from './animation-manager.js';
+import {animateMove, animateRotate} from './animation-manager.js';
 import {chunkNodeColliderFilter} from './world-manager.js';
 
 const defaultUserHeight = 1.80; // In meters
@@ -590,7 +590,11 @@ class Engine3D {
             obj3d.rotation.set(0, facingAngle, 0);
             obj3d.updateMatrix();
           } else if (obj3d.userData.rotate) {
-            // TODO: rotation support
+            animateRotate(node, obj3d, now, this.startPosition,
+                this.endPosition);
+
+            // TODO: find optimization to not trigger this as often
+            this.boundTreesToUpdate.add(id);
           }
 
           // Update objects to move

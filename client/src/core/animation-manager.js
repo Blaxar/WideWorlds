@@ -13,6 +13,8 @@ const rollbackTolerance = 0.25; // in seconds
 
 const seqOpts = {fflate, cors: true};
 
+const twoPi = 2*Math.PI;
+
 /**
  * Format parsed sequence data into three.js-friendly array of frames
  * @param {Object} parsedSeq - Parsed sequence, as returned by the
@@ -245,16 +247,19 @@ function animateEntityExp(node, hash, progress, animationManager) {
  * @param {number} start - Timestamp (ms) marking the begining
  *                         of the animation, this will be ignored
  *                         if sync is set to true.
+ * @param {boolean} allowInfiniteWait - Whether or not to allow infinite
+ *                                      waiting time when 'wait' value
+ *                                      is not provided by the command.
  * @param {number} now - Timestamp (ms) of the current point in
  *                       time.
  * @return {number} Progress ratio of the animation
  */
 function computeActionProgress({loop, sync, reset, time, wait},
-    start = 0, now = Date.now()) {
+    start = 0, allowInfiniteWait = false, now = Date.now()) {
   loop ??= false;
   sync ??= false;
   reset ??= false;
-  wait ??= 0;
+  wait ??= loop || !allowInfiniteWait ? 0 : Infinity;
 
   // If sync is on: we deal in absolute time;
   // If not: the animation will be relative to the time the prop
@@ -269,16 +274,9 @@ function computeActionProgress({loop, sync, reset, time, wait},
   // waits at the begining, as it will warp back to the begining
   // when reaching the end (instead of progressively moving back)
 
-  const totalDuration = (wait + time) * (reset ? 1 : 2);
+  const totalDuration = ((wait !== Infinity ? wait : 0) + time) *
+      (reset ? 1 : 2);
   let progress = (elapsed / totalDuration);
-
-  // On the whole progression for the movement: some part of it
-  // will potentially be spent on waiting, while the other will be spent
-  // performing the animation, we need to know which one is which
-  const waitingRatio = wait * (reset ? 1 : 2) / totalDuration;
-  const animationRatio = time * (reset ? 1 : 2) / totalDuration;
-  const halfWaitingRatio = waitingRatio / 2;
-  const halfAnimationRatio = animationRatio / 2;
 
   if (loop) {
     progress %= 1.0;
@@ -287,6 +285,21 @@ function computeActionProgress({loop, sync, reset, time, wait},
     // will be at its end state.
     progress = 1.0;
   }
+
+  if (wait === Infinity) {
+    // The animation is meant to stay in its ending state
+    // when it reaches it, there's no concept of waiting/animation
+    // ratio in this case, it's a straight way forward
+    return progress;
+  }
+
+  // On the whole progression for the movement: some part of it
+  // will potentially be spent on waiting, while the other will be spent
+  // performing the animation, we need to know which one is which
+  const waitingRatio = wait * (reset ? 1 : 2) / totalDuration;
+  const animationRatio = time * (reset ? 1 : 2) / totalDuration;
+  const halfWaitingRatio = waitingRatio / 2;
+  const halfAnimationRatio = animationRatio / 2;
 
   // Determine if the object is meant to be moving right now
   if (reset) {
@@ -340,9 +353,48 @@ function animateMove(node, obj3d, now, startPosition, endPosition) {
       startPosition.z + z);
 
   const progress = computeActionProgress(obj3d.userData.move,
-      node.userData.appeared, now);
+      node.userData.appeared, false, now);
 
   obj3d.position.copy(startPosition.lerp(endPosition, progress));
+
+  obj3d.updateMatrix();
+}
+
+/**
+ * Animate the action-based rotate animation.
+ *
+ * @param {Object3D} node - Node holding the target object.
+ * @param {Object3D} obj3d - Target object.
+ * @param {number} now - Timestamp (ms) of the current point in
+ *                       time.
+ * @param {Vector3} startRotation - Starting rotation of the object.
+ * @param {Vector3} speedRotation - Speed rotation of the object in
+ *                                  rounds per minute.
+ */
+function animateRotate(node, obj3d, now, startRotation, speedRotation) {
+  const {x, y, z} = obj3d.userData.rotate.speed;
+  startRotation.set(obj3d.userData.prop.pitch,
+      obj3d.userData.prop.yaw,
+      obj3d.userData.prop.roll);
+  speedRotation.set(x, y, z);
+
+  let elapsedMs = obj3d.userData.rotate.sync ?
+      now : now - node.userData.appeared;
+
+  if (obj3d.userData.rotate.time) {
+    const timeMs = obj3d.userData.rotate.time * 1000.0;
+
+    const progress = computeActionProgress(obj3d.userData.rotate,
+        node.userData.appeared, true, now);
+    elapsedMs = timeMs * progress;
+  }
+
+  obj3d.rotation.set(
+      startRotation.x + (speedRotation.x / 60000.0) * elapsedMs * twoPi,
+      startRotation.y + (speedRotation.y / 60000.0) * elapsedMs * twoPi,
+      startRotation.z + (speedRotation.z / 60000.0) * elapsedMs * twoPi,
+      'YXZ',
+  );
 
   obj3d.updateMatrix();
 }
@@ -644,4 +696,4 @@ class AnimationManager {
 
 export default AnimationManager;
 export {userStateToImplicit, animateEntityImp, animateEntityExp,
-  computeActionProgress, animateMove};
+  computeActionProgress, animateMove, animateRotate};
