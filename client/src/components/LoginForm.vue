@@ -41,7 +41,7 @@ const onSubmit = () => {
     <div class="login window prompt">
     <div class="title-bar"><div class="title-bar-text">{{ prompt }}</div></div>
     <form @submit.prevent="onSubmit">
-    <table class="window-body">
+    <table class="window-body"><tbody>
     <tr><td><label> Username: </label></td>
     <td>
         <input type="text" :placeholder="usernamePlaceholder"
@@ -58,7 +58,7 @@ const onSubmit = () => {
     <tr>
     <td colspan=2><button type="submit">{{buttonText}}</button></td>
     </tr>
-    </table>
+    </tbody></table>
     </form>
   </div>
 </template>

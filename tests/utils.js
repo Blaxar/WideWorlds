@@ -39,7 +39,8 @@ const makeHttpTestBase = (port = 62931, dbFile = 'mocha-http-test-db.sqlite3', s
     port,
     dbFile,
     secret,
-    server: null,
+    srv: null,
+    server: '',
     wss: null,
     wsChannelManager: null,
     connection: null,
@@ -64,7 +65,10 @@ const makeHttpTestBase = (port = 62931, dbFile = 'mocha-http-test-db.sqlite3', s
 
     const {server, onPropsChange} = await spawnHttpServer(base.dbFile, base.port,
         base.secret, base.worldFolder, base.userCache, base.terrainCache, base.waterCache);
-    base.server = server;
+
+    /* TODO: revert to solely using the server object once it works again with superwstest */
+    base.srv = server;
+    base.server = `http://127.0.0.1:${port}`;
     const {wss, wsChannelManager} = await spawnWsServer(server, base.secret, base.userCache);
     base.wss = wss;
     base.wsChannelManager = wsChannelManager;
@@ -137,7 +141,7 @@ const makeHttpTestBase = (port = 62931, dbFile = 'mocha-http-test-db.sqlite3', s
   };
 
   const after = async () => {
-    await base.server.close();
+    await base.srv.close();
     fs.unlinkSync(base.dbFile);
 
     // Wait for everything to be properly closed

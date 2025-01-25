@@ -59,7 +59,7 @@ onMounted(() => {
     <div class="world-selection window prompt">
     <div class="title-bar"><div class="title-bar-text">{{ prompt }}</div></div>
     <form @submit.prevent="onSubmit">
-    <table class="window-body">
+    <table class="window-body"><tbody>
     <tr><td><label> World: </label></td>
     <td>
         <select v-model="worldId">
@@ -73,7 +73,7 @@ onMounted(() => {
     <td><button @click="cancel">{{cancelButtonText}}</button></td>
     <td><button type="submit">{{selectButtonText}}</button></td>
     </tr>
-    </table>
+    </tbody></table>
     </form>
     </div>
 </template>

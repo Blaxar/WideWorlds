@@ -297,7 +297,7 @@ onUnmounted(() => {
 <template>
 <div class="user-settings surface">
 <div class="controls-container">
-<table :key="componentKey">
+<table :key="componentKey"><tbody>
   <tr><th scope="col" class="controls-header">Controls</th>
   <th scope="col">Key Bindings</th></tr>
   <tr v-for="name in userInputs" :key="name">
@@ -308,9 +308,9 @@ onUnmounted(() => {
     ref="inputField" class="text-input" />
   </td>
   </tr>
-</table>
+</tbody></table>
 
-<table>
+<table><tbody>
   <tr><td>
     <button @click="resetKeys" name="resetKeys">{{resetKeysButtonText}}</button>
     </td><td>
@@ -429,7 +429,7 @@ onUnmounted(() => {
       {{clearChunkCacheText}}
     </button>
   </td></tr>
-</table>
+</tbody></table>
 </div>
 </div>
 </template>

@@ -123,7 +123,7 @@ const setAbsoluteMove = (event) => {
 
 <template>
 <div class="prop-settings surface">
-<table class="prop-container">
+<table class="prop-container"><tbody>
   <tr class="button-bar"><td colspan="3">
   <button name="prop-undo" @click="onButtonClick" title="Undo" />
   <button name="prop-duplicate" @click="onButtonClick" title="Duplicate" />
@@ -179,7 +179,7 @@ const setAbsoluteMove = (event) => {
     class="text-input" /></td></tr>
   <tr class="prop-owner-id"><th scope="row">Owner:</th>
   <td colspan="2">#{{props.propsSelector.getSinglePropUserId()}}</td></tr>
-</table>
+</tbody></table>
 </div>
 </template>
 
