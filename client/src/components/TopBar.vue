@@ -5,7 +5,7 @@
 
 import {onMounted, ref} from 'vue';
 
- 
+
 const props = defineProps({
   leaveButtonText: {
     type: String,
@@ -32,7 +32,7 @@ const props = defineProps({
     default: 0,
   },
 });
- 
+
 
 const emit = defineEmits(['leave', 'camera', 'avatar', 'settings']);
 

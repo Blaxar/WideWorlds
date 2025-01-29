@@ -67,7 +67,8 @@ v-for="(entry, id) in messages.slice(-props.maxMessageAmount).reverse()"
 	warning: entry.priority == userFeedPriority.warning,
 	error: entry.priority == userFeedPriority.error,
   'object-say': entry.priority == userFeedPriority.objectSay}"
-><strong v-if="entry.emitter">{{ entry.emitter }}</strong>{{ entry.entry }}</span>
+><strong v-if="entry.emitter">{{ entry.emitter }}</strong>
+{{ entry.entry }}</span>
 <!-- eslint-enable no-tabs -->
 </pre>
     <form

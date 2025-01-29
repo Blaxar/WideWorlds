@@ -5,8 +5,8 @@
 
 import {onMounted, onUnmounted, computed, reactive} from 'vue';
 
- 
-const props = defineProps({
+
+const props = defineProps({ // eslint-disable-line no-unused-vars
   titleText: {
     type: String,
     default: 'Untitled',
@@ -16,21 +16,22 @@ const props = defineProps({
 const state = reactive({
   display: true,
 });
- 
+
 
 const display = computed(() => state.display);
 
 const emit = defineEmits(['minimize', 'maximize', 'close', 'hold', 'release']);
 
- 
+// eslint-disable-next-line no-unused-vars
 const minimize = (event) => {
   emit('minimize');
 };
 
+// eslint-disable-next-line no-unused-vars
 const maximize = (event) => {
   emit('maximize');
 };
- 
+
 
 const close = (event) => {
   emit('close');
