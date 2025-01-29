@@ -5,7 +5,7 @@
 
 import {onMounted, ref} from 'vue';
 
-/* eslint-disable no-unused-vars */
+ 
 const props = defineProps({
   prompt: {
     type: String,
@@ -28,7 +28,7 @@ const props = defineProps({
     default: null,
   },
 });
-/* eslint-enable no-unused-vars */
+ 
 
 const worldId = ref(null);
 const availableWorldIds = new Set();
@@ -56,26 +56,45 @@ onMounted(() => {
 </script>
 
 <template>
-    <div class="world-selection window prompt">
-    <div class="title-bar"><div class="title-bar-text">{{ prompt }}</div></div>
-    <form @submit.prevent="onSubmit">
-    <table class="window-body"><tbody>
-    <tr><td><label> World: </label></td>
-    <td>
-        <select v-model="worldId">
-            <option v-for="w in worlds" :key="w.id" :value="w.id">
-                {{ w.name }}
-            </option>
-        </select>
-    </td>
-    </tr>
-    <tr>
-    <td><button @click="cancel">{{cancelButtonText}}</button></td>
-    <td><button type="submit">{{selectButtonText}}</button></td>
-    </tr>
-    </tbody></table>
-    </form>
+  <div class="world-selection window prompt">
+    <div class="title-bar">
+      <div class="title-bar-text">
+        {{ prompt }}
+      </div>
     </div>
+    <form @submit.prevent="onSubmit">
+      <table class="window-body">
+        <tbody>
+          <tr>
+            <td><label> World: </label></td>
+            <td>
+              <select v-model="worldId">
+                <option
+                  v-for="w in worlds"
+                  :key="w.id"
+                  :value="w.id"
+                >
+                  {{ w.name }}
+                </option>
+              </select>
+            </td>
+          </tr>
+          <tr>
+            <td>
+              <button @click="cancel">
+                {{ cancelButtonText }}
+              </button>
+            </td>
+            <td>
+              <button type="submit">
+                {{ selectButtonText }}
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </form>
+  </div>
 </template>
 
 <style scoped>

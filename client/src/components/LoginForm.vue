@@ -3,7 +3,7 @@
  * @author Julien 'Blaxar' Bardagi <blaxar.waldarax@gmail.com>
  */
 
-/* eslint-disable no-unused-vars */
+ 
 const props = defineProps({
   prompt: {
     type: String,
@@ -22,12 +22,12 @@ const props = defineProps({
     default: 'Login',
   },
 });
-/* eslint-enable no-unused-vars */
+ 
 
-/* eslint-disable prefer-const */
+ 
 let username = null;
 let password = null;
-/* eslint-enable prefer-const */
+ 
 
 const emit = defineEmits(['submit']);
 
@@ -38,27 +38,46 @@ const onSubmit = () => {
 </script>
 
 <template>
-    <div class="login window prompt">
-    <div class="title-bar"><div class="title-bar-text">{{ prompt }}</div></div>
+  <div class="login window prompt">
+    <div class="title-bar">
+      <div class="title-bar-text">
+        {{ prompt }}
+      </div>
+    </div>
     <form @submit.prevent="onSubmit">
-    <table class="window-body"><tbody>
-    <tr><td><label> Username: </label></td>
-    <td>
-        <input type="text" :placeholder="usernamePlaceholder"
-        v-model="username" required />
-    </td>
-    </tr>
-    <tr>
-    <td><label> Password: </label></td>
-    <td>
-        <input type="password" :placeholder="passwordPlaceholder"
-        v-model="password" required />
-    </td>
-    </tr>
-    <tr>
-    <td colspan=2><button type="submit">{{buttonText}}</button></td>
-    </tr>
-    </tbody></table>
+      <table class="window-body">
+        <tbody>
+          <tr>
+            <td><label> Username: </label></td>
+            <td>
+              <input
+                v-model="username"
+                type="text"
+                :placeholder="usernamePlaceholder"
+                required
+              >
+            </td>
+          </tr>
+          <tr>
+            <td><label> Password: </label></td>
+            <td>
+              <input
+                v-model="password"
+                type="password"
+                :placeholder="passwordPlaceholder"
+                required
+              >
+            </td>
+          </tr>
+          <tr>
+            <td colspan="2">
+              <button type="submit">
+                {{ buttonText }}
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
     </form>
   </div>
 </template>

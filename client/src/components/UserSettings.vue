@@ -89,6 +89,7 @@ const props = defineProps({
   },
   userConfig: {
     type: UserConfig,
+		default: null,
   },
   feed: {
     type: UserFeed,
@@ -295,143 +296,248 @@ onUnmounted(() => {
 </script>
 
 <template>
-<div class="user-settings surface">
-<div class="controls-container">
-<table :key="componentKey"><tbody>
-  <tr><th scope="col" class="controls-header">Controls</th>
-  <th scope="col">Key Bindings</th></tr>
-  <tr v-for="name in userInputs" :key="name">
-  <td>{{ formatLabel(name) }}</td>
-  <td>
-    <input type="text" maxlength="0" placeholder="none" :name="name"
-    @keyup="onBindingKeyUp" :value="formatLabel(listener.getKey(name))"
-    ref="inputField" class="text-input" />
-  </td>
-  </tr>
-</tbody></table>
+  <div class="user-settings surface">
+    <div class="controls-container">
+      <table :key="componentKey">
+        <tbody>
+          <tr>
+            <th
+              scope="col"
+              class="controls-header"
+            >
+              Controls
+            </th>
+            <th scope="col">
+              Key Bindings
+            </th>
+          </tr>
+          <tr
+            v-for="name in userInputs"
+            :key="name"
+          >
+            <td>{{ formatLabel(name) }}</td>
+            <td>
+              <input
+                ref="inputField"
+                type="text"
+                maxlength="0"
+                placeholder="none"
+                :name="name"
+                :value="formatLabel(listener.getKey(name))"
+                class="text-input"
+                @keyup="onBindingKeyUp"
+              >
+            </td>
+          </tr>
+        </tbody>
+      </table>
 
-<table><tbody>
-  <tr><td>
-    <button @click="resetKeys" name="resetKeys">{{resetKeysButtonText}}</button>
-    </td><td>
-    <input type="checkbox" id="runByDefault"
-    :checked="props.userConfig.at('controls').at('runByDefault').value()"
-    @change="setRunByDefault" />
-    <label for="runByDefault">{{runByDefaultText}}</label>
-  </td></tr>
-  <tr><td colspan="2"></td></tr>
-  <tr><td>Image service URL prefix:</td>
-  <td><input type="text" placeholder="none"
-    @change="onImageServiceChange"
-    :value="props.userConfig.at('network').at('imageService').value()"
-    ref="imageService" class="text-input" />
-    <button @click="resetImageService" name="resetImageService">
-      {{resetImageServiceButtonText}}
-    </button>
-  </td></tr>
-  <tr><td colspan="2">
-  <label for="renderingDistance">
-    {{renderingDistanceText}}: {{localRenderingDistance}}m
-  </label>
-  <input id="renderingDistance" type="range" :min="renderingDistance.min"
-    :max="renderingDistance.max" :defaultValue="getRenderingDistance()"
-    :step="renderingDistance.step" @input="setRenderingDistance"
-    @change="saveRenderingDistance" />
-  </td></tr>
-  <tr><td colspan="2">
-  <label for="propsLoadingDistance">
-    {{propsLoadingDistanceText}}: {{localPropsLoadingDistance}}m
-  </label>
-  <input id="propsLoadingDistance" type="range" :min="propsLoadingDistance.min"
-    :max="propsLoadingDistance.max" :defaultValue="getPropsLoadingDistance()"
-    :step="propsLoadingDistance.step" @input="setPropsLoadingDistance"
-    @change="savePropsLoadingDistance" />
-  </td></tr>
-  <tr><td colspan="2"> {{idlePropsLoadingText}} </td></tr>
-  <tr><td colspan="2">
-  <label for="idlePropsLoadingDistance">
-    {{idlePropsLoadingDistanceText}}: {{localIdlePropsLoadingDistance}}m
-  </label>
-  <input id="idlePropsLoadingDistance" type="range"
-    :min="idlePropsLoading.distance.min"
-    :max="idlePropsLoading.distance.max"
-    :defaultValue="getIdlePropsLoadingDistance()"
-    :step="idlePropsLoading.distance.step" @input="setIdlePropsLoadingDistance"
-    @change="saveIdlePropsLoadingDistance" />
-  </td></tr>
-  <tr><td colspan="2">
-  <label for="idlePropsLoadingDowntime">
-    {{idlePropsLoadingDowntimeText}}: {{localIdlePropsLoadingDowntime}}s
-  </label>
-  <input id="idlePropsLoadingDowntime" type="range"
-    :min="idlePropsLoading.downtime.min"
-    :max="idlePropsLoading.downtime.max"
-    :defaultValue="getIdlePropsLoadingDowntime()"
-    :step="idlePropsLoading.downtime.step" @input="setIdlePropsLoadingDowntime"
-    @change="saveIdlePropsLoadingDowntime" />
-  </td></tr>
-  <tr><td colspan="2">
-  <label for="idlePropsLoadingSpeed">
-    {{idlePropsLoadingSpeedText}}: {{localIdlePropsLoadingSpeed}} chunks/second
-  </label>
-  <input id="idlePropsLoadingSpeed" type="range"
-    :min="idlePropsLoading.speed.min"
-    :max="idlePropsLoading.speed.max" :defaultValue="getIdlePropsLoadingSpeed()"
-    :step="idlePropsLoading.speed.step" @input="setIdlePropsLoadingSpeed"
-    @change="saveIdlePropsLoadingSpeed" />
-  </td></tr>
-  <tr><td colspan="2">
-  <input type="checkbox" id="backgroundScenery"
-    :checked="backgroundScenery().at('enabled').value()"
-    @change="setBackgroundScenery" />
-    <label for="backgroundScenery">
-      {{backgroundSceneryText}}
-    </label>
-  </td></tr>
-  <tr><td colspan="2">
-  <input type="checkbox" id="useHtmlSignRendering"
-    :checked=
-    "props.userConfig.at('graphics').at('useHtmlSignRendering').value()"
-    @change="setUseHtmlSignRendering" />
-    <label for="useHtmlSignRendering">
-      {{useHtmlSignRenderingText}}
-    </label>
-  </td></tr>
-  <tr><td colspan="2">
-  <input type="checkbox" id="debugUserCollider"
-    :checked=
-    "props.userConfig.at('graphics').at('debugUserCollider').value()"
-    @change="setDebugUserCollider" />
-    <label for="debugUserCollider">
-      {{debugUserColliderText}}
-    </label>
-  </td></tr>
-  <tr><td colspan="2">
-  <input type="checkbox" id="colliderInterpolation"
-    :checked=
-    "props.userConfig.at('physics').at('colliderInterpolation').value()"
-    @change="setColliderInterpolation" />
-    <label for="colliderInterpolation">
-      {{colliderInterpolationText}}
-    </label>
-  </td></tr>
-  <tr><td colspan="2">
-  <input type="checkbox" id="legacyCoordinates"
-    :checked=
-    "props.userConfig.at('interface').at('legacyCoordinates').value()"
-    @change="setlegacyCoordinates" />
-    <label for="legacyCoordinates">
-      {{legacyCoordinatesText}}
-    </label>
-  </td></tr>
-  <tr><td colspan="2">
-    <button @click="clearChunkCache">
-      {{clearChunkCacheText}}
-    </button>
-  </td></tr>
-</tbody></table>
-</div>
-</div>
+      <table>
+        <tbody>
+          <tr>
+            <td>
+              <button
+                name="resetKeys"
+                @click="resetKeys"
+              >
+                {{ resetKeysButtonText }}
+              </button>
+            </td><td>
+              <input
+                id="runByDefault"
+                type="checkbox"
+                :checked="props.userConfig.at('controls').at('runByDefault').value()"
+                @change="setRunByDefault"
+              >
+              <label for="runByDefault">{{ runByDefaultText }}</label>
+            </td>
+          </tr>
+          <tr><td colspan="2" /></tr>
+          <tr>
+            <td>Image service URL prefix:</td>
+            <td>
+              <input
+                ref="imageService"
+                type="text"
+                placeholder="none"
+                :value="props.userConfig.at('network').at('imageService').value()"
+                class="text-input"
+                @change="onImageServiceChange"
+              >
+              <button
+                name="resetImageService"
+                @click="resetImageService"
+              >
+                {{ resetImageServiceButtonText }}
+              </button>
+            </td>
+          </tr>
+          <tr>
+            <td colspan="2">
+              <label for="renderingDistance">
+                {{ renderingDistanceText }}: {{ localRenderingDistance }}m
+              </label>
+              <input
+                id="renderingDistance"
+                type="range"
+                :min="renderingDistance.min"
+                :max="renderingDistance.max"
+                :defaultValue="getRenderingDistance()"
+                :step="renderingDistance.step"
+                @input="setRenderingDistance"
+                @change="saveRenderingDistance"
+              >
+            </td>
+          </tr>
+          <tr>
+            <td colspan="2">
+              <label for="propsLoadingDistance">
+                {{ propsLoadingDistanceText }}: {{ localPropsLoadingDistance }}m
+              </label>
+              <input
+                id="propsLoadingDistance"
+                type="range"
+                :min="propsLoadingDistance.min"
+                :max="propsLoadingDistance.max"
+                :defaultValue="getPropsLoadingDistance()"
+                :step="propsLoadingDistance.step"
+                @input="setPropsLoadingDistance"
+                @change="savePropsLoadingDistance"
+              >
+            </td>
+          </tr>
+          <tr>
+            <td colspan="2">
+              {{ idlePropsLoadingText }}
+            </td>
+          </tr>
+          <tr>
+            <td colspan="2">
+              <label for="idlePropsLoadingDistance">
+                {{ idlePropsLoadingDistanceText }}: {{ localIdlePropsLoadingDistance }}m
+              </label>
+              <input
+                id="idlePropsLoadingDistance"
+                type="range"
+                :min="idlePropsLoading.distance.min"
+                :max="idlePropsLoading.distance.max"
+                :defaultValue="getIdlePropsLoadingDistance()"
+                :step="idlePropsLoading.distance.step"
+                @input="setIdlePropsLoadingDistance"
+                @change="saveIdlePropsLoadingDistance"
+              >
+            </td>
+          </tr>
+          <tr>
+            <td colspan="2">
+              <label for="idlePropsLoadingDowntime">
+                {{ idlePropsLoadingDowntimeText }}: {{ localIdlePropsLoadingDowntime }}s
+              </label>
+              <input
+                id="idlePropsLoadingDowntime"
+                type="range"
+                :min="idlePropsLoading.downtime.min"
+                :max="idlePropsLoading.downtime.max"
+                :defaultValue="getIdlePropsLoadingDowntime()"
+                :step="idlePropsLoading.downtime.step"
+                @input="setIdlePropsLoadingDowntime"
+                @change="saveIdlePropsLoadingDowntime"
+              >
+            </td>
+          </tr>
+          <tr>
+            <td colspan="2">
+              <label for="idlePropsLoadingSpeed">
+                {{ idlePropsLoadingSpeedText }}: {{ localIdlePropsLoadingSpeed }} chunks/second
+              </label>
+              <input
+                id="idlePropsLoadingSpeed"
+                type="range"
+                :min="idlePropsLoading.speed.min"
+                :max="idlePropsLoading.speed.max"
+                :defaultValue="getIdlePropsLoadingSpeed()"
+                :step="idlePropsLoading.speed.step"
+                @input="setIdlePropsLoadingSpeed"
+                @change="saveIdlePropsLoadingSpeed"
+              >
+            </td>
+          </tr>
+          <tr>
+            <td colspan="2">
+              <input
+                id="backgroundScenery"
+                type="checkbox"
+                :checked="backgroundScenery().at('enabled').value()"
+                @change="setBackgroundScenery"
+              >
+              <label for="backgroundScenery">
+                {{ backgroundSceneryText }}
+              </label>
+            </td>
+          </tr>
+          <tr>
+            <td colspan="2">
+              <input
+                id="useHtmlSignRendering"
+                type="checkbox"
+                :checked="props.userConfig.at('graphics').at('useHtmlSignRendering').value()"
+                @change="setUseHtmlSignRendering"
+              >
+              <label for="useHtmlSignRendering">
+                {{ useHtmlSignRenderingText }}
+              </label>
+            </td>
+          </tr>
+          <tr>
+            <td colspan="2">
+              <input
+                id="debugUserCollider"
+                type="checkbox"
+                :checked="props.userConfig.at('graphics').at('debugUserCollider').value()"
+                @change="setDebugUserCollider"
+              >
+              <label for="debugUserCollider">
+                {{ debugUserColliderText }}
+              </label>
+            </td>
+          </tr>
+          <tr>
+            <td colspan="2">
+              <input
+                id="colliderInterpolation"
+                type="checkbox"
+                :checked="props.userConfig.at('physics').at('colliderInterpolation').value()"
+                @change="setColliderInterpolation"
+              >
+              <label for="colliderInterpolation">
+                {{ colliderInterpolationText }}
+              </label>
+            </td>
+          </tr>
+          <tr>
+            <td colspan="2">
+              <input
+                id="legacyCoordinates"
+                type="checkbox"
+                :checked="props.userConfig.at('interface').at('legacyCoordinates').value()"
+                @change="setlegacyCoordinates"
+              >
+              <label for="legacyCoordinates">
+                {{ legacyCoordinatesText }}
+              </label>
+            </td>
+          </tr>
+          <tr>
+            <td colspan="2">
+              <button @click="clearChunkCache">
+                {{ clearChunkCacheText }}
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
 </template>
 
 <style scoped>

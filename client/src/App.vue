@@ -643,50 +643,80 @@ const holdMovableWindow = (movableWindow, x, y) => {
 </script>
 
 <template>
-  <canvas id="main-3d-canvas"></canvas>
+  <canvas id="main-3d-canvas" />
   <div id="overlay">
-    <TopBar v-if="displayEdgebars" :avatars="worldAvatars" @leave="handleLeave"
-    @camera="updateCamera(true)" @avatar="handleAvatar"
-    @settings="selectSettings" >
-    <template v-slot:animations>
-      <AnimationPicker :key="main.animationListTrigger"
-      :animations="animations" @animation="handleAnimation" />
-    </template>
-    <template v-slot:compass>
-      <UserCompass :key="main.frameTrigger"
-      :facing="main.facing" :at="main.at"
-      :userConfig="userConfig" />
-    </template>
+    <TopBar
+      v-if="displayEdgebars"
+      :avatars="worldAvatars"
+      @leave="handleLeave"
+      @camera="updateCamera(true)"
+      @avatar="handleAvatar"
+      @settings="selectSettings"
+    >
+      <template #animations>
+        <AnimationPicker
+          :key="main.animationListTrigger"
+          :animations="animations"
+          @animation="handleAnimation"
+        />
+      </template>
+      <template #compass>
+        <UserCompass
+          :key="main.frameTrigger"
+          :facing="main.facing"
+          :at="main.at"
+          :user-config="userConfig"
+        />
+      </template>
     </TopBar>
     <CentralOverlay v-if="displayEdgebars">
-    <template v-slot:center>
-      <MovableWindow v-show="anyMovableComponent()"
-      :titleText="main.displayWindow.title"
-      @close="closeMovableWindow"
-      @hold="holdMovableWindow"
-      @release="main.holdingMovableWindow = null">
-      <template v-slot:body>
-        <UserSettings v-if="main.displayWindow.component == 'UserSettings'"
-        :listener="inputListener"
-        :chunkCache="chunkCache" :userConfig="userConfig" :feed="userFeed" />
+      <template #center>
+        <MovableWindow
+          v-show="anyMovableComponent()"
+          :title-text="main.displayWindow.title"
+          @close="closeMovableWindow"
+          @hold="holdMovableWindow"
+          @release="main.holdingMovableWindow = null"
+        >
+          <template #body>
+            <UserSettings
+              v-if="main.displayWindow.component == 'UserSettings'"
+              :listener="inputListener"
+              :chunk-cache="chunkCache"
+              :user-config="userConfig"
+              :feed="userFeed"
+            />
 
-        <PropSettings v-if="isMovableComponent('PropSettings')"
-        :key="main.propSettingsTrigger" :propsSelector="propsSelector"
-        :run="main.propSettings.run"
-        :strafe="main.propSettings.strafe"
-        :exitKey="inputListener.getExitKey()"
-        :duplicateKey="inputListener.getDuplicateKey()"
-        @defocus="defocus" />
+            <PropSettings
+              v-if="isMovableComponent('PropSettings')"
+              :key="main.propSettingsTrigger"
+              :props-selector="propsSelector"
+              :run="main.propSettings.run"
+              :strafe="main.propSettings.strafe"
+              :exit-key="inputListener.getExitKey()"
+              :duplicate-key="inputListener.getDuplicateKey()"
+              @defocus="defocus"
+            />
+          </template>
+        </MovableWindow>
       </template>
-      </MovableWindow>
-    </template>
     </CentralOverlay>
-    <LoginForm v-if="displayLogin" @submit="handleLogin" />
-    <WorldSelection v-if="displayWorldSelection"
-    :worlds="Object.values(main.worlds)" @submit="handleWorldSelection"
-    :defaultWorldId="defaultWorldId" @cancel="handleLogOut" />
-    <UserChat @send="handleSendChat" :feed="userFeed"
-    :enablePrompt="main.worldId !== null" />
+    <LoginForm
+      v-if="displayLogin"
+      @submit="handleLogin"
+    />
+    <WorldSelection
+      v-if="displayWorldSelection"
+      :worlds="Object.values(main.worlds)"
+      :default-world-id="defaultWorldId"
+      @submit="handleWorldSelection"
+      @cancel="handleLogOut"
+    />
+    <UserChat
+      :feed="userFeed"
+      :enable-prompt="main.worldId !== null"
+      @send="handleSendChat"
+    />
   </div>
 </template>
 

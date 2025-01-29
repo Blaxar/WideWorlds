@@ -5,7 +5,7 @@
 
 import {onMounted, ref} from 'vue';
 
-/* eslint-disable no-unused-vars */
+ 
 const props = defineProps({
   leaveButtonText: {
     type: String,
@@ -32,7 +32,7 @@ const props = defineProps({
     default: 0,
   },
 });
-/* eslint-enable no-unused-vars */
+ 
 
 const emit = defineEmits(['leave', 'camera', 'avatar', 'settings']);
 
@@ -58,24 +58,46 @@ onMounted(() => {
 </script>
 
 <template>
-    <div class="top-bar">
+  <div class="top-bar">
     <div class="surface">
-    <div class="button-bar">
-    <button @click="select" name="leave">{{leaveButtonText}}</button>
-    <button @click="select" name="camera">{{cameraButtonText}}</button>
-    <button @click="select" name="settings">{{settingsButtonText}}</button>
-    <select v-model="avatarId" @change="pickAvatar">
-      <option v-for="(a, id) in avatars" :key="id" :value="id">
-        {{ a.name }}
-      </option>
-    </select>
-    <slot name="animations" />
+      <div class="button-bar">
+        <button
+          name="leave"
+          @click="select"
+        >
+          {{ leaveButtonText }}
+        </button>
+        <button
+          name="camera"
+          @click="select"
+        >
+          {{ cameraButtonText }}
+        </button>
+        <button
+          name="settings"
+          @click="select"
+        >
+          {{ settingsButtonText }}
+        </button>
+        <select
+          v-model="avatarId"
+          @change="pickAvatar"
+        >
+          <option
+            v-for="(a, id) in avatars"
+            :key="id"
+            :value="id"
+          >
+            {{ a.name }}
+          </option>
+        </select>
+        <slot name="animations" />
+      </div>
+      <div class="info-bar">
+        <slot name="compass" />
+      </div>
     </div>
-    <div class="info-bar">
-    <slot name="compass" />
-    </div>
-    </div>
-    </div>
+  </div>
 </template>
 
 <style scoped>

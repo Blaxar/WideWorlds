@@ -5,14 +5,14 @@
 
 import {onMounted, ref} from 'vue';
 
-/* eslint-disable no-unused-vars */
+ 
 const props = defineProps({
   animations: {
     type: Array,
     default: () => [],
   },
 });
-/* eslint-enable no-unused-vars */
+ 
 
 const emit = defineEmits(['animation']);
 
@@ -34,9 +34,16 @@ onMounted(() => {
 </script>
 
 <template>
-<select v-model="animationName" @change="pickAnimation">
-  <option v-for="name in animations" :key="name" :value="name">
-    {{ name }}
-  </option>
-</select>
+  <select
+    v-model="animationName"
+    @change="pickAnimation"
+  >
+    <option
+      v-for="name in animations"
+      :key="name"
+      :value="name"
+    >
+      {{ name }}
+    </option>
+  </select>
 </template>

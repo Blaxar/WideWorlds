@@ -56,25 +56,32 @@ const onSubmit = (event) => {
 </script>
 
 <template>
-
-<div class="bottom-bar">
-<pre id="chat-box">
+  <div class="bottom-bar">
+    <pre id="chat-box">
 <!-- eslint-disable no-tabs -->
-<span class="chat-entry" :key="id"
-  :class="{info: entry.priority == userFeedPriority.info,
+<span
+v-for="(entry, id) in messages.slice(-props.maxMessageAmount).reverse()"
+:key="id"
+  class="chat-entry"
+:class="{info: entry.priority == userFeedPriority.info,
 	warning: entry.priority == userFeedPriority.warning,
 	error: entry.priority == userFeedPriority.error,
   'object-say': entry.priority == userFeedPriority.objectSay}"
-v-for="(entry, id) in messages.slice(-props.maxMessageAmount).reverse()"
-><strong v-if="entry.emitter">{{entry.emitter}}</strong>{{entry.entry}}</span>
+><strong v-if="entry.emitter">{{ entry.emitter }}</strong>{{ entry.entry }}</span>
 <!-- eslint-enable no-tabs -->
 </pre>
-<form @submit.prevent="onSubmit" v-if="props.enablePrompt">
-<input type="text" :placeholder="promptPlaceholder" id="chat-prompt"
-class="text-input" />
-</form>
-</div>
-
+    <form
+      v-if="props.enablePrompt"
+      @submit.prevent="onSubmit"
+    >
+      <input
+        id="chat-prompt"
+        type="text"
+        :placeholder="promptPlaceholder"
+        class="text-input"
+      >
+    </form>
+  </div>
 </template>
 
 <style scoped>

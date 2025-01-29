@@ -5,7 +5,7 @@
 
 import {onMounted, onUnmounted, computed, reactive} from 'vue';
 
-/* eslint-disable no-unused-vars */
+ 
 const props = defineProps({
   titleText: {
     type: String,
@@ -16,13 +16,13 @@ const props = defineProps({
 const state = reactive({
   display: true,
 });
-/* eslint-enable no-unused-vars */
+ 
 
 const display = computed(() => state.display);
 
 const emit = defineEmits(['minimize', 'maximize', 'close', 'hold', 'release']);
 
-/* eslint-disable no-unused-vars */
+ 
 const minimize = (event) => {
   emit('minimize');
 };
@@ -30,7 +30,7 @@ const minimize = (event) => {
 const maximize = (event) => {
   emit('maximize');
 };
-/* eslint-enable no-unused-vars */
+ 
 
 const close = (event) => {
   emit('close');
@@ -62,20 +62,32 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div v-if="display" class="window movable-window">
-  <div class="title-bar" @pointerdown="hold" @pointerup="release">
-  <div class="title-bar-text">{{titleText}}</div>
-    <div class="title-bar-controls">
-      <!--
+  <div
+    v-if="display"
+    class="window movable-window"
+  >
+    <div
+      class="title-bar"
+      @pointerdown="hold"
+      @pointerup="release"
+    >
+      <div class="title-bar-text">
+        {{ titleText }}
+      </div>
+      <div class="title-bar-controls">
+        <!--
       <button aria-label="Minimize" @click="minimize"></button>
       <button aria-label="Maximize" @click="maximize"></button>
       -->
-      <button aria-label="Close" @click="close"></button>
+        <button
+          aria-label="Close"
+          @click="close"
+        />
+      </div>
     </div>
-  </div>
-  <div class="window-body">
-  <slot name="body" />
-  </div>
+    <div class="window-body">
+      <slot name="body" />
+    </div>
   </div>
 </template>
 

@@ -14,6 +14,7 @@ const props = defineProps({
   },
   userConfig: {
     type: Object,
+		default: null,
   },
 });
 
@@ -72,15 +73,17 @@ const facingToText = (angle) => {
 };
 
 </script>
+<!-- eslint-disable vue/no-v-html -->
 <template>
-<div id="user-position">
-<span v-html="atToText(props.at)"></span>
-</div>
-<div id="user-compass">
-{{ facingToText(props.facing) }}
-</div>
+  <div id="user-position">
+    <span v-html="atToText(props.at)" />
+  </div>
+  <div id="user-compass">
+    {{ facingToText(props.facing) }}
+  </div>
 </template>
-
+<!-- eslint-enable vue/no-v-html -->
+	
 <style scoped>
 
 </style>

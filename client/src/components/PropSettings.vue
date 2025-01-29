@@ -10,6 +10,7 @@ import {defaultMoveLength, defaultRotationAngle, smallMoveLength,
 const props = defineProps({
   propsSelector: {
     type: Object,
+		default: null,
   },
   run: {
     type: Boolean,
@@ -122,65 +123,170 @@ const setAbsoluteMove = (event) => {
 </script>
 
 <template>
-<div class="prop-settings surface">
-<table class="prop-container"><tbody>
-  <tr class="button-bar"><td colspan="3">
-  <button name="prop-undo" @click="onButtonClick" title="Undo" />
-  <button name="prop-duplicate" @click="onButtonClick" title="Duplicate" />
-  <button name="prop-delete" @click="onButtonClick" title="Delete" />
-  <button name="prop-up" @click="onButtonClick" title="Move Up" />
-  <button name="prop-down" @click="onButtonClick" title="Move Down" />
-  <button name="prop-left" @click="onButtonClick" title="Move Left" />
-  <button name="prop-right" @click="onButtonClick" title="Move Right" />
-  <button name="prop-forward" @click="onButtonClick" title="Move Forward" />
-  <button name="prop-backward" @click="onButtonClick" title="Move Backward" />
-  <button name="prop-rot-x-ccw" @click="onButtonClick"
-    title="Rotate X Counter-Clockwise" />
-  <button name="prop-rot-x-cw" @click="onButtonClick"
-    title="Rotate X Clockwise" />
-  <button name="prop-rot-y-ccw" @click="onButtonClick"
-    title="Rotate Y Clockwise" />
-  <button name="prop-rot-y-cw" @click="onButtonClick"
-    title="Rotate Y Clockwise" />
-  <button name="prop-rot-z-ccw" @click="onButtonClick"
-    title="Rotate Z Counter-Clockwise" />
-  <button name="prop-rot-z-cw" @click="onButtonClick"
-    title="Rotate Z Clockwise" />
-  <button name="prop-reset" @click="onButtonClick"
-    title="Reset rotation" />
-  <button name="prop-snap" @click="onButtonClick"
-    title="Snap to grid" />
-  </td></tr>
-  <tr class="prop-name"><th scope="row">Name:</th>
-  <td><input type="text"
-    :disabled="props.propsSelector.getSinglePropName() === null"
-    :defaultValue="props.propsSelector.getSinglePropName()"
-    name="name" @keyup="keyupCb"
-    @change="changeCb" @textInput="changeCb" @input="changeCb"
-    class="text-input" /></td>
-  <td><input type="checkbox" id="absoluteMove"
-    :checked="props.propsSelector.usingWorldDirection()"
-    @change="setAbsoluteMove" />
-  <label for="absoluteMove">{{absoluteMoveText}}</label>
-  </td></tr>
-  <tr class="prop-description"><th scope="row">Description:</th>
-  <td colspan="2"><textarea
-    :disabled="props.propsSelector.getSinglePropDescription() === null"
-    :defaultValue="props.propsSelector.getSinglePropDescription()"
-    name="description" @keyup="keyupCb"
-    @change="changeCb" @textInput="changeCb" @input="changeCb"
-    class="text-input" /></td></tr>
-  <tr class="prop-action"><th scope="row">Action:</th>
-  <td colspan="2"><textarea
-    :disabled="props.propsSelector.getSinglePropAction() === null"
-    :defaultValue="props.propsSelector.getSinglePropAction()"
-    name="action" @keyup="keyupCb"
-    @change="changeCb" @textInput="changeCb" @input="changeCb"
-    class="text-input" /></td></tr>
-  <tr class="prop-owner-id"><th scope="row">Owner:</th>
-  <td colspan="2">#{{props.propsSelector.getSinglePropUserId()}}</td></tr>
-</tbody></table>
-</div>
+  <div class="prop-settings surface">
+    <table class="prop-container">
+      <tbody>
+        <tr class="button-bar">
+          <td colspan="3">
+            <button
+              name="prop-undo"
+              title="Undo"
+              @click="onButtonClick"
+            />
+            <button
+              name="prop-duplicate"
+              title="Duplicate"
+              @click="onButtonClick"
+            />
+            <button
+              name="prop-delete"
+              title="Delete"
+              @click="onButtonClick"
+            />
+            <button
+              name="prop-up"
+              title="Move Up"
+              @click="onButtonClick"
+            />
+            <button
+              name="prop-down"
+              title="Move Down"
+              @click="onButtonClick"
+            />
+            <button
+              name="prop-left"
+              title="Move Left"
+              @click="onButtonClick"
+            />
+            <button
+              name="prop-right"
+              title="Move Right"
+              @click="onButtonClick"
+            />
+            <button
+              name="prop-forward"
+              title="Move Forward"
+              @click="onButtonClick"
+            />
+            <button
+              name="prop-backward"
+              title="Move Backward"
+              @click="onButtonClick"
+            />
+            <button
+              name="prop-rot-x-ccw"
+              title="Rotate X Counter-Clockwise"
+              @click="onButtonClick"
+            />
+            <button
+              name="prop-rot-x-cw"
+              title="Rotate X Clockwise"
+              @click="onButtonClick"
+            />
+            <button
+              name="prop-rot-y-ccw"
+              title="Rotate Y Clockwise"
+              @click="onButtonClick"
+            />
+            <button
+              name="prop-rot-y-cw"
+              title="Rotate Y Clockwise"
+              @click="onButtonClick"
+            />
+            <button
+              name="prop-rot-z-ccw"
+              title="Rotate Z Counter-Clockwise"
+              @click="onButtonClick"
+            />
+            <button
+              name="prop-rot-z-cw"
+              title="Rotate Z Clockwise"
+              @click="onButtonClick"
+            />
+            <button
+              name="prop-reset"
+              title="Reset rotation"
+              @click="onButtonClick"
+            />
+            <button
+              name="prop-snap"
+              title="Snap to grid"
+              @click="onButtonClick"
+            />
+          </td>
+        </tr>
+        <tr class="prop-name">
+          <th scope="row">
+            Name:
+          </th>
+          <td>
+            <input
+              type="text"
+              :disabled="props.propsSelector.getSinglePropName() === null"
+              :defaultValue="props.propsSelector.getSinglePropName()"
+              name="name"
+              class="text-input"
+              @keyup="keyupCb"
+              @change="changeCb"
+              @textInput="changeCb"
+              @input="changeCb"
+            >
+          </td>
+          <td>
+            <input
+              id="absoluteMove"
+              type="checkbox"
+              :checked="props.propsSelector.usingWorldDirection()"
+              @change="setAbsoluteMove"
+            >
+            <label for="absoluteMove">{{ absoluteMoveText }}</label>
+          </td>
+        </tr>
+        <tr class="prop-description">
+          <th scope="row">
+            Description:
+          </th>
+          <td colspan="2">
+            <textarea
+              :disabled="props.propsSelector.getSinglePropDescription() === null"
+              :defaultValue="props.propsSelector.getSinglePropDescription()"
+              name="description"
+              class="text-input"
+              @keyup="keyupCb"
+              @change="changeCb"
+              @textInput="changeCb"
+              @input="changeCb"
+            />
+          </td>
+        </tr>
+        <tr class="prop-action">
+          <th scope="row">
+            Action:
+          </th>
+          <td colspan="2">
+            <textarea
+              :disabled="props.propsSelector.getSinglePropAction() === null"
+              :defaultValue="props.propsSelector.getSinglePropAction()"
+              name="action"
+              class="text-input"
+              @keyup="keyupCb"
+              @change="changeCb"
+              @textInput="changeCb"
+              @input="changeCb"
+            />
+          </td>
+        </tr>
+        <tr class="prop-owner-id">
+          <th scope="row">
+            Owner:
+          </th>
+          <td colspan="2">
+            #{{ props.propsSelector.getSinglePropUserId() }}
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
 </template>
 
 <style scoped>
