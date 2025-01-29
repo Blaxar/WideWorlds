@@ -43,7 +43,6 @@ const makeHttpTestBase = (port = 62931, dbFile = 'mocha-http-test-db.sqlite3', s
     server: '',
     wss: null,
     wsChannelManager: null,
-    connection: null,
     worldId: null,
     adminId: 0,
     citizenId: 0,

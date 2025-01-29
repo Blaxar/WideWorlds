@@ -40,7 +40,7 @@ const waterCache = new Map();
 
 spawnHttpServer(argv.db, argv.port, secret, argv.worldFolder, userCache,
     terrainCache, waterCache)
-    .then(async ({server, onPropsChange}) => {
+  .then(async ({server, onPropsChange}) => {
       const wsChannelManager =
           (await spawnWsServer(server, secret, userCache))
               .wsChannelManager;
