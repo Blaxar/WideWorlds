@@ -3,8 +3,8 @@
  * @author Julien 'Blaxar' Bardagi <blaxar.waldarax@gmail.com>
  */
 
- 
-const props = defineProps({
+
+const props = defineProps({ // eslint-disable-line no-unused-vars
   prompt: {
     type: String,
     default: 'Log in',
@@ -22,12 +22,11 @@ const props = defineProps({
     default: 'Login',
   },
 });
- 
 
- 
-let username = null;
-let password = null;
- 
+
+const username = null;
+const password = null;
+
 
 const emit = defineEmits(['submit']);
 

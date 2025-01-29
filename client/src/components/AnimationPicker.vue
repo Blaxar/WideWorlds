@@ -5,14 +5,12 @@
 
 import {onMounted, ref} from 'vue';
 
- 
-const props = defineProps({
+const props = defineProps({ // eslint-disable-line no-unused-vars
   animations: {
     type: Array,
     default: () => [],
   },
 });
- 
 
 const emit = defineEmits(['animation']);
 

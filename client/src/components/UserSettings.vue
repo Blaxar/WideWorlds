@@ -89,7 +89,7 @@ const props = defineProps({
   },
   userConfig: {
     type: UserConfig,
-		default: null,
+    default: null,
   },
   feed: {
     type: UserFeed,
@@ -296,6 +296,7 @@ onUnmounted(() => {
 </script>
 
 <template>
+  <!-- eslint-disable max-len -->
   <div class="user-settings surface">
     <div class="controls-container">
       <table :key="componentKey">
@@ -538,6 +539,7 @@ onUnmounted(() => {
       </table>
     </div>
   </div>
+  <!-- eslint-enable max-len -->
 </template>
 
 <style scoped>

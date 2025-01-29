@@ -10,7 +10,7 @@ import {defaultMoveLength, defaultRotationAngle, smallMoveLength,
 const props = defineProps({
   propsSelector: {
     type: Object,
-		default: null,
+    default: null,
   },
   run: {
     type: Boolean,
@@ -123,6 +123,7 @@ const setAbsoluteMove = (event) => {
 </script>
 
 <template>
+  <!-- eslint-disable max-len -->
   <div class="prop-settings surface">
     <table class="prop-container">
       <tbody>
@@ -287,6 +288,7 @@ const setAbsoluteMove = (event) => {
       </tbody>
     </table>
   </div>
+  <!-- eslint-enable max-len -->
 </template>
 
 <style scoped>

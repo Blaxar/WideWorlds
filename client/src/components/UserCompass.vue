@@ -14,7 +14,7 @@ const props = defineProps({
   },
   userConfig: {
     type: Object,
-		default: null,
+    default: null,
   },
 });
 
@@ -83,7 +83,7 @@ const facingToText = (angle) => {
   </div>
 </template>
 <!-- eslint-enable vue/no-v-html -->
-	
+
 <style scoped>
 
 </style>

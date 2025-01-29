@@ -5,7 +5,7 @@
 
 import {onMounted, ref} from 'vue';
 
- 
+
 const props = defineProps({
   prompt: {
     type: String,
@@ -28,7 +28,7 @@ const props = defineProps({
     default: null,
   },
 });
- 
+
 
 const worldId = ref(null);
 const availableWorldIds = new Set();
