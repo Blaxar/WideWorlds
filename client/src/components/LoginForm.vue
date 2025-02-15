@@ -27,7 +27,6 @@ const props = defineProps({ // eslint-disable-line no-unused-vars
 const username = null;
 const password = null;
 
-
 const emit = defineEmits(['submit']);
 
 const onSubmit = () => {

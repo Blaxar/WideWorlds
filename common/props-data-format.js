@@ -184,7 +184,7 @@ function deserializeProp(prop) {
   const id = uIntArray[1];
   const worldId = uIntArray[2];
   const userId = uIntArray[3];
-  const date = uLongArray[2];
+  const date = Number(uLongArray[2]); // no BigUint JSON stringify
   const x = doubleArray[3];
   const y = doubleArray[4];
   const z = doubleArray[5];

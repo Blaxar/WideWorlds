@@ -3,6 +3,8 @@
  * @author Julien 'Blaxar' Bardagi <blaxar.waldarax@gmail.com>
  */
 
+import {onBeforeMount} from 'vue';
+
 const props = defineProps({
   facing: {
     type: Number,
@@ -21,37 +23,36 @@ const props = defineProps({
 const compassLength = 21;
 const symbols = 'N|||||||E|||||||S|||||||W|||||||';
 
+let legacyCoordinates = true;
 
-const atToText = (position) => {
-  const {x, y, z} = position;
-  const legacyCoordinates = props.userConfig.at('interface')
-      .at('legacyCoordinates').value();
+let latitudeDir = 'N';
+let longitudeDir = 'W';
+let altitude = '0.0';
 
-  const latitudeDir = z < 0 ? 'N' : 'S';
-  const longitudeDir = x < 0 ? 'W' : 'E';
-  const altitude = y.toFixed(1);
+let absX = 0;
+let absZ = 0;
 
-  const absX = Math.abs(x);
-  const absZ = Math.abs(z);
+let latitudeVal = 0;
+let longitudeVal = 0;
 
-  if (legacyCoordinates) {
-    const latitudeVal = absZ < 5.0 ? 0 : Math.floor((absZ - 5.0) / 10.0) + 1;
-    const longitudeVal = absX < 5.0 ? 0 : Math.floor((absX - 5.0) / 10.0) + 1;
+let gz = false;
 
-    if (absX < 5.0 && absZ < 5.0) {
-      return `<span class="compass-at-gz">Ground Zero</span> ` +
-             `(<span class="compass-at-y">${altitude}m</span>)`;
-    }
-    return `<span class="compass-at-z">${latitudeVal}${latitudeDir}</span> ` +
-           `<span class="compass-at-x">${longitudeVal}${longitudeDir}</span> ` +
-           `(<span class="compass-at-y">${altitude}m</span>)`;
-  }
+onBeforeMount(() => {
+  legacyCoordinates =
+    props.userConfig.at('interface').at('legacyCoordinates').value();
 
-  return `<span class="compass-at-x">${x.toFixed(0)}X</span> ` +
-         `<span class="compass-at-z">${z.toFixed(0)}Z</span> ` +
-         `<span class="compass-at-y">${y.toFixed(0)}Y</span>`;
-};
+  latitudeDir = props.at.z < 0 ? 'N' : 'S';
+  longitudeDir = props.at.x < 0 ? 'W' : 'E';
+  altitude = props.at.y.toFixed(1);
 
+  absX = Math.abs(props.at.x);
+  absZ = Math.abs(props.at.z);
+
+  latitudeVal = absZ < 5.0 ? 0 : Math.floor((absZ - 5.0) / 10.0) + 1;
+  longitudeVal = absX < 5.0 ? 0 : Math.floor((absX - 5.0) / 10.0) + 1;
+
+  gz = absX < 5.0 && absZ < 5.0;
+});
 
 const facingToText = (angle) => {
   const slice = Math.PI * 2 / symbols.length;
@@ -73,16 +74,33 @@ const facingToText = (angle) => {
 };
 
 </script>
-<!-- eslint-disable vue/no-v-html -->
 <template>
   <div id="user-position">
-    <span v-html="atToText(props.at)" />
+    <span v-if="legacyCoordinates">
+      <span
+        v-if="gz"
+        class="compass-at-gz"
+      >Ground Zero</span>
+      <span
+        v-if="!gz"
+        class="compass-at-z"
+      >{{ latitudeVal }}{{ latitudeDir }}</span>&nbsp;
+      <span
+        v-if="!gz"
+        class="compass-at-x"
+      >{{ longitudeVal }}{{ longitudeDir }}</span>
+      (<span class="compass-at-y">{{ altitude }}m</span>)
+    </span>
+    <span v-else>
+      <span class="compass-at-x">{{ props.at.x.toFixed(0) }}X</span>&nbsp;
+      <span class="compass-at-z">{{ props.at.z.toFixed(0) }}Z</span>&nbsp;
+      <span class="compass-at-y">{{ props.at.y.toFixed(0) }}Y</span>
+    </span>
   </div>
   <div id="user-compass">
     {{ facingToText(props.facing) }}
   </div>
 </template>
-<!-- eslint-enable vue/no-v-html -->
 
 <style scoped>
 

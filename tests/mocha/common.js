@@ -446,7 +446,7 @@ describe('common', () => {
     assert.strictEqual(dictProp.id, id);
     assert.strictEqual(dictProp.worldId, worldId);
     assert.strictEqual(dictProp.userId, userId);
-    assert.strictEqual(dictProp.date, BigInt(date));
+    assert.strictEqual(dictProp.date, date);
     assert.ok(epsEqual(dictProp.x, x));
     assert.ok(epsEqual(dictProp.y, y));
     assert.ok(epsEqual(dictProp.z, z));
