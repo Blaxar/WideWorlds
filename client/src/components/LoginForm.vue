@@ -23,9 +23,10 @@ const props = defineProps({ // eslint-disable-line no-unused-vars
   },
 });
 
-
-const username = null;
-const password = null;
+/* eslint-disable prefer-const */
+let username = null;
+let password = null;
+/* eslint-enable prefer-const */
 
 const emit = defineEmits(['submit']);
 
