@@ -287,6 +287,50 @@ onMounted(() => {
     props.userConfig.at('controls').at('keyBindings').at(name)
         .set(input);
   });
+
+  // Handling of the tabs is taken care of by the whole code below,
+  // mostly from XP.css online example
+  const root = '.user-settings > section';
+  const tabs = document.querySelectorAll(`${root} > menu[role=tablist]`);
+
+  console.log(tabs);
+  function openTab(event, tab) {
+    const articles =
+      tab.parentNode.querySelectorAll(`${root} > [role="tabpanel"]`);
+    articles.forEach((p) => {
+      p.setAttribute('hidden', true);
+    });
+    const article = tab.parentNode.querySelector(
+        `${root}` +
+        ` > [role="tabpanel"]#${event.target.getAttribute('aria-controls')}`,
+    );
+    article.removeAttribute('hidden');
+  }
+
+  for (let i = 0; i < tabs.length; i++) {
+    const tab = tabs[i];
+
+    const tabButtons =
+      tab.querySelectorAll(`${root} > menu[role=tablist] > button`);
+
+    tabButtons.forEach((btn) =>
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+
+        tabButtons.forEach((button) => {
+          if (
+            button.getAttribute('aria-controls') ===
+            e.target.getAttribute('aria-controls')
+          ) {
+            button.setAttribute('aria-selected', true);
+            openTab(e, tab);
+          } else {
+            button.setAttribute('aria-selected', false);
+          }
+        });
+      }),
+    );
+  }
 });
 
 onUnmounted(() => {
@@ -297,247 +341,312 @@ onUnmounted(() => {
 
 <template>
   <!-- eslint-disable max-len -->
-  <div class="user-settings surface">
-    <div class="controls-container">
-      <table :key="componentKey">
-        <tbody>
-          <tr>
-            <th
-              scope="col"
-              class="controls-header"
+  <div class="user-settings">
+    <section class="tabs">
+      <menu
+        role="tablist"
+        aria-label="Sample Tabs"
+      >
+        <button
+          role="tab"
+          aria-selected="true"
+          aria-controls="tab-controls"
+        >
+          Controls
+        </button>
+        <button
+          role="tab"
+          aria-controls="tab-graphics"
+        >
+          Graphics
+        </button>
+        <button
+          role="tab"
+          aria-controls="tab-network"
+        >
+          Network
+        </button>
+        <button
+          role="tab"
+          aria-controls="tab-misc"
+        >
+          Misc
+        </button>
+      </menu>
+      <article
+        id="tab-controls"
+        role="tabpanel"
+      >
+        <table :key="componentKey">
+          <tbody>
+            <tr>
+              <th
+                scope="col"
+                class="controls-header"
+              >
+                Controls
+              </th>
+              <th scope="col">
+                Key Bindings
+              </th>
+            </tr>
+            <tr
+              v-for="name in userInputs"
+              :key="name"
             >
-              Controls
-            </th>
-            <th scope="col">
-              Key Bindings
-            </th>
-          </tr>
-          <tr
-            v-for="name in userInputs"
-            :key="name"
-          >
-            <td>{{ formatLabel(name) }}</td>
-            <td>
-              <input
-                ref="inputField"
-                type="text"
-                maxlength="0"
-                placeholder="none"
-                :name="name"
-                :value="formatLabel(listener.getKey(name))"
-                class="text-input"
-                @keyup="onBindingKeyUp"
-              >
-            </td>
-          </tr>
-        </tbody>
-      </table>
-
-      <table>
-        <tbody>
-          <tr>
-            <td>
-              <button
-                name="resetKeys"
-                @click="resetKeys"
-              >
-                {{ resetKeysButtonText }}
-              </button>
-            </td><td>
-              <input
-                id="runByDefault"
-                type="checkbox"
-                :checked="props.userConfig.at('controls').at('runByDefault').value()"
-                @change="setRunByDefault"
-              >
-              <label for="runByDefault">{{ runByDefaultText }}</label>
-            </td>
-          </tr>
-          <tr><td colspan="2" /></tr>
-          <tr>
-            <td>Image service URL prefix:</td>
-            <td>
-              <input
-                ref="imageService"
-                type="text"
-                placeholder="none"
-                :value="props.userConfig.at('network').at('imageService').value()"
-                class="text-input"
-                @change="onImageServiceChange"
-              >
-              <button
-                name="resetImageService"
-                @click="resetImageService"
-              >
-                {{ resetImageServiceButtonText }}
-              </button>
-            </td>
-          </tr>
-          <tr>
-            <td colspan="2">
-              <label for="renderingDistance">
-                {{ renderingDistanceText }}: {{ localRenderingDistance }}m
-              </label>
-              <input
-                id="renderingDistance"
-                type="range"
-                :min="renderingDistance.min"
-                :max="renderingDistance.max"
-                :defaultValue="getRenderingDistance()"
-                :step="renderingDistance.step"
-                @input="setRenderingDistance"
-                @change="saveRenderingDistance"
-              >
-            </td>
-          </tr>
-          <tr>
-            <td colspan="2">
-              <label for="propsLoadingDistance">
-                {{ propsLoadingDistanceText }}: {{ localPropsLoadingDistance }}m
-              </label>
-              <input
-                id="propsLoadingDistance"
-                type="range"
-                :min="propsLoadingDistance.min"
-                :max="propsLoadingDistance.max"
-                :defaultValue="getPropsLoadingDistance()"
-                :step="propsLoadingDistance.step"
-                @input="setPropsLoadingDistance"
-                @change="savePropsLoadingDistance"
-              >
-            </td>
-          </tr>
-          <tr>
-            <td colspan="2">
-              {{ idlePropsLoadingText }}
-            </td>
-          </tr>
-          <tr>
-            <td colspan="2">
-              <label for="idlePropsLoadingDistance">
-                {{ idlePropsLoadingDistanceText }}: {{ localIdlePropsLoadingDistance }}m
-              </label>
-              <input
-                id="idlePropsLoadingDistance"
-                type="range"
-                :min="idlePropsLoading.distance.min"
-                :max="idlePropsLoading.distance.max"
-                :defaultValue="getIdlePropsLoadingDistance()"
-                :step="idlePropsLoading.distance.step"
-                @input="setIdlePropsLoadingDistance"
-                @change="saveIdlePropsLoadingDistance"
-              >
-            </td>
-          </tr>
-          <tr>
-            <td colspan="2">
-              <label for="idlePropsLoadingDowntime">
-                {{ idlePropsLoadingDowntimeText }}: {{ localIdlePropsLoadingDowntime }}s
-              </label>
-              <input
-                id="idlePropsLoadingDowntime"
-                type="range"
-                :min="idlePropsLoading.downtime.min"
-                :max="idlePropsLoading.downtime.max"
-                :defaultValue="getIdlePropsLoadingDowntime()"
-                :step="idlePropsLoading.downtime.step"
-                @input="setIdlePropsLoadingDowntime"
-                @change="saveIdlePropsLoadingDowntime"
-              >
-            </td>
-          </tr>
-          <tr>
-            <td colspan="2">
-              <label for="idlePropsLoadingSpeed">
-                {{ idlePropsLoadingSpeedText }}: {{ localIdlePropsLoadingSpeed }} chunks/second
-              </label>
-              <input
-                id="idlePropsLoadingSpeed"
-                type="range"
-                :min="idlePropsLoading.speed.min"
-                :max="idlePropsLoading.speed.max"
-                :defaultValue="getIdlePropsLoadingSpeed()"
-                :step="idlePropsLoading.speed.step"
-                @input="setIdlePropsLoadingSpeed"
-                @change="saveIdlePropsLoadingSpeed"
-              >
-            </td>
-          </tr>
-          <tr>
-            <td colspan="2">
-              <input
-                id="backgroundScenery"
-                type="checkbox"
-                :checked="backgroundScenery().at('enabled').value()"
-                @change="setBackgroundScenery"
-              >
-              <label for="backgroundScenery">
-                {{ backgroundSceneryText }}
-              </label>
-            </td>
-          </tr>
-          <tr>
-            <td colspan="2">
-              <input
-                id="useHtmlSignRendering"
-                type="checkbox"
-                :checked="props.userConfig.at('graphics').at('useHtmlSignRendering').value()"
-                @change="setUseHtmlSignRendering"
-              >
-              <label for="useHtmlSignRendering">
-                {{ useHtmlSignRenderingText }}
-              </label>
-            </td>
-          </tr>
-          <tr>
-            <td colspan="2">
-              <input
-                id="debugUserCollider"
-                type="checkbox"
-                :checked="props.userConfig.at('graphics').at('debugUserCollider').value()"
-                @change="setDebugUserCollider"
-              >
-              <label for="debugUserCollider">
-                {{ debugUserColliderText }}
-              </label>
-            </td>
-          </tr>
-          <tr>
-            <td colspan="2">
-              <input
-                id="colliderInterpolation"
-                type="checkbox"
-                :checked="props.userConfig.at('physics').at('colliderInterpolation').value()"
-                @change="setColliderInterpolation"
-              >
-              <label for="colliderInterpolation">
-                {{ colliderInterpolationText }}
-              </label>
-            </td>
-          </tr>
-          <tr>
-            <td colspan="2">
-              <input
-                id="legacyCoordinates"
-                type="checkbox"
-                :checked="props.userConfig.at('interface').at('legacyCoordinates').value()"
-                @change="setlegacyCoordinates"
-              >
-              <label for="legacyCoordinates">
-                {{ legacyCoordinatesText }}
-              </label>
-            </td>
-          </tr>
-          <tr>
-            <td colspan="2">
-              <button @click="clearChunkCache">
-                {{ clearChunkCacheText }}
-              </button>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+              <td>{{ formatLabel(name) }}</td>
+              <td>
+                <input
+                  ref="inputField"
+                  type="text"
+                  maxlength="0"
+                  placeholder="none"
+                  :name="name"
+                  :value="formatLabel(listener.getKey(name))"
+                  class="text-input"
+                  @keyup="onBindingKeyUp"
+                >
+              </td>
+            </tr>
+            <tr>
+              <td />
+              <td>
+                <button
+                  name="resetKeys"
+                  @click="resetKeys"
+                >
+                  {{ resetKeysButtonText }}
+                </button>
+              </td>
+            </tr>
+            <tr><td><br></td></tr>
+            <tr>
+              <td colspan="2">
+                <input
+                  id="runByDefault"
+                  type="checkbox"
+                  :checked="props.userConfig.at('controls').at('runByDefault').value()"
+                  @change="setRunByDefault"
+                >
+                <label for="runByDefault">{{ runByDefaultText }}</label>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </article>
+      <article
+        id="tab-graphics"
+        role="tabpanel"
+        hidden
+      >
+        <table>
+          <tbody>
+            <tr>
+              <td colspan="2">
+                <label for="renderingDistance">
+                  {{ renderingDistanceText }}: {{ localRenderingDistance }}m
+                </label>
+                <input
+                  id="renderingDistance"
+                  type="range"
+                  :min="renderingDistance.min"
+                  :max="renderingDistance.max"
+                  :defaultValue="getRenderingDistance()"
+                  :step="renderingDistance.step"
+                  @input="setRenderingDistance"
+                  @change="saveRenderingDistance"
+                >
+              </td>
+            </tr>
+            <tr>
+              <td colspan="2">
+                <input
+                  id="backgroundScenery"
+                  type="checkbox"
+                  :checked="backgroundScenery().at('enabled').value()"
+                  @change="setBackgroundScenery"
+                >
+                <label for="backgroundScenery">
+                  {{ backgroundSceneryText }}
+                </label>
+              </td>
+            </tr>
+            <tr>
+              <td colspan="2">
+                <input
+                  id="useHtmlSignRendering"
+                  type="checkbox"
+                  :checked="props.userConfig.at('graphics').at('useHtmlSignRendering').value()"
+                  @change="setUseHtmlSignRendering"
+                >
+                <label for="useHtmlSignRendering">
+                  {{ useHtmlSignRenderingText }}
+                </label>
+              </td>
+            </tr>
+            <tr>
+              <td colspan="2">
+                <input
+                  id="debugUserCollider"
+                  type="checkbox"
+                  :checked="props.userConfig.at('graphics').at('debugUserCollider').value()"
+                  @change="setDebugUserCollider"
+                >
+                <label for="debugUserCollider">
+                  {{ debugUserColliderText }}
+                </label>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </article>
+      <article
+        id="tab-network"
+        role="tabpanel"
+        hidden
+      >
+        <table>
+          <tbody>
+            <tr>
+              <td>Image service URL prefix:</td>
+              <td>
+                <input
+                  ref="imageService"
+                  type="text"
+                  placeholder="none"
+                  :value="props.userConfig.at('network').at('imageService').value()"
+                  class="text-input"
+                  @change="onImageServiceChange"
+                >
+                <button
+                  name="resetImageService"
+                  @click="resetImageService"
+                >
+                  {{ resetImageServiceButtonText }}
+                </button>
+              </td>
+            </tr>
+            <tr>
+              <td colspan="2">
+                <label for="propsLoadingDistance">
+                  {{ propsLoadingDistanceText }}: {{ localPropsLoadingDistance }}m
+                </label>
+                <input
+                  id="propsLoadingDistance"
+                  type="range"
+                  :min="propsLoadingDistance.min"
+                  :max="propsLoadingDistance.max"
+                  :defaultValue="getPropsLoadingDistance()"
+                  :step="propsLoadingDistance.step"
+                  @input="setPropsLoadingDistance"
+                  @change="savePropsLoadingDistance"
+                >
+              </td>
+            </tr>
+            <tr>
+              <td colspan="2">
+                {{ idlePropsLoadingText }}
+              </td>
+            </tr>
+            <tr>
+              <td colspan="2">
+                <label for="idlePropsLoadingDistance">
+                  {{ idlePropsLoadingDistanceText }}: {{ localIdlePropsLoadingDistance }}m
+                </label>
+                <input
+                  id="idlePropsLoadingDistance"
+                  type="range"
+                  :min="idlePropsLoading.distance.min"
+                  :max="idlePropsLoading.distance.max"
+                  :defaultValue="getIdlePropsLoadingDistance()"
+                  :step="idlePropsLoading.distance.step"
+                  @input="setIdlePropsLoadingDistance"
+                  @change="saveIdlePropsLoadingDistance"
+                >
+              </td>
+            </tr>
+            <tr>
+              <td colspan="2">
+                <label for="idlePropsLoadingDowntime">
+                  {{ idlePropsLoadingDowntimeText }}: {{ localIdlePropsLoadingDowntime }}s
+                </label>
+                <input
+                  id="idlePropsLoadingDowntime"
+                  type="range"
+                  :min="idlePropsLoading.downtime.min"
+                  :max="idlePropsLoading.downtime.max"
+                  :defaultValue="getIdlePropsLoadingDowntime()"
+                  :step="idlePropsLoading.downtime.step"
+                  @input="setIdlePropsLoadingDowntime"
+                  @change="saveIdlePropsLoadingDowntime"
+                >
+              </td>
+            </tr>
+            <tr>
+              <td colspan="2">
+                <label for="idlePropsLoadingSpeed">
+                  {{ idlePropsLoadingSpeedText }}: {{ localIdlePropsLoadingSpeed }} chunks/second
+                </label>
+                <input
+                  id="idlePropsLoadingSpeed"
+                  type="range"
+                  :min="idlePropsLoading.speed.min"
+                  :max="idlePropsLoading.speed.max"
+                  :defaultValue="getIdlePropsLoadingSpeed()"
+                  :step="idlePropsLoading.speed.step"
+                  @input="setIdlePropsLoadingSpeed"
+                  @change="saveIdlePropsLoadingSpeed"
+                >
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </article>
+      <article
+        id="tab-misc"
+        role="tabpanel"
+        hidden
+      >
+        <table>
+          <tbody>
+            <tr>
+              <td colspan="2">
+                <input
+                  id="colliderInterpolation"
+                  type="checkbox"
+                  :checked="props.userConfig.at('physics').at('colliderInterpolation').value()"
+                  @change="setColliderInterpolation"
+                >
+                <label for="colliderInterpolation">
+                  {{ colliderInterpolationText }}
+                </label>
+              </td>
+            </tr>
+            <tr>
+              <td colspan="2">
+                <input
+                  id="legacyCoordinates"
+                  type="checkbox"
+                  :checked="props.userConfig.at('interface').at('legacyCoordinates').value()"
+                  @change="setlegacyCoordinates"
+                >
+                <label for="legacyCoordinates">
+                  {{ legacyCoordinatesText }}
+                </label>
+              </td>
+            </tr>
+            <tr><td><br></td></tr>
+            <tr>
+              <td colspan="2">
+                <button @click="clearChunkCache">
+                  {{ clearChunkCacheText }}
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </article>
+    </section>
   </div>
   <!-- eslint-enable max-len -->
 </template>
