@@ -44,8 +44,7 @@ Options:
       --version      Show version number                               [boolean]
       --db           Path to the SQLite3 database file, will be created if need
                      be                 [string] [default: "wideworlds.sqlite3"]
-  -p, --port         Port to listen on for http and ws requests
-                                                      [string] [default: "8080"]
+  -p, --port         Port to listen on for http and ws requests  [default: 8080]
   -w, --worldFolder  Folder holding world-related files, will be created if need
                       be                          [string] [default: "./worlds"]
   -h, --help         Show help                                         [boolean]

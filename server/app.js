@@ -18,8 +18,8 @@ const argv = yargs(process.argv)
     .option('port', {
       alias: 'p',
       description: 'Port to listen on for http and ws requests',
-      type: 'string',
-      default: '8080',
+      type: 'integer',
+      default: 8080,
     })
     .option('worldFolder', {
       alias: 'w',
