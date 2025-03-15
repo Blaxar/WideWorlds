@@ -191,8 +191,8 @@ function registerPropsEndpoints(app, authenticate, connection, ctx) {
     const wid = req.params.id;
 
     // Get user ID and role
-    const userRole = req.userRole;
     const userId = req.userId;
+    const userRole = req.userRole;
 
     const props = req.body;
 
@@ -383,8 +383,8 @@ function registerPropsEndpoints(app, authenticate, connection, ctx) {
     const wid = req.params.id;
 
     // Get user ID and role
-    const userRole = req.userRole;
     const userId = req.userId;
+    const userRole = req.userRole;
 
     const props = req.body;
 

@@ -86,8 +86,8 @@ const makeHttpTestBase = (port = 62931, dbFile = 'mocha-http-test-db.sqlite3', s
     base.citizenId = await makeTestUser(TypeORM.getConnection(), 'oOo_Al1ce_oOo',
         '3p1cP4sSw0Rd', 'test2@somemail.com', 'citizen');
 
-    base.userCache.set(base.adminId, {name: 'xXx_B0b_xXx', role: 'admin'});
-    base.userCache.set(base.citizenId, {name: 'oOo_Al1ce_oOo', role: 'citizen'});
+    base.userCache.set(base.adminId, {name: 'xXx_B0b_xXx', role: 'admin', email: 'test@somemail.com'});
+    base.userCache.set(base.citizenId, {name: 'oOo_Al1ce_oOo', role: 'citizen', email: 'test2@somemail.com'});
 
     base.adminBearerToken = await request(base.server)
       .post('/api/login')

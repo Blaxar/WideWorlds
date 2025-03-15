@@ -3,7 +3,10 @@
  */
 
 import {defaultPageDiameter} from '../../common/terrain-utils.js';
+import User from '../../common/db/model/User.js';
+import * as db from '../../common/db/utils.js';
 import makeHttpTestBase from '../utils.js';
+import TypeORM from 'typeorm';
 import request from 'superwstest';
 import * as assert from 'assert';
 import {join} from 'node:path';
@@ -406,6 +409,187 @@ describe('http server', () => {
         .expect(404, done);
   });
 
+  it('POST /api/users (as admin) - Bad Request (missing field)', (done) => {
+    request(base.server)
+        .post('/api/users')
+        .send({
+          name: 'Ig0r-R0xX0r',
+          email: 'igor@ok.net',
+          role: 'citizen',
+        })
+        .set('Authorization', 'Bearer ' + base.adminBearerToken)
+        .set('Accept', 'application/json')
+        .expect('Content-Type', /json/)
+        .expect(400, done);
+  });
+
+  it('POST /api/users (as admin) - Bad Request (invalid role)', (done) => {
+    request(base.server)
+        .post('/api/users')
+        .send({
+          name: 'Ig0r-R0xX0r',
+          email: 'igor@ok.net',
+          password: '1mN0tB0b',
+          role: 'god',
+        })
+        .set('Authorization', 'Bearer ' + base.adminBearerToken)
+        .set('Accept', 'application/json')
+        .expect('Content-Type', /json/)
+        .expect(400, done);
+  });
+
+  it('POST /api/users (as admin) - Bad Request (invalid format)', (done) => {
+    request(base.server)
+        .post('/api/users')
+        .send({
+          name: 1337,
+          email: 'igor@ok.net',
+          password: '1mN0tB0b',
+          role: 'citizen',
+        })
+        .set('Authorization', 'Bearer ' + base.adminBearerToken)
+        .set('Accept', 'application/json')
+        .expect('Content-Type', /json/)
+        .expect(400, done);
+  });
+
+  it('POST /api/users (as admin) - Bad Request (passwords identical)', (done) => {
+    request(base.server)
+        .post('/api/users')
+        .send({
+          name: 'Ig0r-R0xX0r',
+          email: 'igor@ok.net',
+          password: '1mN0tB0b',
+          privilegePassword: '1mN0tB0b',
+          role: 'citizen',
+        })
+        .set('Authorization', 'Bearer ' + base.adminBearerToken)
+        .set('Accept', 'application/json')
+        .expect('Content-Type', /json/)
+        .expect(400, done);
+  });
+
+  it('POST /api/users (as admin) - Bad Request (name already taken)', (done) => {
+    request(base.server)
+        .post('/api/users')
+        .send({
+          name: 'oOo_Al1ce_oOo',
+          email: 'igor@ok.net',
+          password: '1mN0tB0b',
+          role: 'citizen',
+        })
+        .set('Authorization', 'Bearer ' + base.adminBearerToken)
+        .set('Accept', 'application/json')
+        .expect('Content-Type', /json/)
+        .expect(400, done);
+  });
+
+  it('POST /api/users (as admin) - Bad Request (email already taken)', (done) => {
+    request(base.server)
+        .post('/api/users')
+        .send({
+          name: 'Ig0r-R0xX0r',
+          email: 'test2@somemail.com',
+          password: '1mN0tB0b',
+          role: 'citizen',
+        })
+        .set('Authorization', 'Bearer ' + base.adminBearerToken)
+        .set('Accept', 'application/json')
+        .expect('Content-Type', /json/)
+        .expect(400, done);
+  });
+
+  it('POST /api/users (as admin) - Bad Request (invalid email)', (done) => {
+    request(base.server)
+        .post('/api/users')
+        .send({
+          name: 'Ig0r-R0xX0r',
+          email: 'Not an email address',
+          password: '1mN0tB0b',
+          role: 'citizen',
+        })
+        .set('Authorization', 'Bearer ' + base.adminBearerToken)
+        .set('Accept', 'application/json')
+        .expect('Content-Type', /json/)
+        .expect(400, done);
+  });
+
+  it('POST /api/users (as admin) - OK', (done) => {
+    request(base.server)
+        .post('/api/users')
+        .send({
+          name: 'Ig0r-R0xX0r',
+          password: '1mN0tB0b',
+          email: 'igor@ok.net',
+          role: 'citizen',
+        })
+        .set('Authorization', 'Bearer ' + base.adminBearerToken)
+        .set('Accept', 'application/json')
+        .expect('Content-Type', /json/)
+        .expect(200).then(async (response) => {
+          const body = response.body;
+
+          assert.notEqual(body.id, base.adminId);
+          assert.notEqual(body.id, base.citizenId);
+          assert.equal(body.name, 'Ig0r-R0xX0r');
+          assert.equal(body.email, 'igor@ok.net');
+          assert.equal(body.role, 'citizen');
+
+          await TypeORM.getConnection().manager.createQueryBuilder(User, 'user')
+              .where('user.id = :uid', {uid: body.id}).getOne()
+              .then((user) => {
+                // Assert fields
+                assert.equal(user.id, body.id);
+                assert.equal(user.name, 'Ig0r-R0xX0r');
+                assert.equal(user.password, db.hashPassword('1mN0tB0b', user.salt));
+                assert.equal(user.email, 'igor@ok.net');
+                assert.equal(user.role, 'citizen');
+
+                done();
+              }).catch((err) => done(err));
+        })
+        .catch((err) => done(err));
+  });
+
+  it('POST /api/users (as admin) - OK with privilege password', (done) => {
+    request(base.server)
+        .post('/api/users')
+        .send({
+          name: 'Ig0r-R0xX0r',
+          password: '1mN0tB0b',
+          privilegePassword: '1mSt1llN0tB0b',
+          email: 'igor@ok.net',
+          role: 'citizen',
+        })
+        .set('Authorization', 'Bearer ' + base.adminBearerToken)
+        .set('Accept', 'application/json')
+        .expect('Content-Type', /json/)
+        .expect(200).then(async (response) => {
+          const body = response.body;
+
+          assert.notEqual(body.id, base.adminId);
+          assert.notEqual(body.id, base.citizenId);
+          assert.equal(body.name, 'Ig0r-R0xX0r');
+          assert.equal(body.email, 'igor@ok.net');
+          assert.equal(body.role, 'citizen');
+
+          await TypeORM.getConnection().manager.createQueryBuilder(User, 'user')
+              .where('user.id = :uid', {uid: body.id}).getOne()
+              .then((user) => {
+                // Assert fields
+                assert.equal(user.id, body.id);
+                assert.equal(user.name, 'Ig0r-R0xX0r');
+                assert.equal(user.password, db.hashPassword('1mN0tB0b', user.salt));
+                assert.equal(user.privilegePassword, db.hashPassword('1mSt1llN0tB0b', user.salt));
+                assert.equal(user.email, 'igor@ok.net');
+                assert.equal(user.role, 'citizen');
+
+                done();
+              }).catch((err) => done(err));
+        })
+        .catch((err) => done(err));
+  });
+
   // Testing User API (as citizen)
 
   it('GET /api/users (as citizen) - Forbidden (low rank)', (done) => {
@@ -475,6 +659,51 @@ describe('http server', () => {
   it('GET /api/users/id (as citizen) - Forbidden', (done) => {
     request(base.server)
         .get('/api/users/' + base.citizenId)
+        .set('Authorization', 'Bearer iNvAlId')
+        .set('Accept', 'application/json')
+        .expect('Content-Type', /json/)
+        .expect(403, done);
+  });
+
+  it('POST /api/users (as citizen) - Forbidden (not admin)', (done) => {
+    request(base.server)
+        .post('/api/users')
+        .send({
+          name: 'Ig0r-R0xX0r',
+          password: '1mN0tB0b',
+          email: 'igor@ok.net',
+          role: 'citizen',
+        })
+        .set('Authorization', 'Bearer ' + base.citizenBearerToken)
+        .set('Accept', 'application/json')
+        .expect('Content-Type', /json/)
+        .expect(403, done);
+  });
+
+  it('POST /api/users (as citizen) - Unauthorized', (done) => {
+    request(base.server)
+        .post('/api/users')
+        .send({
+          name: 'Ig0r-R0xX0r',
+          password: '1mN0tB0b',
+          email: 'igor@ok.net',
+          role: 'citizen',
+        })
+        .set('Authorization', 'gibberish')
+        .set('Accept', 'application/json')
+        .expect('Content-Type', /json/)
+        .expect(401, done);
+  });
+
+  it('POST /api/users (as citizen) - Forbidden', (done) => {
+    request(base.server)
+        .post('/api/users')
+        .send({
+          name: 'Ig0r-R0xX0r',
+          password: '1mN0tB0b',
+          email: 'igor@ok.net',
+          role: 'citizen',
+        })
         .set('Authorization', 'Bearer iNvAlId')
         .set('Accept', 'application/json')
         .expect('Content-Type', /json/)

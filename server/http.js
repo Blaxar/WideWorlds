@@ -5,6 +5,7 @@
 import * as db from '../common/db/utils.js';
 import World from '../common/db/model/World.js';
 import User from '../common/db/model/User.js';
+import * as crypto from 'crypto';
 import TerrainStorage from './terrain-storage.js';
 import WaterStorage from './water-storage.js';
 import {packElevationData} from '../common/terrain-utils.js';
@@ -15,6 +16,7 @@ import {createServer} from 'http';
 import jwt from 'jsonwebtoken';
 import cors from 'cors';
 import express from 'express';
+import {body, validationResult} from 'express-validator';
 import {join} from 'node:path';
 import logger from './logger.js';
 
@@ -65,7 +67,8 @@ const spawnHttpServer = async (path, port, secret, worldFolder, userCache,
         .then((users) => {
           // Fill-in the cache by binding IDs to names and roles
           for (const user of users) {
-            userCache.set(user.id, (({name, role}) => ({name, role}))(user));
+            userCache.set(user.id,
+                (({name, role, email}) => ({name, role, email}))(user));
           }
         }); // TODO: handle error (if any)
 
@@ -482,8 +485,9 @@ const spawnHttpServer = async (path, port, secret, worldFolder, userCache,
      *           description: Email address bound to this user account
      *           type: string
      *         role:
-     *           description: Role of the user, can be on of `admin`,
+     *           description: Role of the user, can be one of `admin`,
      *                        `citizen` or `tourist`
+     *           type: string
      *
      *     AllUsers:
      *       type: array
@@ -597,6 +601,126 @@ const spawnHttpServer = async (path, port, secret, worldFolder, userCache,
             return res.status(500).json({});
           });
     });
+
+    /**
+     * @openapi
+     * components:
+     *   schemas:
+     *     UserCreation:
+     *       type: object
+     *       properties:
+     *         name:
+     *           description: Displayable name of the user
+     *           type: string
+     *         email:
+     *           description: Email address bound to this user account
+     *           type: string
+     *         role:
+     *           description: Role of the user, can be one of `admin`,
+     *                        `citizen` or `tourist`
+     *           type: string
+     *         password:
+     *           description: Password of the user in clear text, will be stored
+     *                        hashed and slated.
+     *         privilegePassword:
+     *           description: Optional (null for none) privilege password of the
+     *                        user in clear text, will be stored hashed and
+     *                        slated.
+     *           type: string
+     */
+
+    /**
+     * @openapi
+     * /api/users:
+     *   post:
+     *     description: Create a new user
+     *     operationId: post-user
+     *     security:
+     *       - bearerAuth: []
+     *     requestBody:
+     *       description: Payload to create a new user
+     *       required: true
+     *       content:
+     *         application/json:
+     *           schema:
+     *             $ref: '#/components/schemas/UserCreation'
+     *     responses:
+     *       200:
+     *         description: Successful request creating a new user
+     *         content:
+     *           application/json:
+     *             schema:
+     *               $ref: '#/components/schemas/User'
+     *       400:
+     *         description: Invalid value(s) provided
+     *       401:
+     *         description: Authentication required
+     *       403:
+     *         description: Action not allowed for this user, admin level
+     *                      required
+     *       500:
+     *         description: Internal error
+     */
+    app.post('/api/users', authenticate, forbiddenOnFalse(hasUserRole('admin')),
+        body('email').isEmail(),
+        body('name').isString(),
+        body('role').isIn(['admin', 'citizen', 'tourist']),
+        body('password').isString(),
+        body('privilegePassword').isString().optional({nullable: true}),
+        (req, res) => {
+          const errors = validationResult(req);
+          res.setHeader('Content-Type', 'application/json');
+
+          const value = req.body;
+
+          if (!errors.isEmpty()) {
+            res.status(400).json({});
+            return;
+          }
+
+          // Account password and privilege password cannot be the same
+          if (value.password === value.privilegePassword) {
+            res.status(400).json({});
+            return;
+          }
+
+          // Name and email must not already be taken
+          if ([...userCache.values()].some(
+              ({name, email}) => name == value.name || email == value.email)) {
+            res.status(400).json({});
+            return;
+          }
+
+          // The salt is generated on the spot, then we hash
+          // the password with it and store both of them
+          const salt = crypto.randomBytes(db.saltLength).toString('base64');
+
+          const user = new User(
+              undefined,
+              value.name,
+              db.hashPassword(value.password, salt),
+              value.email,
+              value.role,
+              salt,
+              value.privilegePassword ?
+                db.hashPassword(value.privilegePassword, salt) : null,
+          );
+
+          connection.manager.save(user)
+              .then((u) => {
+                const {id, name, email, role} = u;
+
+                // Update the local user cache for fast lookup elsewhere
+                userCache.set(id,
+                    (({name, role, email}) => ({name, role, email}))(u));
+                res.json({id, name, email, role});
+              })
+              .catch((e) => {
+                logger.fatal('Critical DB access error while trying to ' +
+                               'post user: ' + e);
+                return res.status(500).json({});
+              });
+        });
 
     server.on('close', async () => {
       // Close DB connection along with webserver
