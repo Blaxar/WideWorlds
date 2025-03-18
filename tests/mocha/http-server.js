@@ -590,6 +590,51 @@ describe('http server', () => {
         .catch((err) => done(err));
   });
 
+  it('DELETE /api/users/id (as admin) - OK (someone else)', (done) => {
+    request(base.server)
+        .delete('/api/users/' + base.citizenId)
+        .set('Authorization', 'Bearer ' + base.adminBearerToken)
+        .set('Accept', 'application/json')
+        .expect('Content-Type', /json/)
+        .expect(200).then(async (response) => {
+          const body = response.body;
+
+          assert.equal(body.id, base.citizenId);
+          assert.equal(body.name, 'oOo_Al1ce_oOo');
+          assert.equal(body.email, 'test2@somemail.com');
+          assert.equal(body.role, 'citizen');
+
+          // The user should have been removed from the DB
+          await TypeORM.getConnection().manager.createQueryBuilder(User, 'user')
+              .where('user.id = :uid', {uid: body.id}).getOne()
+              .then((user) => {
+                // Assert fields
+                assert.equal(user, null);
+
+                done();
+              }).catch((err) => done(err));
+        })
+        .catch((err) => done(err));
+  });
+
+  it('DELETE /api/users/id (as admin) - Forbidden (self)', (done) => {
+    request(base.server)
+        .delete('/api/users/' + base.adminId)
+        .set('Authorization', 'Bearer ' + base.adminBearerToken)
+        .set('Accept', 'application/json')
+        .expect('Content-Type', /json/)
+        .expect(403, done);
+  });
+
+  it('DELETE /api/users/id (as admin) - Not found', (done) => {
+    request(base.server)
+        .delete('/api/users/66666')
+        .set('Authorization', 'Bearer ' + base.adminBearerToken)
+        .set('Accept', 'application/json')
+        .expect('Content-Type', /json/)
+        .expect(404, done);
+  });
+
   // Testing User API (as citizen)
 
   it('GET /api/users (as citizen) - Forbidden (low rank)', (done) => {
@@ -680,7 +725,7 @@ describe('http server', () => {
         .expect(403, done);
   });
 
-  it('POST /api/users (as citizen) - Unauthorized', (done) => {
+  it('POST /api/users - Unauthorized', (done) => {
     request(base.server)
         .post('/api/users')
         .send({
@@ -695,7 +740,7 @@ describe('http server', () => {
         .expect(401, done);
   });
 
-  it('POST /api/users (as citizen) - Forbidden', (done) => {
+  it('POST /api/users - Forbidden', (done) => {
     request(base.server)
         .post('/api/users')
         .send({
@@ -708,5 +753,41 @@ describe('http server', () => {
         .set('Accept', 'application/json')
         .expect('Content-Type', /json/)
         .expect(403, done);
+  });
+
+  it('DELETE /api/users/id (as citizen) - Forbidden (self)', (done) => {
+    request(base.server)
+        .delete('/api/users/' + base.citizenId)
+        .set('Authorization', 'Bearer ' + base.citizenBearerToken)
+        .set('Accept', 'application/json')
+        .expect('Content-Type', /json/)
+        .expect(403, done);
+  });
+
+  it('DELETE /api/users/id (as citizen) - Forbidden (someone else)', (done) => {
+    request(base.server)
+        .delete('/api/users/' + base.adminId)
+        .set('Authorization', 'Bearer ' + base.citizenBearerToken)
+        .set('Accept', 'application/json')
+        .expect('Content-Type', /json/)
+        .expect(403, done);
+  });
+
+  it('DELETE /api/users/id - Forbidden', (done) => {
+    request(base.server)
+        .delete('/api/users/' + base.citizenId)
+        .set('Authorization', 'Bearer iNvAlId')
+        .set('Accept', 'application/json')
+        .expect('Content-Type', /json/)
+        .expect(403, done);
+  });
+
+  it('DELETE /api/users/id - Unauthorized', (done) => {
+    request(base.server)
+        .delete('/api/users/' + base.citizenId)
+        .set('Authorization', 'gibberish')
+        .set('Accept', 'application/json')
+        .expect('Content-Type', /json/)
+        .expect(401, done);
   });
 });

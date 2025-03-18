@@ -722,6 +722,76 @@ const spawnHttpServer = async (path, port, secret, worldFolder, userCache,
               });
         });
 
+    /**
+     * @openapi
+     * /api/users/{userId}:
+     *   delete:
+     *     description: Delete a single user
+     *     operationId: delete-user
+     *     security:
+     *       - bearerAuth: []
+     *     parameters:
+     *       - in: path
+     *         name: userId
+     *         schema:
+     *           type: integer
+     *         required: true
+     *         description: Numeric ID of the user to delete
+     *     responses:
+     *       200:
+     *         description: Successful request deleting a user
+     *         content:
+     *           application/json:
+     *             schema:
+     *               $ref: '#/components/schemas/User'
+     *       401:
+     *         description: Authentication required
+     *       403:
+     *         description: Action not allowed for this user, admin level
+     *                      required or self-delete requested
+     *       404:
+     *         description: User not found given the provided ID
+     *       500:
+     *         description: Internal error
+     */
+    app.delete('/api/users/:id', authenticate,
+        forbiddenOnFalse(hasUserRole('admin')),
+        (req, res) => {
+          res.setHeader('Content-Type', 'application/json');
+
+          // Get user ID from request parameter
+          const uid = parseInt(req.params.id);
+
+          // Get user ID from authorization
+          const userId = parseInt(req.userId);
+
+          // A user cannot delete themself
+          if (uid === userId) {
+            res.status(403).json({});
+            return;
+          }
+
+          if (!userCache.has(uid)) {
+            // User not found
+            res.status(404).json({});
+            return;
+          }
+
+          connection.manager.delete(User, uid)
+              .then(() => {
+                const {name, email, role} = userCache.get(uid);
+                res.json({id: uid, name, email, role});
+
+                // Remove user from the cache
+                userCache.erase(uid);
+              })
+              .catch((e) => {
+                logger.fatal('Critical DB access error while trying to ' +
+                               `delete user #${uid}: ` + e);
+                return res.status(500).json({});
+              });
+        });
+
     server.on('close', async () => {
       // Close DB connection along with webserver
       await connection.close();
