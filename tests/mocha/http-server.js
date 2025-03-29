@@ -590,6 +590,18 @@ describe('http server', () => {
         .catch((err) => done(err));
   });
 
+  it('PUT /api/users/id (as admin) - Not Found', (done) => {
+    request(base.server)
+        .put('/api/users/66666')
+        .send({
+          role: 'tourist',
+        })
+        .set('Authorization', 'Bearer ' + base.adminBearerToken)
+        .set('Accept', 'application/json')
+        .expect('Content-Type', /json/)
+        .expect(404, done);
+  });
+
   it('PUT /api/users/id (as admin to self) - Bad Request (change role)', (done) => {
     request(base.server)
         .put('/api/users/' + base.adminId)
