@@ -590,6 +590,166 @@ describe('http server', () => {
         .catch((err) => done(err));
   });
 
+  it('PUT /api/users/id (as admin to self) - Bad Request (change role)', (done) => {
+    request(base.server)
+        .put('/api/users/' + base.adminId)
+        .send({
+          role: 'citizen',
+        })
+        .set('Authorization', 'Bearer ' + base.adminBearerToken)
+        .set('Accept', 'application/json')
+        .expect('Content-Type', /json/)
+        .expect(403, done);
+  });
+
+  it('PUT /api/users/id (as admin to other) - Bad Request (invalid role)', (done) => {
+    request(base.server)
+        .put('/api/users/' + base.citizenId)
+        .send({
+          role: 'god',
+        })
+        .set('Authorization', 'Bearer ' + base.adminBearerToken)
+        .set('Accept', 'application/json')
+        .expect('Content-Type', /json/)
+        .expect(400, done);
+  });
+
+  it('PUT /api/users/id (as admin to other) - Bad Request (invalid format)', (done) => {
+    request(base.server)
+        .put('/api/users/' + base.citizenId)
+        .send({
+          name: 1337,
+          email: 'igor@ok.net',
+          password: '1mN0tB0b',
+          role: 'citizen',
+        })
+        .set('Authorization', 'Bearer ' + base.adminBearerToken)
+        .set('Accept', 'application/json')
+        .expect('Content-Type', /json/)
+        .expect(400, done);
+  });
+
+  it('PUT /api/users/id (as admin to other) - Bad Request (passwords identical)', (done) => {
+    request(base.server)
+        .put('/api/users/' + base.citizenId)
+        .send({
+          privilegePassword: '3p1cP4sSw0Rd', // same as account password
+        })
+        .set('Authorization', 'Bearer ' + base.adminBearerToken)
+        .set('Accept', 'application/json')
+        .expect('Content-Type', /json/)
+        .expect(400, done);
+  });
+
+  it('PUT /api/users/id (as admin to other) - Bad Request (name already taken)', (done) => {
+    request(base.server)
+        .put('/api/users/' + base.citizenId)
+        .send({
+          name: 'xXx_B0b_xXx',
+        })
+        .set('Authorization', 'Bearer ' + base.adminBearerToken)
+        .set('Accept', 'application/json')
+        .expect('Content-Type', /json/)
+        .expect(400, done);
+  });
+
+  it('PUT /api/users/id (as admin to other) - Bad Request (email already taken)', (done) => {
+    request(base.server)
+        .put('/api/users/' + base.citizenId)
+        .send({
+          email: 'test@somemail.com',
+        })
+        .set('Authorization', 'Bearer ' + base.adminBearerToken)
+        .set('Accept', 'application/json')
+        .expect('Content-Type', /json/)
+        .expect(400, done);
+  });
+
+  it('PUT /api/users/id (as admin to other) - Bad Request (invalid email)', (done) => {
+    request(base.server)
+        .put('/api/users/' + base.citizenId)
+        .send({
+          email: 'Not an email address',
+        })
+        .set('Authorization', 'Bearer ' + base.adminBearerToken)
+        .set('Accept', 'application/json')
+        .expect('Content-Type', /json/)
+        .expect(400, done);
+  });
+
+  it('PUT /api/users/id (as admin to other) - OK', (done) => {
+    request(base.server)
+        .put('/api/users/' + base.citizenId)
+        .send({
+          name: 'Ig0r-R0xX0r',
+          privilegePassword: '1mN0tB0b', // Only change privilege password
+          email: 'igor@ok.net',
+          role: 'tourist',
+        })
+        .set('Authorization', 'Bearer ' + base.adminBearerToken)
+        .set('Accept', 'application/json')
+        .expect('Content-Type', /json/)
+        .expect(200).then(async (response) => {
+          const body = response.body;
+
+          assert.equal(body.id, base.citizenId);
+          assert.equal(body.name, 'Ig0r-R0xX0r');
+          assert.equal(body.email, 'igor@ok.net');
+          assert.equal(body.role, 'tourist');
+
+          await TypeORM.getConnection().manager.createQueryBuilder(User, 'user')
+              .where('user.id = :uid', {uid: body.id}).getOne()
+              .then((user) => {
+                // Assert fields
+                assert.equal(user.id, body.id);
+                assert.equal(user.name, 'Ig0r-R0xX0r');
+                assert.equal(user.password, db.hashPassword('3p1cP4sSw0Rd', user.salt));
+                assert.equal(user.privilegePassword, db.hashPassword('1mN0tB0b', user.salt));
+                assert.equal(user.email, 'igor@ok.net');
+                assert.equal(user.role, 'tourist');
+
+                done();
+              }).catch((err) => done(err));
+        })
+        .catch((err) => done(err));
+  });
+
+  it('PUT /api/users/id (as admin to self) - OK', (done) => {
+    request(base.server)
+        .put('/api/users/' + base.adminId)
+        .send({
+          name: 'Ig0r-R0xX0r',
+          privilegePassword: null, // Remove privilege password
+          email: 'igor@ok.net',
+        })
+        .set('Authorization', 'Bearer ' + base.adminBearerToken)
+        .set('Accept', 'application/json')
+        .expect('Content-Type', /json/)
+        .expect(200).then(async (response) => {
+          const body = response.body;
+
+          assert.equal(body.id, base.adminId);
+          assert.equal(body.name, 'Ig0r-R0xX0r');
+          assert.equal(body.email, 'igor@ok.net');
+          assert.equal(body.role, 'admin');
+
+          await TypeORM.getConnection().manager.createQueryBuilder(User, 'user')
+              .where('user.id = :uid', {uid: body.id}).getOne()
+              .then((user) => {
+                // Assert fields
+                assert.equal(user.id, body.id);
+                assert.equal(user.name, 'Ig0r-R0xX0r');
+                assert.equal(user.password, db.hashPassword('3p1cP4sSw0Rd', user.salt));
+                assert.equal(user.privilegePassword, null);
+                assert.equal(user.email, 'igor@ok.net');
+                assert.equal(user.role, 'admin');
+
+                done();
+              }).catch((err) => done(err));
+        })
+        .catch((err) => done(err));
+  });
+
   it('DELETE /api/users/id (as admin) - OK (someone else)', (done) => {
     request(base.server)
         .delete('/api/users/' + base.citizenId)
@@ -753,6 +913,182 @@ describe('http server', () => {
         .set('Accept', 'application/json')
         .expect('Content-Type', /json/)
         .expect(403, done);
+  });
+
+  it('PUT /api/users/id (as citizen to self) - Bad Request (change role)', (done) => {
+    request(base.server)
+        .put('/api/users/' + base.adminId)
+        .send({
+          role: 'admin',
+        })
+        .set('Authorization', 'Bearer ' + base.citizenBearerToken)
+        .set('Accept', 'application/json')
+        .expect('Content-Type', /json/)
+        .expect(403, done);
+  });
+
+  it('PUT /api/users/id (as citizen to self) - Bad Request (invalid format)', (done) => {
+    request(base.server)
+        .put('/api/users/' + base.citizenId)
+        .send({
+          name: 1337,
+          email: 'igor@ok.net',
+          password: '1mN0tB0b',
+        })
+        .set('Authorization', 'Bearer ' + base.citizenBearerToken)
+        .set('Accept', 'application/json')
+        .expect('Content-Type', /json/)
+        .expect(400, done);
+  });
+
+  it('PUT /api/users/id (as citizen to self) - Bad Request (passwords identical)', (done) => {
+    request(base.server)
+        .put('/api/users/' + base.citizenId)
+        .send({
+          privilegePassword: '3p1cP4sSw0Rd', // same as account password
+        })
+        .set('Authorization', 'Bearer ' + base.citizenBearerToken)
+        .set('Accept', 'application/json')
+        .expect('Content-Type', /json/)
+        .expect(400, done);
+  });
+
+  it('PUT /api/users/id (as citizen to self) - Bad Request (name already taken)', (done) => {
+    request(base.server)
+        .put('/api/users/' + base.citizenId)
+        .send({
+          name: 'xXx_B0b_xXx',
+        })
+        .set('Authorization', 'Bearer ' + base.citizenBearerToken)
+        .set('Accept', 'application/json')
+        .expect('Content-Type', /json/)
+        .expect(400, done);
+  });
+
+  it('PUT /api/users/id (as citizen to self) - Bad Request (email already taken)', (done) => {
+    request(base.server)
+        .put('/api/users/' + base.citizenId)
+        .send({
+          email: 'test@somemail.com',
+        })
+        .set('Authorization', 'Bearer ' + base.citizenBearerToken)
+        .set('Accept', 'application/json')
+        .expect('Content-Type', /json/)
+        .expect(400, done);
+  });
+
+  it('PUT /api/users/id (as citizen to self) - Bad Request (invalid email)', (done) => {
+    request(base.server)
+        .put('/api/users/' + base.citizenId)
+        .send({
+          email: 'Not an email address',
+        })
+        .set('Authorization', 'Bearer ' + base.citizenBearerToken)
+        .set('Accept', 'application/json')
+        .expect('Content-Type', /json/)
+        .expect(400, done);
+  });
+
+  it('PUT /api/users/id (as citizen to other) - Forbidden', (done) => {
+    request(base.server)
+        .put('/api/users/' + base.adminId)
+        .send({
+          name: 'Ig0r-R0xX0r',
+          privilegePassword: '1mN0tB0b', // Only change privilege password
+          email: 'igor@ok.net',
+          role: 'tourist',
+        })
+        .set('Authorization', 'Bearer ' + base.citizenBearerToken)
+        .set('Accept', 'application/json')
+        .expect('Content-Type', /json/)
+        .expect(403, done);
+  });
+
+  it('PUT /api/users/id (as citizen to self) - OK', (done) => {
+    request(base.server)
+        .put('/api/users/' + base.citizenId)
+        .send({
+          name: 'Ig0r-R0xX0r',
+          privilegePassword: null, // Remove privilege password
+          email: 'igor@ok.net',
+        })
+        .set('Authorization', 'Bearer ' + base.citizenBearerToken)
+        .set('Accept', 'application/json')
+        .expect('Content-Type', /json/)
+        .expect(200).then(async (response) => {
+          const body = response.body;
+
+          assert.equal(body.id, base.citizenId);
+          assert.equal(body.name, 'Ig0r-R0xX0r');
+          assert.equal(body.email, 'igor@ok.net');
+          assert.equal(body.role, 'citizen');
+
+          await TypeORM.getConnection().manager.createQueryBuilder(User, 'user')
+              .where('user.id = :uid', {uid: body.id}).getOne()
+              .then((user) => {
+                // Assert fields
+                assert.equal(user.id, body.id);
+                assert.equal(user.name, 'Ig0r-R0xX0r');
+                assert.equal(user.password, db.hashPassword('3p1cP4sSw0Rd', user.salt));
+                assert.equal(user.privilegePassword, null);
+                assert.equal(user.email, 'igor@ok.net');
+                assert.equal(user.role, 'citizen');
+
+                done();
+              }).catch((err) => done(err));
+        })
+        .catch((err) => done(err));
+  });
+
+  it('PUT /api/users/id - Forbidden', (done) => {
+    request(base.server)
+        .put('/api/users/' + base.citizenId)
+        .send({
+          email: 'igor@ok.net',
+        })
+        .set('Authorization', 'Bearer iNvAlId')
+        .set('Accept', 'application/json')
+        .expect('Content-Type', /json/)
+        .expect(403, done);
+  });
+
+  it('PUT /api/users/id - Unauthorized', (done) => {
+    request(base.server)
+        .put('/api/users/' + base.citizenId)
+        .send({
+          email: 'igor@ok.net',
+        })
+        .set('Authorization', 'gibberish')
+        .set('Accept', 'application/json')
+        .expect('Content-Type', /json/)
+        .expect(401, done);
+  });
+
+  it('DELETE /api/users/id (as admin) - OK (someone else)', (done) => {
+    request(base.server)
+        .delete('/api/users/' + base.citizenId)
+        .set('Authorization', 'Bearer ' + base.adminBearerToken)
+        .set('Accept', 'application/json')
+        .expect('Content-Type', /json/)
+        .expect(200).then(async (response) => {
+          const body = response.body;
+
+          assert.equal(body.id, base.citizenId);
+          assert.equal(body.name, 'oOo_Al1ce_oOo');
+          assert.equal(body.email, 'test2@somemail.com');
+          assert.equal(body.role, 'citizen');
+
+          // The user should have been removed from the DB
+          await TypeORM.getConnection().manager.createQueryBuilder(User, 'user')
+              .where('user.id = :uid', {uid: body.id}).getOne()
+              .then((user) => {
+                // Assert fields
+                assert.equal(user, null);
+
+                done();
+              }).catch((err) => done(err));
+        })
+        .catch((err) => done(err));
   });
 
   it('DELETE /api/users/id (as citizen) - Forbidden (self)', (done) => {

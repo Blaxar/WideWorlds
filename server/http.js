@@ -598,7 +598,7 @@ const spawnHttpServer = async (path, port, secret, worldFolder, userCache,
           .catch((e) => {
             logger.fatal('Critical DB access error while trying to get user ' +
                          `#${req.params.id}: ` + e);
-            return res.status(500).json({});
+            res.status(500).json({});
           });
     });
 
@@ -608,6 +608,11 @@ const spawnHttpServer = async (path, port, secret, worldFolder, userCache,
      *   schemas:
      *     UserCreation:
      *       type: object
+     *       required:
+     *         - name
+     *         - email
+     *         - role
+     *         - password
      *       properties:
      *         name:
      *           description: Displayable name of the user
@@ -621,11 +626,11 @@ const spawnHttpServer = async (path, port, secret, worldFolder, userCache,
      *           type: string
      *         password:
      *           description: Password of the user in clear text, will be stored
-     *                        hashed and slated.
+     *                        hashed and salted.
      *         privilegePassword:
      *           description: Optional (null for none) privilege password of the
      *                        user in clear text, will be stored hashed and
-     *                        slated.
+     *                        salted.
      *           type: string
      */
 
@@ -719,6 +724,178 @@ const spawnHttpServer = async (path, port, secret, worldFolder, userCache,
                 logger.fatal('Critical DB access error while trying to ' +
                                'post user: ' + e);
                 return res.status(500).json({});
+              });
+        });
+
+    /**
+     * @openapi
+     * components:
+     *   schemas:
+     *     UserUpdate:
+     *       type: object
+     *       properties:
+     *         name:
+     *           description: Displayable name of the user
+     *           type: string
+     *         email:
+     *           description: Email address bound to this user account
+     *           type: string
+     *         role:
+     *           description: Role of the user, can be one of `admin`,
+     *                        `citizen` or `tourist`
+     *           type: string
+     *         password:
+     *           description: Password of the user in clear text, will be stored
+     *                        hashed and salted.
+     *         privilegePassword:
+     *           description: Optional (null for none) privilege password of the
+     *                        user in clear text, will be stored hashed and
+     *                        salted.
+     *           type: string
+     */
+
+    /**
+     * @openapi
+     * /api/users/{userId}:
+     *   put:
+     *     description: Update a user
+     *     operationId: put-user
+     *     security:
+     *       - bearerAuth: []
+     *     parameters:
+     *       - in: path
+     *         name: userId
+     *         schema:
+     *           type: integer
+     *         required: true
+     *         description: Numeric ID of the user to update
+     *     requestBody:
+     *       description: Payload to update the user
+     *       required: true
+     *       content:
+     *         application/json:
+     *           schema:
+     *             $ref: '#/components/schemas/UserUpdate'
+     *     responses:
+     *       200:
+     *         description: Successful request updating a user
+     *         content:
+     *           application/json:
+     *             schema:
+     *               $ref: '#/components/schemas/User'
+     *       400:
+     *         description: Invalid value(s) provided
+     *       401:
+     *         description: Authentication required
+     *       403:
+     *         description: Action not allowed
+     *       500:
+     *         description: Internal error
+     */
+    app.put('/api/users/:id', authenticate,
+        forbiddenOnFalse(middleOr(hasUserRole('admin'),
+            hasUserIdInParams('id'))),
+        body('email').isEmail().optional({nullable: false}),
+        body('name').isString().optional({nullable: false}),
+        body('role').isIn(['admin', 'citizen', 'tourist'])
+            .optional({nullable: false}),
+        body('password').isString().optional({nullable: false}),
+        body('privilegePassword').isString().optional({nullable: true}),
+        async (req, res, next) => {
+          const errors = validationResult(req);
+          res.setHeader('Content-Type', 'application/json');
+
+          const uid = parseInt(req.params.id);
+          const userId = parseInt(req.userId);
+          const value = req.body;
+
+          // Lookup user from the cache first, 404 if not found
+          if (!userCache.has(uid)) {
+            // User not found
+            res.status(404).json({});
+            next();
+            return;
+          }
+
+          if (!errors.isEmpty()) {
+            res.status(400).json({});
+            next();
+            return;
+          }
+
+          const user = await connection.manager.createQueryBuilder(User, 'user')
+              .where('user.id = :id', {id: uid}).getOne().then((user) => {
+                if (user) {
+                  return user;
+                } else {
+                  res.status(404).json({});
+                  next();
+                  return null;
+                }
+              })
+              .catch((e) => {
+                logger.fatal(
+                    'Critical DB access error while trying to get user ' +
+                    `#${req.params.id}: ` + e);
+                res.status(500).json({});
+                next();
+              });
+
+          if (!user) return;
+
+          user.name = (typeof value.name !== 'undefined') ?
+              value.name : user.name;
+          user.password = (typeof value.password !== 'undefined') ?
+              db.hashPassword(value.password, user.salt) : user.password;
+          user.privilegePassword =
+              (typeof value.privilegePassword !== 'undefined') ?
+              (value.privilegePassword ?
+              db.hashPassword(value.privilegePassword, user.salt) : null) :
+              user.privilegePassword;
+          user.email = (typeof value.email !== 'undefined') ?
+              value.email : user.email;
+          user.role = (typeof value.role !== 'undefined') ?
+              value.role : user.role;
+
+          // Account password and privilege password cannot be the same
+          if (user.password === user.privilegePassword) {
+            res.status(400).json({});
+            next();
+            return;
+          }
+
+          // Name and email must not already be taken by another user
+          if ([...userCache.entries()].some(
+              ([id, {name, email}]) => user.id != id &&
+                (name == value.name || email == value.email))) {
+            res.status(400).json({});
+            next();
+            return;
+          }
+
+          // The user issuing the request cannot modify its own role,
+          if (userId === uid && userCache.get(uid).role != user.role) {
+            res.status(403).json({});
+            next();
+            return;
+          }
+
+          connection.manager.save(user)
+              .then((u) => {
+                const {id, name, email, role} = u;
+
+                // Update the local user cache for fast lookup elsewhere
+                userCache.set(id,
+                    (({name, role, email}) => ({name, role, email}))(u));
+
+                res.json({id, name, email, role});
+                next();
+              })
+              .catch((e) => {
+                logger.fatal('Critical DB access error while trying to ' +
+                             'put user: ' + e);
+                res.status(500).json({});
+                next();
               });
         });
 
