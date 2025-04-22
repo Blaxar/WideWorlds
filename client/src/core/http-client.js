@@ -247,6 +247,101 @@ class HttpClient {
   }
 
   /**
+   * Get a list of users
+   * @param {integer} amount - Amount of users to list.
+   * @param {integer} page - Page number (0-based index).
+   * @return {Promise<Array<User>>} List of users.
+   */
+  async getUsers(amount, page = 0) {
+    const request = new Request(
+        `${this.url}/users?amount=${amount}&page=${page}`, {
+          method: 'GET',
+          headers: this.headers,
+          mode: this.cors ? 'cors' : undefined,
+        });
+
+    return await fetch(request).then((response) => {
+      if (response.ok) return response.json();
+      else throw new Error(response.status);
+    });
+  }
+
+  /**
+   * Get a single user
+   * @param {integer} id - ID of the user to get.
+   * @return {Promise<User>} User matching the provided ID.
+   */
+  async getUser(id) {
+    const request = new Request(`${this.url}/users/${id}`, {
+      method: 'GET',
+      headers: this.headers,
+      mode: this.cors ? 'cors' : undefined,
+    });
+
+    return await fetch(request).then((response) => {
+      if (response.ok) return response.json();
+      else throw new Error(response.status);
+    });
+  }
+
+  /**
+   * Update a single user
+   * @param {integer} id - ID of the user to update.
+   * @param {User} payload - Payload to update the user with.
+   * @return {Promise<User>} Updated user matching the provided ID.
+   */
+  async putUser(id, payload) {
+    const request = new Request(`${this.url}/users/${id}`, {
+      method: 'PUT',
+      headers: this.headers,
+      body: JSON.stringify(payload),
+      mode: this.cors ? 'cors' : undefined,
+    });
+
+    return await fetch(request).then((response) => {
+      if (response.ok) return response.json();
+      else throw new Error(response.status);
+    });
+  }
+
+  /**
+   * Create a single user
+   * @param {User} payload - Payload to create the user with.
+   * @return {Promise<User>} Newly-created user.
+   */
+  async postUser(payload) {
+    const request = new Request(`${this.url}/users`, {
+      method: 'POST',
+      headers: this.headers,
+      body: JSON.stringify(payload),
+      mode: this.cors ? 'cors' : undefined,
+    });
+
+    return await fetch(request).then((response) => {
+      if (response.ok) return response.json();
+      else throw new Error(response.status);
+    });
+  }
+
+  /**
+   * Delete a single user
+   * @param {integer} id - ID of the user to delete.
+   * @return {Promise<User>} Deleted user matching the provided ID.
+   */
+  async deleteUser(id) {
+    const request = new Request(`${this.url}/users/${id}`, {
+      method: 'DELETE',
+      headers: this.headers,
+      mode: this.cors ? 'cors' : undefined,
+    });
+
+    return await fetch(request).then((response) => {
+      if (response.ok) return response.json();
+      else throw new Error(response.status);
+    });
+  }
+
+  /**
    * Get terrain page
    * @param {integer} wid - ID of the world to get the URLs from.
    * @param {integer} pageX - Index of the page on the X axis.

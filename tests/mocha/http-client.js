@@ -669,6 +669,213 @@ describe('http client', () => {
       });
   });
 
+  // Testing User API
+
+  it('getUsers - OK (first page)', (done) => {
+    login().then(() => {
+      httpClient.getUsers(1).then((body) => {
+        // We expect only one entry
+        assert.equal(body.length, 1);
+
+        assert.equal(body[0].id, base.adminId);
+        assert.equal(body[0].name, 'xXx_B0b_xXx');
+        assert.equal(body[0].email, 'test@somemail.com');
+        assert.equal(body[0].role, 'admin');
+
+        done();
+      });
+    }).catch((err) => done(err));
+  });
+
+  it('getUsers - OK (second page)', (done) => {
+    login().then(() => {
+      httpClient.getUsers(1, 1).then((body) => {
+        // We expect only one entry
+        assert.equal(body.length, 1);
+
+        assert.equal(body[0].id, base.citizenId);
+        assert.equal(body[0].name, 'oOo_Al1ce_oOo');
+        assert.equal(body[0].email, 'test2@somemail.com');
+        assert.equal(body[0].role, 'citizen');
+
+        done();
+      });
+    }).catch((err) => done(err));
+  });
+
+  it('getUser - OK (single)', (done) => {
+    login().then(() => {
+      httpClient.getUser(base.citizenId).then((body) => {
+        assert.equal(body.id, base.citizenId);
+        assert.equal(body.name, 'oOo_Al1ce_oOo');
+        assert.equal(body.email, 'test2@somemail.com');
+        assert.equal(body.role, 'citizen');
+
+        done();
+      });
+    }).catch((err) => done(err));
+  });
+
+  it('getUser - Not found', (done) => {
+    login().then(() => {
+      httpClient.getUser(666)
+        .then(() => done('Getting user should not work here'))
+        .catch((err) => {
+          if (err.message == 404) done();
+          else done(err);
+        });
+    });
+  });
+
+  it('getUser - Unauthorized', (done) => {
+    httpClient.getUser(base.citizenId)
+      .then(() => done('Getting user should not work here'))
+      .catch((err) => {
+        if (err.message == 401) done();
+        else done(err);
+      });
+  });
+
+  it('putUser - OK', (done) => {
+    const payload = {
+      name: 'Ig0r-R0xX0r',
+      privilegePassword: '1mN0tB0b', // Only change privilege password
+      email: 'igor@ok.net',
+      role: 'tourist',
+    };
+
+    login().then(() => {
+      httpClient.putUser(base.citizenId, payload).then((body) => {
+        assert.equal(body.id, base.citizenId);
+        assert.equal(body.name, 'Ig0r-R0xX0r');
+        assert.equal(body.email, 'igor@ok.net');
+        assert.equal(body.role, 'tourist');
+
+        done();
+      });
+    }).catch((err) => done(err));
+  });
+
+  it('putUser - Not found', (done) => {
+    const payload = {
+      name: 'Ig0r-R0xX0r',
+      privilegePassword: '1mN0tB0b', // Only change privilege password
+      email: 'igor@ok.net',
+      role: 'tourist',
+    };
+
+    login().then(() => {
+      httpClient.putUser(666, payload)
+        .then(() => done('Updating user should not work here'))
+        .catch((err) => {
+          if (err.message == 404) done();
+          else done(err);
+        });
+    });
+  });
+
+  it('putUser - Unauthorized', (done) => {
+    const payload = {
+      name: 'Ig0r-R0xX0r',
+      privilegePassword: '1mN0tB0b', // Only change privilege password
+      email: 'igor@ok.net',
+      role: 'tourist',
+    };
+
+    httpClient.putUser(base.citizenId, payload)
+      .then(() => done('Updating user should not work here'))
+      .catch((err) => {
+        if (err.message == 401) done();
+        else done(err);
+      });
+  });
+
+  it('postUser - OK', (done) => {
+    const payload = {
+      name: 'Ig0r-R0xX0r',
+      password: '1mN0tB0b',
+      email: 'igor@ok.net',
+      role: 'tourist',
+    };
+
+    login().then(() => {
+      httpClient.postUser(payload).then((body) => {
+        assert.notEqual(body.id, base.adminId);
+        assert.notEqual(body.id, base.citizenId);
+        assert.equal(body.name, 'Ig0r-R0xX0r');
+        assert.equal(body.email, 'igor@ok.net');
+        assert.equal(body.role, 'tourist');
+
+        done();
+      });
+    }).catch((err) => done(err));
+  });
+
+  it('postUser - Missing fields', (done) => {
+    const payload = {
+      name: 'Ig0r-R0xX0r',
+      role: 'tourist',
+    };
+
+    login().then(() => {
+      httpClient.postUser(payload)
+        .then(() => done('Creating user should not work here'))
+        .catch((err) => {
+          if (err.message == 400) done();
+          else done(err);
+        });
+    }).catch((err) => done(err));
+  });
+
+  it('postUser - Unauthorized', (done) => {
+    const payload = {
+      name: 'Ig0r-R0xX0r',
+      password: '1mN0tB0b',
+      email: 'igor@ok.net',
+      role: 'tourist',
+    };
+
+    httpClient.postUser(payload)
+      .then(() => done('Creating user should not work here'))
+      .catch((err) => {
+        if (err.message == 401) done();
+        else done(err);
+      });
+  });
+
+  it('deleteUser - OK', (done) => {
+    login().then(() => {
+      httpClient.deleteUser(base.citizenId).then((body) => {
+        assert.equal(body.id, base.citizenId);
+        assert.equal(body.name, 'oOo_Al1ce_oOo');
+        assert.equal(body.email, 'test2@somemail.com');
+        assert.equal(body.role, 'citizen');
+
+        done();
+      });
+    }).catch((err) => done(err));
+  });
+
+  it('deleteUser - Not found', (done) => {
+    login().then(() => {
+      httpClient.deleteUser(666)
+        .then(() => done('Deleting user should not work here'))
+        .catch((err) => {
+          if (err.message == 404) done();
+          else done(err);
+        });
+    }).catch((err) => done(err));
+  });
+
+  it('deleteUser - Unauthorized', (done) => {
+    httpClient.deleteUser(base.citizenId)
+      .then(() => done('Deleting user should not work here'))
+      .catch((err) => {
+        if (err.message == 401) done();
+        else done(err);
+      });
+  });
+
   // Testing Terrain Page API
 
   it('getTerrainPage - OK', (done) => {
