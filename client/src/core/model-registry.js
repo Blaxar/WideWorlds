@@ -7,7 +7,7 @@ import RWXLoader, {
 } from 'three-rwx-loader';
 import {Mesh, Group, BufferGeometry, BufferAttribute, MeshBasicMaterial,
   SRGBColorSpace, TextureLoader, Color, CanvasTexture, BoxHelper,
-  LineBasicMaterial, RepeatWrapping} from 'three';
+  LineBasicMaterial, RepeatWrapping, Vector3} from 'three';
 import * as fflate from 'fflate';
 import {AWActionParser} from 'aw-action-parser';
 import formatSignLines, {makeSignHTML, makeSignCanvas} from './sign-utils.js';
@@ -30,6 +30,11 @@ const defaultBoxHelper = new BoxHelper(new Group(), defaultBoundingBoxColor);
 const normalizePropName = (name) =>
   name.match(/.+\.([a-zA-Z0-9]+)$/) ? name : name + '.rwx';
 const isUrl = (str) => /https?:\/\//.test(str);
+const clampShear = (value) => {
+  const SHEAR_MIN = -5.0;
+  const SHEAR_MAX = 5.0;
+  return Math.max(SHEAR_MIN, Math.min(SHEAR_MAX, value));
+};
 
 /**
  * Set bounding box on the input prop
@@ -219,6 +224,71 @@ class ModelRegistry {
   }
 
   /**
+   * Applies multiple volume-preserving skews to geometry.
+   * @param {BufferGeometry} geometry - The geometry to skew.
+   * @param {number} [p1] - Shear factor for Z from Y.
+   * @param {number} [p2] - Shear factor for X from Z.
+   * @param {number} [p3] - Shear factor for Y from X.
+   * @param {number} [p4] - Shear factor for Y from Z.
+   * @param {number} [p5] - Shear factor for Z from X.
+   * @param {number} [p6] - Shear factor for X from Y.
+   * @returns {BufferGeometry} newGeo - Newly computed geometry
+   */
+  applyShear(geometry, p1 = 0, p2 = 0, p3 = 0, p4 = 0, p5 = 0, p6 = 0) {
+    const shears = [
+      {target: 'z', source: 'y', factor: -clampShear(p1)},
+      {target: 'x', source: 'z', factor: clampShear(p2)},
+      {target: 'y', source: 'x', factor: -clampShear(p3)},
+      {target: 'y', source: 'z', factor: clampShear(p4)},
+      {target: 'z', source: 'x', factor: -clampShear(p5)},
+      {target: 'x', source: 'y', factor: clampShear(p6)},
+    ];
+
+    const axes = {x: 0, y: 1, z: 2};
+
+    for (const {target, source} of shears) {
+      if (!axes.hasOwnProperty(target) ||
+          !axes.hasOwnProperty(source) ||
+          target === source) {
+        console.warn('Invalid shear axis pair:', target, source);
+        return geometry;
+      }
+    }
+
+    const newGeo = geometry.clone();
+    newGeo.computeBoundingBox();
+
+    const center = new Vector3();
+    newGeo.boundingBox.getCenter(center);
+
+    const posAttr = newGeo.attributes.position;
+    const original = new Vector3();
+    const modified = new Vector3();
+
+    for (let i = 0; i < posAttr.count; i++) {
+      original.fromBufferAttribute(posAttr, i);
+      modified.copy(original);
+
+      for (const {target, source, factor} of shears) {
+        const tIdx = axes[target];
+        const sIdx = axes[source];
+        const offset = (
+          original.getComponent(sIdx) - center.getComponent(sIdx)
+        ) * factor;
+        modified.setComponent(tIdx, modified.getComponent(tIdx) + offset);
+      }
+
+      posAttr.setXYZ(i, modified.x, modified.y, modified.z);
+    }
+
+    posAttr.needsUpdate = true;
+    newGeo.computeVertexNormals();
+    newGeo.computeBoundingBox();
+
+    return newGeo;
+  }
+
+  /**
    * Apply action string to the given 3D prop
    * @param {Object3D} obj3d - 3D asset to apply the action string to.
    * @param {string} actionString - Content of the action string.
@@ -249,6 +319,7 @@ class ModelRegistry {
       scale: null,
       opacity: null,
       say: null,
+      shear: null,
     };
 
     let scenerySignature = '';
@@ -314,6 +385,10 @@ class ModelRegistry {
           create.rotate = action;
           break;
 
+        case 'shear':
+          create.shear = action;
+          break;
+
         default:
         // No action, we do nothing.
           break;
@@ -356,7 +431,7 @@ class ModelRegistry {
     if (obj3d.name === unknownObjectName) return;
 
     const {texture, color, solid, visible, picture, sign, scale, opacity,
-      say, move, rotate} = actions.create;
+      say, move, rotate, shear} = actions.create;
 
     for (const material of obj3d.material) {
       if (!material.userData.rwx) {
@@ -391,6 +466,21 @@ class ModelRegistry {
         boundingBox.scale.copy(scale.factor);
         boundingBox.material = scaledBoundingBoxMaterial;
       }
+
+      if (shear) {
+        // We don't change the bounding box, matching AW behaviour
+        const shearFactor = shear.axes;
+        obj3d.geometry = this.applyShear(
+            obj3d.geometry,
+            shearFactor.x1,
+            shearFactor.y1,
+            shearFactor.z1,
+            shearFactor.x2,
+            shearFactor.y2,
+            shearFactor.z2,
+        );
+      }
+
 
       if (opacity) rwxMaterial.opacity = opacity.value;
 
