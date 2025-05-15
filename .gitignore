@@ -8,3 +8,4 @@ prop*.txt
 elev*.txt
 worlds/
 terrain/
+*.patch

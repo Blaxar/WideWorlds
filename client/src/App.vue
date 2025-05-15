@@ -595,12 +595,17 @@ document.addEventListener('focusout', (event) => {
   someInputFocused = false;
 }, false);
 
+
 document.addEventListener('contextmenu', (event) => {
   if (someInputFocused) return;
-
+  let nearbySelect = false;
   if (isOverlay3D(event.target)) {
     getViewCoordinates(event, tmpVec2);
-    propsSelector.select(tmpVec2, main.propSettings.strafe);
+    // TODO Set Keybind for CTRL?
+    if (event?.ctrlKey && inputListener.getStrafeKey()) {
+      nearbySelect = true;
+    }
+    propsSelector.select(tmpVec2, main.propSettings.strafe, nearbySelect);
     event.preventDefault();
   }
 

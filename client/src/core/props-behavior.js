@@ -131,106 +131,147 @@ class PropsSelector {
   }
 
   /**
-   * Select a prop for building mode
-   * @param {Vector2} pointer - 2D Pointer for the raycaster.
-   * @param {boolean} add - True to add the newfound prop to the existing
-   *                        selection list, false (default) to clear the
-   *                        list first.
+   * Traverse up the object hierarchy to find the root prop object.
+   *
+   * @param {Object3D} object - The child object to start from.
+   * @returns {Object3D} The root object containing userData.prop,
+   *                           or the original object if none found.
    */
-  select(pointer, add = false) {
+  getRootPropObject(object) {
+    while (object && !object.userData?.prop && object.parent) {
+      object = object.parent;
+    }
+    return object;
+  }
+
+  /**
+  * Add a single root prop to the current selection list.
+  *
+  * @param {Object3D} rootProp - Root object representing the prop.
+  */
+  selectSingleProp(rootProp) {
+    const boundingBox = rootProp.getObjectByName(boundingBoxName)?.clone();
+    if (!boundingBox) return;
+
+    const {x, y, z} = rootProp.userData.prop;
+
+    const stagingProp = rootProp.clone();
+    stagingProp.visible = true;
+    stagingProp.position.set(x, y, z);
+
+    this.engine3d.appendToNode(this.stagingNode, stagingProp);
+    stagingProp.updateMatrix();
+
+    boundingBox.position.set(x, y, z);
+    boundingBox.rotation.copy(rootProp.rotation);
+    boundingBox.updateMatrix();
+    boundingBox.visible = true;
+    this.engine3d.addHelperObject(boundingBox);
+
+    this.props.push({prop: rootProp, stagingProp, boundingBox});
+  }
+
+  /**
+  * Select all props in the same chunk within a given radius.
+  *
+  * @param {Object3D} rootProp - Root prop used as center point.
+  * @param {number} radius - Distance (in meters) to include nearby props.
+  */
+  selectNearbyProps(baseProp) {
+    const chunkHandle = baseProp.userData.chunkNodeHandle;
+    if (!chunkHandle) return;
+
+    const chunkId = this.worldManager.chunkKeys.get(chunkHandle);
+    if (!chunkId) return;
+
+    // Find all props in the same chunk
+    // eslint-disable-next-line
+    for (const [propId, obj3d] of this.worldManager.props.entries()) {
+      if (
+        obj3d.userData.chunkNodeHandle === chunkHandle &&
+        obj3d !== baseProp &&
+        obj3d.visible
+      ) {
+        const alreadySelected = this.props.find(
+            ({stagingProp}) =>
+              stagingProp.userData.prop.id === obj3d.userData.prop.id,
+        );
+        if (!alreadySelected) {
+          this.selectSingleProp(obj3d);
+        }
+      }
+    }
+  }
+
+  /**
+    * Select a prop for building mode
+    * @param {Vector2} pointer - 2D Pointer for the raycaster.
+    * @param {boolean} add - True to add the newfound prop to the existing
+    *                        selection list, false (default) to clear the
+    *                        list first.
+    * @param {boolean} - True to select nearby objects, false (default) to
+    *                    do a regular object selection
+    */
+  select(pointer, add = false, multi = false) {
+    const selectionRadius = 1.0;
     let done = false;
 
-    this.clickRaycaster.setFromCamera(
-        pointer, this.engine3d.camera,
+    this.clickRaycaster.setFromCamera(pointer, this.engine3d.camera);
+
+    const intersects = this.clickRaycaster.intersectObjects(
+        this.engine3d.getSelectableNodes(),
+        true,
     );
 
-    const intersects =
-        this.clickRaycaster.intersectObjects(
-            this.engine3d.getSelectableNodes(), true,
-        );
-
     for (const intersect of intersects) {
-      if (intersect.object.parent &&
-          intersect.object.parent.name == pageAssetName) {
-        // Some terrain page has been selected, which is the equivalent
-        // of clicking into the void as far as the props-selector
-        // is concerned
-        if (!add) {
-          // If we're not in multiprop selection mode:
-          // commit the current content to the server
-          this.commitAndClear(false);
-        }
+      if (!validateIntersect(intersect, this.maxCastingDistance)) continue;
 
+      const rootProp = this.getRootPropObject(intersect.object);
+      const propData = rootProp.userData.prop;
+      console.log(rootProp, propData);
+
+      if (rootProp.parent?.name === pageAssetName) {
+        if (!add) this.commitAndClear(false);
         done = true;
         break;
       }
 
-      if (validateIntersect(intersect, this.maxCastingDistance)) {
-        // If the object was already selected: nothing to be done...
-        const foundPropId = this.props.findIndex(({stagingProp}) => {
-          return intersect.object.id === stagingProp.id;
-        });
+      const foundPropIndex = this.props.findIndex(
+          ({stagingProp}) => stagingProp.userData.prop.id === propData?.id,
+      );
 
-        if (foundPropId >= 0) {
-          if (add) {
-            // ... unless multiprop selection is on, then we deselect this
-            // single object and commit the changes for it.
-            this.commitAndClearSingle(foundPropId, false);
+      if (add) {
+        if (foundPropIndex >= 0) {
+          this.commitAndClearSingle(foundPropIndex, false);
+        } else {
+          this.selectSingleProp(rootProp);
+          if (multi) {
+            this.selectNearbyProps(rootProp, selectionRadius);
           }
-          done = true;
-          break;
         }
-
-        if (!add) {
-          // If we're not in multiprop selection mode:
-          // commit the current content to the server
-          this.commitAndClear(false);
-        }
-
-        // We expect the object to have pre-computed bounding box geometry
-        let boundingBox = intersect.object
-            .getObjectByName(boundingBoxName);
-        if (!boundingBox) continue;
-
-        const prop = boundingBox.parent;
-        boundingBox = boundingBox.clone();
-
-        const {x, y, z} = prop.userData.prop;
-
-        // Ready the staging prop
-        const stagingProp = prop.clone();
-        stagingProp.visible = true;
-        stagingProp.position.set(x, y, z);
-        stagingProp.userData['originalProp'] =
-            JSON.parse(JSON.stringify(prop.userData.prop));
-
-        this.engine3d.appendToNode(this.stagingNode, stagingProp);
-        stagingProp.updateMatrix();
-        prop.visible = false;
-
-        boundingBox.position.set(x, y, z);
-        boundingBox.rotation.copy(prop.rotation);
-        boundingBox.updateMatrix();
-        boundingBox.visible = true;
-        this.engine3d.addHelperObject(boundingBox);
-        this.props.push({prop, stagingProp, boundingBox});
-
-        // Outputting the object's data to the browser console
-        console.log(prop);
 
         done = true;
         break;
       }
+
+      if (!add) this.commitAndClear(false);
+      this.selectSingleProp(rootProp);
+      if (multi) {
+        this.selectNearbyProps(rootProp, selectionRadius);
+      }
+
+      done = true;
+      break;
     }
 
     this.updateArrows();
     this.notifyChange(this.props.length);
 
-    if (done) return;
-
-    // Clicked outside of a prop: commit everything
-    this.commitAndClear();
+    if (!done) {
+      this.commitAndClear();
+    }
   }
+
 
   /** Clear selected props list */
   clear() {
@@ -777,7 +818,7 @@ class PropsSelector {
     for (const {stagingProp, boundingBox} of this.props) {
       const {x, y, z, pitch, yaw, roll,
         name, action, description} =
-          stagingProp.userData.originalProp;
+          stagingProp.userData.parent;
       Object.assign(stagingProp.userData.prop,
           {x, y, z, pitch, yaw, roll,
             name, action, description});
