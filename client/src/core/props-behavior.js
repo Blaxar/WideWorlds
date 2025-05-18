@@ -195,12 +195,13 @@ class PropsSelector {
         const prop = boundingBox.parent;
         boundingBox = boundingBox.clone();
 
-        const {x, y, z} = prop.userData.prop;
+        const {x, y, z, pitch, yaw, roll} = prop.userData.prop;
 
         // Ready the staging prop
         const stagingProp = prop.clone();
         stagingProp.visible = true;
         stagingProp.position.set(x, y, z);
+        stagingProp.rotation.set(pitch, yaw, roll, 'YZX');
         stagingProp.userData['originalProp'] =
             JSON.parse(JSON.stringify(prop.userData.prop));
 
@@ -209,7 +210,7 @@ class PropsSelector {
         prop.visible = false;
 
         boundingBox.position.set(x, y, z);
-        boundingBox.rotation.copy(prop.rotation);
+        boundingBox.rotation.set(pitch, yaw, roll, 'YZX');
         boundingBox.updateMatrix();
         boundingBox.visible = true;
         this.engine3d.addHelperObject(boundingBox);
