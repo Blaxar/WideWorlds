@@ -127,6 +127,8 @@ class Engine3D {
     // Pre-allocate data for animations
     this.startPosition = new THREE.Vector3();
     this.endPosition = new THREE.Vector3();
+    this.tmpMat = new THREE.Matrix4();
+    this.tmpEul = new THREE.Euler();
     this.boundTreesToUpdate = new Set();
   }
 
@@ -590,8 +592,8 @@ class Engine3D {
             obj3d.rotation.set(0, facingAngle, 0);
             obj3d.updateMatrix();
           } else if (obj3d.userData.rotate) {
-            animateRotate(node, obj3d, now, this.startPosition,
-                this.endPosition);
+            animateRotate(node, obj3d, now, this.tmpEul,
+                this.endPosition, this.tmpMat);
 
             // TODO: find optimization to not trigger this as often
             this.boundTreesToUpdate.add(id);

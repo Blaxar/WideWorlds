@@ -367,16 +367,16 @@ function animateMove(node, obj3d, now, startPosition, endPosition) {
  * @param {Object3D} obj3d - Target object.
  * @param {number} now - Timestamp (ms) of the current point in
  *                       time.
- * @param {Vector3} startRotation - Starting rotation of the object.
+ * @param {Euler} rotation - Pre-allocated rotation object.
  * @param {Vector3} speedRotation - Speed rotation of the object in
  *                                  rounds per minute.
+ * @param {Matrix4} transform - Pre-allocated transformation matrix.
  */
-function animateRotate(node, obj3d, now, startRotation, speedRotation) {
+function animateRotate(node, obj3d, now, rotation, speedRotation, transform) {
   const {x, y, z} = obj3d.userData.rotate.speed;
-  startRotation.set(obj3d.userData.prop.pitch,
-      obj3d.userData.prop.yaw,
-      obj3d.userData.prop.roll);
   speedRotation.set(x, y, z);
+
+  obj3d.updateMatrix();
 
   let elapsedMs = obj3d.userData.rotate.sync ?
       now : now - node.userData.appeared;
@@ -389,14 +389,15 @@ function animateRotate(node, obj3d, now, startRotation, speedRotation) {
     elapsedMs = timeMs * progress;
   }
 
-  obj3d.rotation.set(
-      startRotation.x + (speedRotation.x / 60000.0) * elapsedMs * twoPi,
-      startRotation.y + (speedRotation.y / 60000.0) * elapsedMs * twoPi,
-      startRotation.z + (speedRotation.z / 60000.0) * elapsedMs * twoPi,
+  rotation.set(
+      (speedRotation.x / 60000.0) * elapsedMs * twoPi,
+      (speedRotation.y / 60000.0) * elapsedMs * twoPi,
+      (speedRotation.z / 60000.0) * elapsedMs * twoPi,
       'YXZ',
   );
+  transform.makeRotationFromEuler(rotation);
 
-  obj3d.updateMatrix();
+  obj3d.matrix.multiply(transform);
 }
 
 /**
