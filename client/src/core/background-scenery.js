@@ -3,7 +3,7 @@
  */
 
 import {InstancedMesh, Matrix4, Group} from 'three';
-import {flattenGroup} from 'three-rwx-loader';
+import {flattenGroup, scaleGroupName} from 'three-rwx-loader';
 
 const startCount = 32;
 const minimumCountThreshold = 16;
@@ -140,7 +140,8 @@ class BackgroundScenery {
       }
     } else {
       // Make one single mesh
-      const flat = obj3d.isMesh ? obj3d : flattenGroup(obj3d);
+      const flat = obj3d.isMesh ? obj3d :
+          flattenGroup(obj3d.getObjectByName(scaleGroupName) || obj3d);
 
       // Flatten geometry, make it and instanced mesh.
       const mesh = new InstancedMesh(flat.geometry, flat.material, startCount);

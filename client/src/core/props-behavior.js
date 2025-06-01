@@ -23,16 +23,27 @@ const verySmallRotationAngle = Math.PI / 1800.0; // Tenth of a degree
  * @param {number} maxDistance - Maximum casting distance (in meters)
  *                               beyond which the candidate will be
  *                               dismissed.
- * @return {boolean} True if the candidate is a valid prop for
- *                   selection, false otherwise.
+ * @return {Object3D} Top-level object instance of the selected prop,
+ *                    null if none found.
  */
 function validateIntersect(intersect, maxDistance) {
-  return intersect.distance < maxDistance &&
-    intersect.object.name.length > 0 &&
-    intersect.object.name != boundingBoxName &&
-    intersect.object.visible &&
-    intersect.object.userData.prop &&
-    intersect.object.parent.visible;
+  // If the prop is not flatten (Mesh instance) and instead
+  // has its full clump hierarchy (Group instance) then the
+  // parents need to be traversed up to find the top level
+  let obj3d = intersect.object;
+  while (obj3d.name != boundingBoxName && !obj3d.userData.prop &&
+      obj3d.parent) {
+    obj3d = obj3d.parent;
+  }
+
+  if (intersect.distance < maxDistance &&
+      obj3d.name.length > 0 &&
+      obj3d.name != boundingBoxName &&
+      obj3d.visible &&
+      obj3d.userData.prop &&
+      obj3d.parent.visible) return obj3d;
+
+  return null;
 };
 
 /** Handle props selection */
@@ -120,10 +131,11 @@ class PropsSelector {
         );
 
     for (const intersect of intersects) {
-      if (validateIntersect(intersect, this.maxCastingDistance)) {
+      const obj3d = validateIntersect(intersect, this.maxCastingDistance);
+      if (obj3d) {
         // Fetch prop description (if any) to return it as alt text to
         // display
-        return intersect.object.userData.prop.description;
+        return obj3d.userData.prop.description;
       }
     }
 
@@ -165,10 +177,11 @@ class PropsSelector {
         break;
       }
 
-      if (validateIntersect(intersect, this.maxCastingDistance)) {
+      const obj3d = validateIntersect(intersect, this.maxCastingDistance);
+      if (obj3d) {
         // If the object was already selected: nothing to be done...
         const foundPropId = this.props.findIndex(({stagingProp}) => {
-          return intersect.object.id === stagingProp.id;
+          return obj3d.id === stagingProp.id;
         });
 
         if (foundPropId >= 0) {
@@ -188,8 +201,7 @@ class PropsSelector {
         }
 
         // We expect the object to have pre-computed bounding box geometry
-        let boundingBox = intersect.object
-            .getObjectByName(boundingBoxName);
+        let boundingBox = obj3d.getObjectByName(boundingBoxName);
         if (!boundingBox) continue;
 
         const prop = boundingBox.parent;

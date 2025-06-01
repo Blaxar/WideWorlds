@@ -3,11 +3,11 @@
  */
 
 import RWXLoader, {
-  RWXMaterialManager, pictureTag, signTag, defaultAlphaTest,
+  RWXMaterialManager, pictureTag, signTag, defaultAlphaTest, firstClumpName,
 } from 'three-rwx-loader';
 import {Mesh, Group, BufferGeometry, BufferAttribute, MeshBasicMaterial,
   SRGBColorSpace, TextureLoader, Color, CanvasTexture, BoxHelper,
-  LineBasicMaterial, RepeatWrapping} from 'three';
+  LineBasicMaterial, RepeatWrapping, Matrix4} from 'three';
 import * as fflate from 'fflate';
 import {AWActionParser} from 'aw-action-parser';
 import formatSignLines, {makeSignHTML, makeSignCanvas} from './sign-utils.js';
@@ -32,11 +32,22 @@ const normalizePropName = (name) =>
 const isUrl = (str) => /https?:\/\//.test(str);
 
 /**
+ * Dispose of all the prop's associated data
+ * @param {Object3D} obj3d - Prop to dispose of.
+ */
+function disposeOfProp(obj3d) {
+  const boundingBox = obj3d.getObjectByName(boundingBoxName);
+
+  boundingBox?.dispose();
+}
+
+/**
  * Set bounding box on the input prop
  * @param {Object3D} rwx - Prop to set the bounding box on.
  */
 function setBoundingBox(rwx) {
   // Add bounding box
+
   const boxHelper = defaultBoxHelper.clone();
   boxHelper.geometry = boxHelper.geometry.clone();
   boxHelper.setFromObject(rwx);
@@ -118,7 +129,7 @@ class ModelRegistry {
 
     this.loader = (new RWXLoader(loadingManager))
         .setRWXMaterialManager(this.materialManager)
-        .setPath(path).setFlatten(true);
+        .setPath(path).setFlatten(false);
     this.basicLoader = (new RWXLoader(loadingManager))
         .setRWXMaterialManager(this.basicMaterialManager)
         .setPath(path).setFlatten(true);
@@ -224,11 +235,61 @@ class ModelRegistry {
    * @param {string} actionString - Content of the action string.
    */
   applyActionString(obj3d, actionString) {
+    const shearMat = new Matrix4();
     const {actions, scenerySignature} =
-      this.parseActions(actionString, obj3d.userData.prop?.description);
-    this.applyActionsRecursive(obj3d, actions);
+        this.parseActions(actionString, obj3d.userData.prop?.description);
+
+    this.applyActionsRecursive(
+        obj3d.getObjectByName(firstClumpName) || obj3d,
+        actions, obj3d.userData,
+    );
     obj3d.userData.scenerySignature = scenerySignature;
-    return;
+
+    const boundingBox = obj3d.getObjectByName(boundingBoxName);
+
+    // Nothing else to do, just return identity matrix
+    if (!actions.create) return shearMat;
+
+    const {scale, shear, move, rotate, visible, say} = actions.create;
+
+    obj3d.userData.move = move || undefined;
+
+    obj3d.userData.rotate = rotate || undefined;
+
+    obj3d.visible = visible;
+    obj3d.userData.invisible = !visible;
+
+    if (say) {
+      obj3d.userData.say = say.text;
+    }
+
+    if (scale) {
+      obj3d.scale.set(
+          scale.factor.x,
+          scale.factor.y,
+          scale.factor.z,
+      );
+      boundingBox.scale.set(
+          scale.factor.x,
+          scale.factor.y,
+          scale.factor.z,
+      );
+      boundingBox.material = scaledBoundingBoxMaterial;
+      boundingBox.needsUpdate = true;
+    }
+
+    if (shear) {
+      shearMat.makeShear(
+          shear.axes.z1, // changes Y along X
+          -shear.axes.y2, // changes Z along X
+          -shear.axes.z2, // changes X along Y
+          shear.axes.x1, // changes Z along Y
+          shear.axes.y1, // changes X along Z
+          -shear.axes.x2, // changes Y along Z
+      );
+    }
+
+    return shearMat;
   }
 
   /**
@@ -302,6 +363,10 @@ class ModelRegistry {
           create.scale = action;
           break;
 
+        case 'shear':
+          create.shear = action;
+          break;
+
         case 'opacity':
           create.opacity = action;
           break;
@@ -324,26 +389,65 @@ class ModelRegistry {
   }
 
   /**
+   * Recursively apply transformation matrix without altering base
+   * components (position, rotation, and scale), it is mostly
+   * intended for shearing (the way AW does it).
+   *
+   * This is meant to be called only after {@link updateMatrix}, otherwise
+   * those changes will be dismissed.
+   * @param {Object3D} obj3d - 3D asset to apply the transformation to.
+   * @param {Matrix4} transform - Transformation matrix.
+   */
+  transformRecursive(obj3d, transform) {
+    if (obj3d.isMesh) {
+      obj3d.matrixAutoUpdate = false;
+      obj3d.matrix.multiply(transform);
+      obj3d.matrixWorldNeedsUpdate = true;
+    } else {
+      this.transformRecursiveImpl(obj3d, transform);
+    }
+  }
+
+  /**
+   * For internal use by {@transform}
+   *
+   * @param {Object3D} obj3d - 3D asset to apply the transformation to.
+   * @param {Matrix4} transform - Transformation matrix.
+   */
+  transformRecursiveImpl(obj3d, transform, name) {
+    // We are dealing with a group, this means we must
+    // perform a recursive call to its children
+    obj3d.matrixAutoUpdate = false;
+    if (obj3d.isGroup) obj3d.matrix.multiply(transform);
+    obj3d.matrixWorldNeedsUpdate = true;
+
+    for (const child of obj3d.children) {
+      this.transformRecursiveImpl(child, transform);
+    }
+  }
+
+  /**
    * Recursively apply parsed action commands to the given 3D prop,
    * for internal use by {@link applyActionString}
    * @param {Object3D} obj3d - 3D asset to apply the action string to.
    * @param {Object} actions - Parsed action commands.
+   * @param {Object} obj3dUserData - userData of obj3d.
    */
-  applyActionsRecursive(obj3d, actions) {
+  applyActionsRecursive(obj3d, actions, obj3dUserData) {
     // Only deal with 'create' actions for the moment
     if (!actions.create) return;
 
-    const boundingBox = obj3d.getObjectByName(boundingBoxName);
-    if (obj3d instanceof Group) {
+    if (obj3d.isGroup) {
       // We are dealing with a group, this means we must
       // perform a recursive call to its children
 
-      for (const child of actions.children) {
-        this.applyActionsRecursive(child, actions);
+      for (const child of obj3d.children) {
+        this.applyActionsRecursive(child, actions, obj3dUserData);
       }
 
       return;
-    } else if (!(obj3d instanceof Mesh)) {
+    } else if (!(obj3d.isMesh)) {
+      return;
       // If the object is neither a Group nor a Mesh, then it's invalid
       throw new Error('Invalid object type provided for action parsing');
     }
@@ -355,8 +459,7 @@ class ModelRegistry {
     // This is a placeholder object, nothing to do
     if (obj3d.name === unknownObjectName) return;
 
-    const {texture, color, solid, visible, picture, sign, scale, opacity,
-      say, move, rotate} = actions.create;
+    const {texture, color, solid, picture, sign, opacity} = actions.create;
 
     for (const material of obj3d.material) {
       if (!material.userData.rwx) {
@@ -369,12 +472,12 @@ class ModelRegistry {
       if (texture) {
         if (texture?.resource) {
           rwxMaterial.texture = isUrl(texture.resource) ? this.imageService +
-              texture.resource : texture.resource;
+            texture.resource : texture.resource;
         }
 
         if (texture?.mask) {
           rwxMaterial.mask = isUrl(texture.mask) ? this.imageService +
-              texture.mask : texture.mask;
+            texture.mask : texture.mask;
         }
 
         materialChanged = true;
@@ -386,32 +489,19 @@ class ModelRegistry {
         // Nothing.
       }
 
-      if (scale) {
-        obj3d.scale.copy(scale.factor);
-        boundingBox.scale.copy(scale.factor);
-        boundingBox.material = scaledBoundingBoxMaterial;
-      }
-
       if (opacity) rwxMaterial.opacity = opacity.value;
 
+      obj3d.userData.rwx = obj3d.userData.rwx || {};
       obj3d.userData.rwx.solid = solid;
-      obj3d.visible = visible;
-      obj3d.userData.invisible = !visible;
-      if (say) {
-        obj3d.userData.say = say.text;
-      }
-
-      obj3d.userData.move = move || undefined;
-
-      obj3d.userData.rotate = rotate || undefined;
 
       const lastMatId = materials.length;
 
       // Check if we need to apply a picture
       // and if said picture can be applied here to begin with...
 
-      if (picture?.resource && obj3d.userData.taggedMaterials[pictureTag]
-          ?.includes(lastMatId)) {
+      if (picture?.resource && obj3d.userData.taggedMaterials &&
+          obj3d.userData.taggedMaterials[pictureTag]
+              ?.includes(lastMatId)) {
         const url = this.imageService + picture.resource;
         // Doing the above ensures us the new array of materials
         // will be updated, so if a picture is applied:
@@ -434,8 +524,9 @@ class ModelRegistry {
 
       // Check if we need to apply a sign
       // and if said sign can be applied here to begin with...
-      if (sign && obj3d.userData.taggedMaterials[signTag]
-          ?.includes(lastMatId)) {
+      if (sign && obj3d.userData.taggedMaterials &&
+          obj3d.userData.taggedMaterials[signTag]
+              ?.includes(lastMatId)) {
         materialChanged = true;
 
         materials[lastMatId] = materials[lastMatId].clone();
@@ -525,4 +616,4 @@ class ModelRegistry {
 
 export default ModelRegistry;
 export {normalizePropName, unknownObjectName, boundingBoxName,
-  makePlaceholderMesh};
+  makePlaceholderMesh, disposeOfProp};

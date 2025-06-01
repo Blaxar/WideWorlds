@@ -15,7 +15,9 @@ import {makePagePlane as makeWaterPagePlane,
   adjustPageEdges as adjustWaterPageEdges, loadWaterMaterials}
   from './water-utils.js';
 import {Vector3, Color, MathUtils, TextureLoader, Group} from 'three';
+import {firstClumpName} from 'three-rwx-loader';
 import {userFeedPriority} from './user-feed.js';
+import {disposeOfProp} from './model-registry.js';
 
 const chunkCacheBatchSize = 100;
 
@@ -30,7 +32,7 @@ const pageLoadingPattern = [[-1, -1], [0, -1], [1, -1],
 // Ignore non-solid props when computing bounds tree for collision detection
 const chunkNodeColliderFilter =
     (obj3d) => obj3d.userData.rwx?.solid === undefined ||
-        obj3d.userData.rwx.solid === true;
+      obj3d.userData.rwx.solid === true;
 
 const twoPi = 2*Math.PI;
 const maxLoadingAttempts = 4;
@@ -419,6 +421,7 @@ class WorldManager {
               oldObj3d);
 
           oldObj3d.removeFromParent();
+          disposeOfProp(oldObj3d);
 
           // Spawn a new one update it
           const newObj3d = await modelRegistry.get(value.name);
@@ -439,6 +442,7 @@ class WorldManager {
               obj3d);
           this.sceneryUpdater.unset(obj3d);
           obj3d.removeFromParent();
+          disposeOfProp(obj3d);
           this.props.delete(id);
         }
       }
@@ -1358,13 +1362,17 @@ class WorldManager {
     const {chunkPos, chunkNodeHandle} = chunkAnchor ? chunkAnchor :
         this.getChunkAnchor(cX, cZ);
 
+    obj3d.matrixAutoUpdate = false;
     obj3d.position.set(prop.x - chunkPos.x, prop.y,
         prop.z - chunkPos.z);
     obj3d.rotation.set(prop.pitch, prop.yaw, prop.roll, 'YZX');
     obj3d.userData.prop = prop;
 
+    let shearMat = null;
+
     try {
-      this.currentModelRegistry.applyActionString(obj3d, prop.action);
+      shearMat =
+          this.currentModelRegistry.applyActionString(obj3d, prop.action);
 
       if (obj3d.userData?.say) {
         this.userFeed.publish(
@@ -1391,8 +1399,14 @@ class WorldManager {
 
     obj3d.userData.chunkNodeHandle = chunkNodeHandle;
 
-    obj3d.matrixAutoUpdate = false;
     obj3d.updateMatrix();
+
+    if (shearMat) {
+      this.currentModelRegistry.transformRecursive(
+          obj3d.getObjectByName(firstClumpName) || obj3d,
+          shearMat, obj3d.userData?.prop?.name || 'unknown',
+      );
+    }
 
     this.props.set(prop.id, obj3d);
 

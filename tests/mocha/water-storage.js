@@ -135,7 +135,7 @@ describe('WaterStorage', () => {
     const page = await waterStorage.getPage(1, 2);
     const packedElevationData = packElevationData(page);
 
-    // Expecting Uint8Array with endian cue at the begining
+    // Expecting Uint8Array with endian cue at the beginning
     assert.strictEqual(packedElevationData.length, pageSize * 2 + 2);
     assert.strictEqual(new Uint16Array(packedElevationData.buffer)[0], 0x1144);
 

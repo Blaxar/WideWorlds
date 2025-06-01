@@ -182,7 +182,7 @@ describe('TerrainStorage', () => {
     const page = await terrainStorage.getPage(1, 2);
     const packedElevationData = packElevationData(page.elevationData);
 
-    // Expecting Uint8Array with endian cue at the begining
+    // Expecting Uint8Array with endian cue at the beginning
     assert.strictEqual(packedElevationData.length, pageSize * 2 + 2);
     assert.strictEqual(new Uint16Array(packedElevationData.buffer)[0], 0x1144);
 

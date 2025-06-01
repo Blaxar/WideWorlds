@@ -40,7 +40,7 @@
   },
   "homepage": "https://github.com/Blaxar/WideWorlds#readme",
   "dependencies": {
-    "aw-action-parser": "npm:@blaxar/aw-action-parser@^1.1.12",
+    "aw-action-parser": "npm:@blaxar/aw-action-parser@^1.1.14",
     "aw-sequence-parser": "^0.4.2",
     "awcoordinates": "^0.5.5",
     "cors": "^2.8.5",
@@ -57,7 +57,7 @@
     "sqlite3": "^5.1.7",
     "three": ">=0.172.0",
     "three-mesh-bvh": "^0.9.0",
-    "three-rwx-loader": "^0.12.4",
+    "three-rwx-loader": "^0.13.2",
     "typeorm": "^0.3.20",
     "vue": "^3.5.13",
     "ws": "^8.18.0",

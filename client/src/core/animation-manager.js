@@ -239,12 +239,12 @@ function animateEntityExp(node, hash, progress, animationManager) {
  * @param {boolean} data.reset - Whether or not to reset the animation,
  *                               true means the animation will only play
  *                               forward and immeditaly wrap back at the
- *                               begining upon reaching the end.
+ *                               beginning upon reaching the end.
  * @param {number} data.time - Number of seconds for the animation to
  *                             complete one-way.
  * @param {number} data.wait - Number of seconds for the animation to
  *                             wait when reaching one end.
- * @param {number} start - Timestamp (ms) marking the begining
+ * @param {number} start - Timestamp (ms) marking the beginning
  *                         of the animation, this will be ignored
  *                         if sync is set to true.
  * @param {boolean} allowInfiniteWait - Whether or not to allow infinite
@@ -271,7 +271,7 @@ function computeActionProgress({loop, sync, reset, time, wait},
 
   // The 'wait' value means the object will wait at both ends
   // of the movement, unless we're in a reset setting then it only
-  // waits at the begining, as it will warp back to the begining
+  // waits at the beginning, as it will warp back to the beginning
   // when reaching the end (instead of progressively moving back)
 
   const totalDuration = ((wait !== Infinity ? wait : 0) + time) *
@@ -304,7 +304,7 @@ function computeActionProgress({loop, sync, reset, time, wait},
   // Determine if the object is meant to be moving right now
   if (reset) {
     if (progress < waitingRatio) {
-      // Waiting at the begining
+      // Waiting at the beginning
       progress = 0;
     } else if (progress < waitingRatio + animationRatio) {
       // Traveling forward
@@ -326,7 +326,7 @@ function computeActionProgress({loop, sync, reset, time, wait},
       progress *= 1 / (1 - waitingRatio - halfAnimationRatio);
       progress = 1 - progress;
     } else {
-      // Waiting at the begining
+      // Waiting at the beginning
       progress = 0;
     }
   }
