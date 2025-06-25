@@ -184,6 +184,104 @@ function registerPropsEndpoints(app, authenticate, connection, ctx) {
         });
   });
 
+  /**
+   * @openapi
+   * components:
+   *   schemas:
+   *     Prop:
+   *       type: object
+   *       properties:
+   *         id:
+   *           description: ID of the prop
+   *           type: integer
+   *         wid:
+   *           description: ID of the world the prop belongs to
+   *           type: integer
+   *         uid:
+   *           description: ID of the user the prop belongs to
+   *           type: integer
+   *         date:
+   *           description: Creation/modification timestamp (ms) of the prop
+   *           type: integer
+   *         x:
+   *           description: X coordinate of the prop (in meters)
+   *           type: number
+   *         y:
+   *           description: Y coordinate of the prop (in meters)
+   *           type: number
+   *         z:
+   *           description: Z coordinate of the prop (in meters)
+   *           type: number
+   *         ya:
+   *           description: Yaw of the prop (in radians)
+   *           type: number
+   *         pi:
+   *           description: Pitch of the prop (in radians)
+   *           type: number
+   *         ro:
+   *           description: Roll of the prop (in radians)
+   *           type: number
+   *         name:
+   *           description: Model name of the prop
+   *           type: string
+   *         desc:
+   *           description: Description of the prop
+   *           type: string
+   *         act:
+   *           description: Action field of the prop
+   *           type: string
+   */
+
+  /**
+   * @openapi
+   * /api/worlds/{worldId}/props:
+   *   put:
+   *     description: Update props on a world
+   *     operationId: put-props
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: worldId
+   *         schema:
+   *           type: integer
+   *         required: true
+   *         description: Numeric ID of the world to update props on
+   *     requestBody:
+   *       description: Array of props to update
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: array
+   *             items:
+   *               $ref: '#/components/schemas/Prop'
+   *     responses:
+   *       200:
+   *         description: |
+   *           Array of results matching each prop from the request \
+   *           array: `null` means the prop was not found, `true` \
+   *           means the prop was succesfully updated and `false` \
+   *           means the prop was not updated due to permission \
+   *           issues
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: array
+   *               items:
+   *                 schema:
+   *                   type: boolean
+   *                   nullable: true
+   *       401:
+   *         description: Authentication required
+   *       403:
+   *         description: Action not allowed for this user, admin level
+   *                      required
+   *       404:
+   *         description: World not found given the provided ID
+   *       500:
+   *         description: Internal error
+   */
   app.put('/api/worlds/:id/props', authenticate, (req, res) => {
     res.setHeader('Content-Type', 'application/json');
 
@@ -281,6 +379,55 @@ function registerPropsEndpoints(app, authenticate, connection, ctx) {
         });
   });
 
+  /**
+   * @openapi
+   * /api/worlds/{worldId}/props:
+   *   post:
+   *     description: Create props on a world
+   *     operationId: post-props
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: worldId
+   *         schema:
+   *           type: integer
+   *         required: true
+   *         description: Numeric ID of the world to create props on
+   *     requestBody:
+   *       description: Array of props to create
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: array
+   *             items:
+   *               $ref: '#/components/schemas/Prop'
+   *     responses:
+   *       200:
+   *         description: |
+   *           Array of results matching each prop from the request \
+   *           array: `null` means the prop data payload was invalid, \
+   *           `true` means the prop was succesfully updated and \
+   *           `false` means the prop was not created due to \
+   *           permission issues
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: array
+   *               items:
+   *                 schema:
+   *                   type: boolean
+   *                   nullable: true
+   *       401:
+   *         description: Authentication required
+   *       403:
+   *         description: (TODO) Action not allowed for this user
+   *       404:
+   *         description: World not found given the provided ID
+   *       500:
+   *         description: Internal error
+   */
   app.post('/api/worlds/:id/props', authenticate, (req, res) => {
     res.setHeader('Content-Type', 'application/json');
 
@@ -376,6 +523,55 @@ function registerPropsEndpoints(app, authenticate, connection, ctx) {
         });
   });
 
+  /**
+   * @openapi
+   * /api/worlds/{worldId}/props:
+   *   delete:
+   *     description: Delete props from a world
+   *     operationId: delete-props
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: worldId
+   *         schema:
+   *           type: integer
+   *         required: true
+   *         description: Numeric ID of the world to delete props from
+   *     requestBody:
+   *       description: Array of prop IDs to delete
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: array
+   *             items:
+   *               type: integer
+   *     responses:
+   *       200:
+   *         description: |
+   *           Array of results matching each prop from the request \
+   *           array: `null` means the prop does not exist, `true`\
+   *           means the prop was succesfully deleted and `false` \
+   *           means the prop was not deleted due to permission \
+   *           issues
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: array
+   *               items:
+   *                 schema:
+   *                   type: boolean
+   *                   nullable: true
+   *       401:
+   *         description: Authentication required
+   *       403:
+   *         description: (TODO) Action not allowed for this user
+   *       404:
+   *         description: World not found given the provided ID
+   *       500:
+   *         description: Internal error
+   */
   app.delete('/api/worlds/:id/props', authenticate, (req, res) => {
     res.setHeader('Content-Type', 'application/json');
 
