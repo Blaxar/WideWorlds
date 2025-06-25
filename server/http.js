@@ -77,7 +77,6 @@ const spawnHttpServer = async (path, port, secret, worldFolder, userCache,
      * /api/login:
      *   post:
      *     description: Authenticate a user based on the provided credentials
-     *     summary: Submit credentials to get an authentication token
      *     operationId: login
      *     requestBody:
      *       description: Credentials for user authentication
@@ -88,8 +87,12 @@ const spawnHttpServer = async (path, port, secret, worldFolder, userCache,
      *             properties:
      *               username:
      *                 description: Username in plain text
+     *                 type: string
+     *                 example: John
      *               password:
      *                 description: Password in plain text
+     *                 type: string
+     *                 example: p.4SsW0r-*D
      *     responses:
      *       200:
      *         description: Successful authentication
@@ -98,6 +101,7 @@ const spawnHttpServer = async (path, port, secret, worldFolder, userCache,
      *             schema:
      *               properties:
      *                 token:
+     *                   type: string
      *                   description: Authentication token
      *       401:
      *         description: Invalid credentials
@@ -162,7 +166,6 @@ const spawnHttpServer = async (path, port, secret, worldFolder, userCache,
      *         $ref: '#/components/schemas/World'
      *
      */
-
 
     /**
      * @openapi

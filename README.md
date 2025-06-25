@@ -1,5 +1,9 @@
 # WideWorlds
 
+Metaverse accessible from your favorite web browser, in the steps of Active Worlds.
+
+HTTP API documentation is available [here](https://blaxar.github.io/WideWorlds).
+
 ## Working on it
 
 The simplest way to work on this project is to run the _Node.js_ server for the http/ws backend and _Vite_ to build and serve the _Vue.js_ frontend on the fly.
