@@ -100,9 +100,20 @@ const spawnHttpServer = async (path, port, secret, worldFolder, userCache,
      *           application/json:
      *             schema:
      *               properties:
+     *                 id:
+     *                   type: integer
+     *                   description: ID of the user
+     *                   example: 3247
+     *                 role:
+     *                   type: string
+     *                   description: |
+     *                     Role of the user, can be one of `admin`, \
+     *                     `citizen` or `tourist`
+     *                   example: citizen
      *                 token:
      *                   type: string
      *                   description: Authentication token
+     *                   example: eyJhbGciOiJ...kVUQjE
      *       401:
      *         description: Invalid credentials
      *       500:
@@ -152,12 +163,15 @@ const spawnHttpServer = async (path, port, secret, worldFolder, userCache,
      *         id:
      *           description: ID of the world
      *           type: integer
+     *           example: 3247
      *         name:
-     *           description: Displayable name for the world
+     *           description: Displayable name of the world
      *           type: string
+     *           example: Natura
      *         data:
      *           description: Data dictionary of the world
      *           type: object
+     *           example: { "name": "Natura", "path": "https://mydomain.com/aw/path" }
      *
      *     AllWorlds:
      *       type: array
@@ -481,16 +495,21 @@ const spawnHttpServer = async (path, port, secret, worldFolder, userCache,
      *         id:
      *           description: ID of the user
      *           type: integer
+     *           example: 3247
      *         name:
-     *           description: Displayable name of the user
+     *           description: Name of the user
      *           type: string
+     *           example: johndoe
      *         email:
      *           description: Email address bound to this user account
      *           type: string
+     *           example: john.doe@domain.com
      *         role:
-     *           description: Role of the user, can be one of `admin`,
-     *                        `citizen` or `tourist`
+     *           description: |
+     *             Role of the user, can be one of `admin`, `citizen` or \
+     *             `tourist`
      *           type: string
+     *           example: citizen
      *
      *     AllUsers:
      *       type: array
@@ -618,7 +637,7 @@ const spawnHttpServer = async (path, port, secret, worldFolder, userCache,
      *         - password
      *       properties:
      *         name:
-     *           description: Displayable name of the user
+     *           description: Name of the user
      *           type: string
      *         email:
      *           description: Email address bound to this user account
@@ -738,15 +757,19 @@ const spawnHttpServer = async (path, port, secret, worldFolder, userCache,
      *       type: object
      *       properties:
      *         name:
-     *           description: Displayable name of the user
+     *           description: Name of the user
      *           type: string
+     *           example: johndoe
      *         email:
      *           description: Email address bound to this user account
      *           type: string
+     *           example: john.doe@domain.com
      *         role:
-     *           description: Role of the user, can be one of `admin`,
-     *                        `citizen` or `tourist`
+     *           description: |
+     *             Role of the user, can be one of `admin`, `citizen` or \
+     *             `tourist`
      *           type: string
+     *           example: citizen
      *         password:
      *           description: Password of the user in clear text, will be stored
      *                        hashed and salted.

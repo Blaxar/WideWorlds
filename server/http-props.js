@@ -194,42 +194,55 @@ function registerPropsEndpoints(app, authenticate, connection, ctx) {
    *         id:
    *           description: ID of the prop
    *           type: integer
+   *           example: 13257
    *         wid:
    *           description: ID of the world the prop belongs to
    *           type: integer
+   *           example: 2
    *         uid:
    *           description: ID of the user the prop belongs to
    *           type: integer
+   *           example : 321
    *         date:
    *           description: Creation/modification timestamp (ms) of the prop
    *           type: integer
+   *           example: 1751733868025
    *         x:
    *           description: X coordinate of the prop (in meters)
    *           type: number
+   *           example: 215
    *         y:
    *           description: Y coordinate of the prop (in meters)
    *           type: number
+   *           example: 10.2
    *         z:
    *           description: Z coordinate of the prop (in meters)
    *           type: number
+   *           example: 8915.12
    *         ya:
    *           description: Yaw of the prop (in radians)
    *           type: number
+   *           example: 3.1415
    *         pi:
    *           description: Pitch of the prop (in radians)
    *           type: number
+   *           example: 0.0162
    *         ro:
    *           description: Roll of the prop (in radians)
    *           type: number
+   *           example: 0
    *         name:
    *           description: Model name of the prop
    *           type: string
+   *           example: sign1.rwx
    *         desc:
    *           description: Description of the prop
    *           type: string
+   *           example: John's Shack
    *         act:
    *           description: Action field of the prop
    *           type: string
+   *           example: create sign;
    */
 
   /**
