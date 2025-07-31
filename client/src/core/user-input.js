@@ -103,10 +103,22 @@ class SubjectBehavior {
   }
 
   /**
-   * To be overriden, update subject based input commands
-   * @param {number} delta - Elapsed number of seconds since last call.
+   * @typedef UserInputEvent
+   * @type {object}
+   * @property {string} name - Name of the command.
+   * @property {boolean} pressed - True if the command key/button is pressed,
+   *                               false is released.
+   * @property {number} delta - Elapsed number of seconds since the last
+   *                            {@link step} call.
    */
-  step(delta) {} // override this in a subclass
+
+  /**
+   * To be overridden, update subject-based input commands
+   * @param {number} delta - Elapsed number of seconds since last call.
+   * @param {UserInputEvent[]} buffer - List on user input events since last
+   *                                    {@link step} call.
+   */
+  step(delta, buffer = []) {} // override this in a subclass
 }
 
 /**
@@ -125,6 +137,8 @@ class UserInputListener {
     this.subjectBehavior = null;
     this.subjectType = null;
     this.bindingListeners = [];
+    this.buffer = [];
+    this.lastStep = Date.now();
 
     this.bindAllKeys(keyBindings);
 
@@ -273,6 +287,12 @@ class UserInputListener {
     for (const name of UserInput) {
       if ( this[`${name}Key`] === key) {
         this[`${name}Pressed`] = true;
+
+        // Commit the event to the buffer
+        this.buffer.push(
+            {name, pressed: true, delta: (Date.now() - this.lastStep) * 0.001},
+        );
+
         break;
       }
     }
@@ -286,6 +306,12 @@ class UserInputListener {
     for (const name of UserInput) {
       if (this[`${name}Key`] === key) {
         this[`${name}Pressed`] = false;
+
+        // Commit the event to the buffer
+        this.buffer.push(
+            {name, pressed: false, delta: (Date.now() - this.lastStep) * 0.001},
+        );
+
         break;
       }
     }
@@ -296,6 +322,8 @@ class UserInputListener {
    * @param {number} delta - Amount of seconds elapsed since last update.
    */
   step(delta) {
+    const now = Date.now();
+
     if (this.subjectBehavior) {
       for (const name of UserInput) {
         if (this[`${name}Pressed`]) {
@@ -305,7 +333,11 @@ class UserInputListener {
         }
       }
 
-      this.subjectBehavior.step(delta);
+      this.subjectBehavior.step(delta, this.buffer);
+
+      // Update timestamp and clear the event buffer
+      this.lastStep = now;
+      this.buffer = [];
     }
   }
 }

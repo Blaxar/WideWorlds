@@ -3,6 +3,7 @@
  */
 
 import UserInput, {SubjectBehavior, SubjectBehaviorFactory, UserInputListener} from '../../client/src/core/user-input.js';
+import {sleep} from '../utils.js';
 import * as assert from 'assert';
 
 class DummySubject {
@@ -10,6 +11,8 @@ class DummySubject {
     this.x = 0.0;
     this.y = 0.0;
     this.z = 0.0;
+
+    this.buffer = [];
   }
 }
 
@@ -18,30 +21,32 @@ class DummyBehavior extends SubjectBehavior {
     super(subject);
   }
 
-  step(delta) {
+  step(delta, buffer) {
     if (this.forward()) {
-      this.subject.z += 2.0 * delta;
+      this.subject.z += 20.0 * delta;
     }
 
     if (this.backward()) {
-      this.subject.z -= 2.0 * delta;
+      this.subject.z -= 20.0 * delta;
     }
 
     if (this.left()) {
-      this.subject.x += 2.0 * delta;
+      this.subject.x += 20.0 * delta;
     }
 
     if (this.right()) {
-      this.subject.x -= 2.0 * delta;
+      this.subject.x -= 20.0 * delta;
     }
 
     if (this.moveUp()) {
-      this.subject.y += 2.0 * delta;
+      this.subject.y += 20.0 * delta;
     }
 
     if (this.moveDown()) {
-      this.subject.y -= 2.0 * delta;
+      this.subject.y -= 20.0 * delta;
     }
+
+    this.subject.buffer = buffer;
   }
 }
 
@@ -86,23 +91,23 @@ describe('UserInput', () => {
     assert.equal(subject.z, 0.0);
 
     behavior._forwardPressed = true;
-    behavior.step(4.0); // Moves forward
+    behavior.step(0.4); // Moves forward
     behavior._forwardPressed = false;
-    behavior.step(2.0); // Does nothing
+    behavior.step(0.2); // Does nothing
 
     assert.equal(subject.z, 8.0);
 
     behavior._rightPressed = true;
     behavior._moveUpPressed = true;
-    behavior.step(3.0); // Moves up to the right
+    behavior.step(0.3); // Moves up to the right
     behavior._rightPressed = false;
-    behavior.step(1.0); // Only moves up
+    behavior.step(0.1); // Only moves up
 
     assert.equal(subject.x, -6.0);
     assert.equal(subject.y, 8.0);
   });
 
-  it('UserInputListener', () => {
+  it('UserInputListener', async () => {
     const subject = new DummySubject();
     const behaviorFactory = new SubjectBehaviorFactory();
     const inputListener = new UserInputListener(behaviorFactory);
@@ -153,7 +158,20 @@ describe('UserInput', () => {
 
     inputListener.pressKey('z');
     inputListener.pressKey('q');
-    inputListener.step(2.0);
+
+    inputListener.step(0.2);
+
+    // Validate buffer content
+    assert.equal(subject.buffer.length, 2);
+    assert.equal(subject.buffer[0].name, 'forward');
+    assert.ok(subject.buffer[0].pressed);
+    assert.ok(subject.buffer[0].delta >= 0);
+    assert.equal(subject.buffer[1].name, 'left');
+    assert.ok(subject.buffer[1].pressed);
+    assert.ok(subject.buffer[1].delta >= 0);
+
+    await sleep(220);
+
     inputListener.releaseKey('z');
     inputListener.releaseKey('q');
 
@@ -163,13 +181,43 @@ describe('UserInput', () => {
 
     inputListener.pressKey('s');
     inputListener.pressKey('-');
-    inputListener.step(3.0);
+
+    inputListener.step(0.3);
+
+    // Validate buffer content again
+    assert.equal(subject.buffer.length, 4);
+    assert.equal(subject.buffer[0].name, 'forward');
+    assert.ok(!subject.buffer[0].pressed);
+    assert.ok(subject.buffer[0].delta >= 0.2);
+    assert.equal(subject.buffer[1].name, 'left');
+    assert.ok(!subject.buffer[1].pressed);
+    assert.ok(subject.buffer[1].delta >= 0.2);
+    assert.equal(subject.buffer[2].name, 'backward');
+    assert.ok(subject.buffer[2].pressed);
+    assert.ok(subject.buffer[2].delta >= 0.2);
+    assert.equal(subject.buffer[3].name, 'moveDown');
+    assert.ok(subject.buffer[3].pressed);
+    assert.ok(subject.buffer[3].delta >= 0.2);
+
+    await sleep(320);
+
     inputListener.releaseKey('s');
     inputListener.releaseKey('-');
 
     assert.equal(subject.x, 4.0);
     assert.equal(subject.y, -6.0);
     assert.equal(subject.z, -2.0);
+
+    inputListener.step(0.1);
+
+    // Validate buffer content one last time
+    assert.equal(subject.buffer.length, 2);
+    assert.equal(subject.buffer[0].name, 'backward');
+    assert.ok(!subject.buffer[0].pressed);
+    assert.ok(subject.buffer[0].delta >= 0.3);
+    assert.equal(subject.buffer[1].name, 'moveDown');
+    assert.ok(!subject.buffer[1].pressed);
+    assert.ok(subject.buffer[1].delta >= 0.3);
 
     inputListener.clearForwardKey();
     inputListener.clearBackwardKey();
