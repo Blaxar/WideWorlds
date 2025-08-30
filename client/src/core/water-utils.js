@@ -115,7 +115,7 @@ void main() {
 class WaterPhongMaterial extends THREE.ShaderMaterial {
   /**
    * @constructor
-   * @param {Object} parameters - three.js Material parameters.
+   * @param {object} parameters - three.js Material parameters.
    */
   constructor(parameters) {
     const baseMatKey = 'phong';
@@ -515,8 +515,8 @@ function adjustPageEdges(pagePlane, elevationData, left, topLeft, top, right,
  * Load water materials
  * @param {TextureLoader} textureLoader - three.js texture loader instance.
  * @param {string} url - Base texture URL.
- * @param {Object} water - Dictionary holding water properties.
- * @return {Object} Object holding waterMaterial and bottomMaterial.
+ * @param {object} water - Dictionary holding water properties.
+ * @return {object} Object holding waterMaterial and bottomMaterial.
  */
 function loadWaterMaterials(textureLoader, url, water) {
   let waterMaterial = null;

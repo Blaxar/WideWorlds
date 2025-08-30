@@ -159,7 +159,7 @@ class UserInputListener {
 
   /**
    * Bind all the keys at once
-   * @param {Object} keyBindings - Key binding map
+   * @param {object} keyBindings - Key binding map
    */
   bindAllKeys(keyBindings) {
     for (const name of UserInput) {
@@ -169,7 +169,7 @@ class UserInputListener {
 
   /**
    * Register a listener, it will be called on key-binding update
-   * @param {function} listener - Listener callback function.
+   * @param {Function} listener - Listener callback function.
    * @return {integer} ID associated to this new listener.
    */
   addBindingListener(listener) {
@@ -214,7 +214,7 @@ class UserInputListener {
   /**
    * Get all the commands bound to a specific key
    * @param {any} input - Input key value.
-   * @return {array} Array storing the command names bound to the key.
+   * @return {Array} Array storing the command names bound to the key.
    */
   getBindingsFromKey(input) {
     const bindings = [];

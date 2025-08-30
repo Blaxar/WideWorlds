@@ -160,7 +160,7 @@ const argv = yargs(hideBin(process.argv))
 
 /**
  * Parse world water-related sub attributes
- * @param {Object} water - Dictionnary to holdi water properties.
+ * @param {object} water - Dictionnary to holdi water properties.
  * @param {string} attrSubStr - Attribute name without the 'water' prefix.
  * @param {string} value - String value for this attribute.
  */
@@ -402,7 +402,7 @@ function rgbToHex(r, g, b) {
 /**
  * Parse world prop file
  * @param {string} path - Path to the prop file.
- * @yield {array} Parsed world prop entries.
+ * @yield {Array} Parsed world prop entries.
  */
 function* parsePropFile(path) {
   // Load world attr file content

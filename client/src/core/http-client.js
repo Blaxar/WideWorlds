@@ -177,10 +177,10 @@ class HttpClient {
   /**
    * Update certain props on a given world
    * @param {integer} wid - ID of the world to update props on.
-   * @param {Object} props - Map of props to be updated, indexed by their ID
+   * @param {object} props - Map of props to be updated, indexed by their ID
    *                         and holding all meaningful properties in an object
    *                         as value.
-   * @return {Promise<Object>} Map of results for props to be updated, indexed
+   * @return {Promise<object>} Map of results for props to be updated, indexed
    *                           by their ID, value is true in case of success,
    *                           false in case of failure (privilege or
    *                           ownership restriction) and null when the prop
@@ -346,7 +346,7 @@ class HttpClient {
    * @param {integer} wid - ID of the world to get the URLs from.
    * @param {integer} pageX - Index of the page on the X axis.
    * @param {integer} pageZ - Index of the page on the Z axis.
-   * @return {Promise<Object>} Object storing elevation and texture data.
+   * @return {Promise<object>} Object storing elevation and texture data.
    */
   async getTerrainPage(wid, pageX, pageZ) {
     const pageURI = `${this.url}/worlds/${wid}/terrain/${pageX}/${pageZ}/`;

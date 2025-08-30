@@ -192,8 +192,6 @@ class ChunkCache {
    * Wipe all chunks belonging to a given world
    *
    * @param {integer} worldId - ID of the world this chunk belongs to.
-   * @param {integer} x - Index of this chunk along the X-axis.
-   * @param {integer} z - Index of this chunk along the Z-axis.
    * @return {Promise<undefined>} Promise hanging on the completion
    *                              of the transaction, will be
    *                              successful even if there was

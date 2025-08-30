@@ -310,7 +310,7 @@ class WorldManager {
    * Takes in a world json description, parse it and set the 3D scene
    * accordingly
    * @param {world} world - World data object.
-   * @return {Promise<Object>} Promise of an object describing the content of
+   * @return {Promise<object>} Promise of an object describing the content of
    *                           the parsed avatars.dat file for this world.
    */
   async load(world) {
@@ -517,7 +517,7 @@ class WorldManager {
    * Get tile-space coordinates of a chunk covering a real-space position
    * @param {number} x - Position along the X axis (in meters).
    * @param {number} z - Position along the Z axis (in meters).
-   * @return {Object} Object holding {cX, cZ}, respectively tile coordinates
+   * @return {object} Object holding {cX, cZ}, respectively tile coordinates
    *                  for the X and the Z axis
    */
   getChunkCoordinates(x, z) {
@@ -531,7 +531,7 @@ class WorldManager {
    * Get tile-space coordinates of a page covering a real-space position
    * @param {number} x - Position along the X axis (in meters).
    * @param {number} z - Position along the Z axis (in meters).
-   * @return {Object} Object holding {cX, cZ}, respectively tile coordinates
+   * @return {object} Object holding {cX, cZ}, respectively tile coordinates
    *                  for the X and the Z axis
    */
   getPageCoordinates(x, z) {
@@ -562,7 +562,7 @@ class WorldManager {
     this.pageData.clear();
   }
 
-  /** Clear all water pages and associated materials **/
+  /** Clear all water pages and associated materials */
   clearWater() {
     this.engine3d.wipeNode(this.waterNodeHandle);
 
@@ -971,7 +971,7 @@ class WorldManager {
    * @param {integer} cX - Index of the chunk on the X axis.
    * @param {integer} cZ - Index of the chunk on the Z axis.
    * @param {boolean} hide - Whether or not to hide chunk at creation.
-   * @return {Object} Object holding chunk position and node handler.
+   * @return {object} Object holding chunk position and node handler.
    */
   getChunkAnchor(cX, cZ, hide = false) {
     const chunkPos = new Vector3(cX * this.chunkSide, 0,
@@ -1351,8 +1351,8 @@ class WorldManager {
    * provided prop description object
    * @param {Object3D} obj3d - 3D asset to update.
    * @param {Prop} prop - Object describing a prop.
-   * @param{Object} chunkAnchor - Object holding chunk position and node
-   *                              handler.
+   * @param {object} chunkAnchor - Object holding chunk position and node
+   *                               handler.
    */
   updateAssetFromProp(obj3d, prop, chunkAnchor = null) {
     // Cancel operation if the world has been unloaded in the meantime

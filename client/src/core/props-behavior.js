@@ -52,7 +52,7 @@ class PropsSelector {
    * @constructor
    * @param {Engine3D} engine3d - Main WideWorlds 3D engine.
    * @param {Engine3D} worldManager - Main world manager instance.
-   * @param {function} onChange - Callback function on change of
+   * @param {Function} onChange - Callback function on change of
    *                              the selection, takes the number
    *                              of selected props as argument.
    * @param {UserConfigNode} renderingDistanceNode - Configuration node
@@ -838,7 +838,7 @@ class PropsSelector {
 
   /**
    * Snap current prop selection to grid
-      to the nearest whole integers on the X, Y, and Z axes.
+      * to the nearest whole integers on the X, Y, and Z axes.
    * Executes on an individual basis on each object, and not on the entire group
    */
   snapToGrid() {

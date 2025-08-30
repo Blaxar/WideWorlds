@@ -7,7 +7,7 @@ import {unzipSync} from 'fflate';
 /**
  * Parse AW avatars.dat file
  * @param {string} fileContent - Text content of the avatars.dat file.
- * @return {Object} Object describing the content of the .dat file.
+ * @return {object} Object describing the content of the .dat file.
  */
 function parseAvatarsDat(fileContent) {
   const data = {

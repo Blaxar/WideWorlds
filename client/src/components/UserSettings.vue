@@ -293,8 +293,7 @@ onMounted(() => {
   const root = '.user-settings > section';
   const tabs = document.querySelectorAll(`${root} > menu[role=tablist]`);
 
-  console.log(tabs);
-  function openTab(event, tab) {
+  const openTab = (event, tab) => {
     const articles =
       tab.parentNode.querySelectorAll(`${root} > [role="tabpanel"]`);
     articles.forEach((p) => {
@@ -305,7 +304,7 @@ onMounted(() => {
         ` > [role="tabpanel"]#${event.target.getAttribute('aria-controls')}`,
     );
     article.removeAttribute('hidden');
-  }
+  };
 
   for (let i = 0; i < tabs.length; i++) {
     const tab = tabs[i];

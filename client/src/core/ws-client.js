@@ -18,7 +18,7 @@ class BaseWs {
 
   /**
    * Register a callback for the 'message' event on the WebSocket client
-   * @param {function} cb - Callback function to register.
+   * @param {Function} cb - Callback function to register.
    */
   onMessage(cb) {
     this.ws.addEventListener('message', (event) => {
@@ -28,7 +28,7 @@ class BaseWs {
 
   /**
    * Register a callback for the 'close' event on the WebSocket client
-   * @param {function} cb - Callback function to register.
+   * @param {Function} cb - Callback function to register.
    */
   onClose(cb) {
     this.ws.addEventListener('close', (event) => {
@@ -92,7 +92,7 @@ class WorldState extends BaseWs {
 
   /**
    * Register a callback for the 'message' event on the WebSocket client
-   * @param {function} cb - Callback function to register.
+   * @param {Function} cb - Callback function to register.
    */
   onMessage(cb) {
     this.ws.addEventListener('message', (event) => {
@@ -123,7 +123,7 @@ class WorldUpdate extends BaseWs {
 
   /**
    * Register a callback for the 'message' event on the WebSocket client
-   * @param {function} cb - Callback function to register.
+   * @param {Function} cb - Callback function to register.
    */
   onMessage(cb) {
     this.ws.addEventListener('message', (event) => {

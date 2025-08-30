@@ -17,10 +17,10 @@ const twoPi = 2*Math.PI;
 
 /**
  * Format parsed sequence data into three.js-friendly array of frames
- * @param {Object} parsedSeq - Parsed sequence, as returned by the
+ * @param {object} parsedSeq - Parsed sequence, as returned by the
  *                             parseSequence function from
  *                             aw-sequence-parser.
- * @return {Array<Object>} Array of frames from the provided sequence
+ * @return {Array<object>} Array of frames from the provided sequence
  *                         data.
  */
 function formatParsedSeq(parsedSeq) {
@@ -51,7 +51,7 @@ function formatParsedSeq(parsedSeq) {
  * the avatar, indexed by the numeric value of the joint type
  * @param {Group} group - three.js object holding all the
  *                        avatar geometry with tagged joints.
- * @param {Object} avatarView - Empty dictionary to fill.
+ * @param {object} avatarView - Empty dictionary to fill.
  */
 function populateAvatarViewRecursive(group, avatarView) {
   if (group.userData?.rwx?.tag) {
@@ -70,7 +70,7 @@ function populateAvatarViewRecursive(group, avatarView) {
 /**
  * Reset each joint in the avatarView map to its original position
  * and rotation
- * @param {Object} avatarView - Filled lookup map for the joints.
+ * @param {object} avatarView - Filled lookup map for the joints.
  */
 function resetAvatarView(avatarView) {
   for (const node of Object.values(avatarView)) {
@@ -93,9 +93,9 @@ function resetAvatarView(avatarView) {
 /**
  * Update the joints of an avatar to match a specific animation step,
  * uses interpolation between two reference frames
- * @param {Object} avatarView - Filled lookup map for the joints.
- * @param {Object} startFrame - Starting frame for the interpolation.
- * @param {Object} endFrame - Ending frame for interpolation.
+ * @param {object} avatarView - Filled lookup map for the joints.
+ * @param {object} startFrame - Starting frame for the interpolation.
+ * @param {object} endFrame - Ending frame for interpolation.
  * @param {string} rootJointName - Name of the root joint, containing all
  *                                 the others has its children.
  * @param {number} progress - Completion rate of the target step, related to
@@ -104,7 +104,7 @@ function resetAvatarView(avatarView) {
  *                            be interpolated.
  * @param {boolean} translate - Whether or not to apply translation to the root
  *                              joint (as dictated by the provided frames).
- * @return {Object} The interpolated frame.
+ * @return {object} The interpolated frame.
  */
 function animateAvatar(avatarView, startFrame, endFrame, rootJointName,
     progress, translate = true) {
@@ -148,7 +148,7 @@ function animateAvatar(avatarView, startFrame, endFrame, rootJointName,
 
 /**
  * Get the implicit animation name matching the provided user state
- * @param {Object} userState - User state object holding those entries:
+ * @param {object} userState - User state object holding those entries:
  *                             {flying, running, idle}
  * @return {string} Implicit animation name.
  */
@@ -232,7 +232,7 @@ function animateEntityExp(node, hash, progress, animationManager) {
  * Compute the progress ratio of an action-based animation
  * by taking its parameters into account
  *
- * @param {Object} data - Parameters for the animation
+ * @param {object} data - Parameters for the animation
  * @param {boolean} data.loop - Whether or not to loop the animation.
  * @param {boolean} data.sync - Whether or not to sync the animation
  *                              with the global time.
@@ -428,9 +428,9 @@ class AnimationManager {
   /**
    * Load the animation sequences data for a single avatar
    * @param {string} name - Name of the avatar to load the sequences for.
-   * @param {Object} imp - Dictionary of implicit sequence file names,
+   * @param {object} imp - Dictionary of implicit sequence file names,
    *                       indexed by the animation names.
-   * @param {Object} exp - Dictionary of implicit sequence file names,
+   * @param {object} exp - Dictionary of implicit sequence file names,
    *                       indexed by the animation names.
    */
   async loadAvatarSequences(name, imp, exp) {

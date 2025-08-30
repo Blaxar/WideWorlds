@@ -44,7 +44,7 @@ function getTagCssFontProperty(fontSize) {
  * Measure the width of a single line of text for bare canvas sign rendering
  * @param {string} line - Text content to measure.
  * @param {integer} fontSize - Font size, in pixels.
- * @param {Object} canvasCtx - 2D HTML canvas context.
+ * @param {object} canvasCtx - 2D HTML canvas context.
  * @return {integer} Width of the text, in pixels.
  */
 function measureLine(line, fontSize, canvasCtx) {
@@ -55,8 +55,8 @@ function measureLine(line, fontSize, canvasCtx) {
 /**
  * Format text into an array of lines for it to fit into a given surface
  * @param {string} text - Text content to format.
- * @param {Object} canvasCtx - 2D HTML canvas context.
- * @return {Object} Object holding lines, fontSize (in pixels) and
+ * @param {object} canvasCtx - 2D HTML canvas context.
+ * @return {object} Object holding lines, fontSize (in pixels) and
  *                  maxLineWidth (in pixels)
  */
 function formatSignLines(text, canvasCtx) {
@@ -170,7 +170,7 @@ function makeSignHTML(lines, fontSize, width, height, r = 0, g = 0, b = 0) {
 
 /**
  * Draw text content on the provided canvas for a sign
- * @param {Object} canvasCtx - 2D HTML canvas context to draw with.
+ * @param {object} canvasCtx - 2D HTML canvas context to draw with.
  * @param {Array<string>} lines - Text lines ti display.
  * @param {integer} fontSize - Font size, in pixels.
  * @param {integer} maxLineWidth - Maximum line width, in pixels.
@@ -205,7 +205,7 @@ function makeSignCanvas(canvasCtx, lines, fontSize, maxLineWidth,
 
 /**
  * Draw text content on the provided canvas for a tag
- * @param {Object} canvasCtx - 2D HTML canvas context to draw with.
+ * @param {object} canvasCtx - 2D HTML canvas context to draw with.
  * @param {Array<string>} lines - Text lines to display.
  * @param {integer} fontSize - Font size, in pixels.
  * @param {integer} maxLineWidth - Maximum line width, in pixels.

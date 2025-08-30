@@ -17,7 +17,7 @@ class CommandParser {
   /**
    * @constructor
    * @param {WorldManager} worldManager - The World Manager
-   * @param {String} world - The current world's attributes
+   * @param {string} world - The current world's attributes
    * @param {UserFeed} userFeed - The user feed for publishing messages.
    * @param {object} configsNode - the 'controls' node in the user configs
    * @param {HttpClient} httpClient - client-server API

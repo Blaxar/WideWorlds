@@ -27,7 +27,7 @@ class UserFeed {
 
   /**
    * Register listener to the feed
-   * @param {function} cb - Listener callback function.
+   * @param {Function} cb - Listener callback function.
    * @return {integer} Handle of the newly-added listener.
    */
   addListener(cb) {

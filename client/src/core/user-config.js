@@ -249,7 +249,7 @@ class UserConfigNode {
 
   /**
    * Register a new update listeners for this node
-   * @param {function} cb - Callback function to be called on each update.
+   * @param {Function} cb - Callback function to be called on each update.
    */
   onUpdate(cb) {
     const path = this.path();
@@ -301,7 +301,7 @@ class UserConfig {
   /**
    * @constructor
    * @param {string} configKey - Key to store the configuration at.
-   * @param {function} onLoad - Callback on configuration loading.
+   * @param {Function} onLoad - Callback on configuration loading.
    * @param {Storage} storage - Storage to hold the config in.
    */
   constructor(configKey = 'config', onLoad = (config) => {},

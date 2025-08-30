@@ -79,23 +79,24 @@ function formatUserMessage(delivered, id, name, role, msg) {
 
 /**
  * Serialize binary payload of entity state
- * @param {integer} entityType - Code of the entity type.
- * @param {integer} updateType - Code of the update type.
- * @param {integer} entityId - ID of the entity.
- * @param {float} x - World position on the X axis (in meters).
- * @param {float} y - World position on the Y axis (in meters).
- * @param {float} z - World position on the Z axis (in meters).
- * @param {float} yaw - Yaw (in radians).
- * @param {float} pitch - Pitch (in radians).
- * @param {float} roll - Roll (in radians).
- * @param {short} dataBlock0 - First data block.
- * @param {short} dataBlock1 - Second data block.
- * @param {short} dataBlock2 - Third data block.
- * @param {short} dataBlock3 - Fourth data block.
- * @param {short} dataBlock4 - Fifth data block.
- * @param {short} dataBlock5 - Sixth data block.
- * @param {short} dataBlock6 - Seventh data block.
- * @param {short} dataBlock7 - Eighth data block.
+ * @param {object} param - Object holding all parameters.
+ * @param {integer} param.entityType - Code of the entity type.
+ * @param {integer} param.updateType - Code of the update type.
+ * @param {integer} param.entityId - ID of the entity.
+ * @param {float} param.x - World position on the X axis (in meters).
+ * @param {float} param.y - World position on the Y axis (in meters).
+ * @param {float} param.z - World position on the Z axis (in meters).
+ * @param {float} param.yaw - Yaw (in radians).
+ * @param {float} param.pitch - Pitch (in radians).
+ * @param {float} param.roll - Roll (in radians).
+ * @param {short} param.dataBlock0 - First data block.
+ * @param {short} param.dataBlock1 - Second data block.
+ * @param {short} param.dataBlock2 - Third data block.
+ * @param {short} param.dataBlock3 - Fourth data block.
+ * @param {short} param.dataBlock4 - Fifth data block.
+ * @param {short} param.dataBlock5 - Sixth data block.
+ * @param {short} param.dataBlock6 - Seventh data block.
+ * @param {short} param.dataBlock7 - Eighth data block.
  * @return {Uint8Array} Entity state binary payload
  */
 function serializeEntityState({entityType, updateType, entityId, x, y, z,
@@ -192,7 +193,7 @@ function validateEntityState(state,
 /**
  * Deserialize binary payload of entity state
  * @param {Uint8Array} state - Entity state binary payload.
- * @return {Object} Entity state in object form
+ * @return {object} Entity state in object form
  */
 function deserializeEntityState(state) {
   const validState = validateEntityState(state);

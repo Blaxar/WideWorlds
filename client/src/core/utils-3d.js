@@ -15,7 +15,7 @@ const defaultSkyColors = [
 
 /**
  * Make a reversed (inward-facing faces) 3D octahedron
- * @param {array} colors - Array of colors, 18 elements
+ * @param {Array} colors - Array of colors, 18 elements
  * @return {Mesh} three.js Mesh object
  */
 function makeReversedOctahedron(

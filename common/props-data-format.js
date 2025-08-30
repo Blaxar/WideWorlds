@@ -47,16 +47,20 @@ const propDataSchema = {
 
 /**
  * Serialize binary payload of prop
- * @param {integer} id - ID of the prop.
- * @param {integer} worldId - ID of the world.
- * @param {integer} userId - ID of the owner.
- * @param {float} x - World position on the X axis (in meters).
- * @param {float} y - World position on the Y axis (in meters).
- * @param {float} z - World position on the Z axis (in meters).
- * @param {float} yaw - Yaw (in radians).
- * @param {float} pitch - Pitch (in radians).
- * @param {float} roll - Roll (in radians).
- * @param {string} name - Name of the prop.
+ * @param {object} param - Object holding all parameters.
+ * @param {integer} param.id - ID of the prop.
+ * @param {integer} param.worldId - ID of the world.
+ * @param {integer} param.userId - ID of the owner.
+ * @param {integer} param.date - Timestamp of last modification (ms).
+ * @param {float} param.x - World position on the X axis (in meters).
+ * @param {float} param.y - World position on the Y axis (in meters).
+ * @param {float} param.z - World position on the Z axis (in meters).
+ * @param {float} param.yaw - Yaw (in radians).
+ * @param {float} param.pitch - Pitch (in radians).
+ * @param {float} param.roll - Roll (in radians).
+ * @param {string} param.name - Name of the prop.
+ * @param {string} param.description - Description of the prop.
+ * @param {string} param.action - Action of the prop.
  * @return {Uint8Array} Prop data binary payload
  */
 function serializeProp({id, worldId, userId, date, x, y, z,

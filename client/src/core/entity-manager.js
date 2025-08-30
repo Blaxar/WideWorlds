@@ -21,11 +21,11 @@ class EntityManager {
    * @param {integer} localUserId - ID of the local user.
    * @param {number} avgUpdateTime - Initial guess for the average elapsed time
    *                                 (in seconds) between each update.
-   * @param {function} setEntityAvatar - Callback function to set avatars on
+   * @param {Function} setEntityAvatar - Callback function to set avatars on
    *                                     entities (to be called each frame).
-   * @param {function} animateEntityImp - Callback function to update implicit
+   * @param {Function} animateEntityImp - Callback function to update implicit
    *                                      animations on entities (each frame).
-   * @param {function} animateEntityExp - Callback function to update explicit
+   * @param {Function} animateEntityExp - Callback function to update explicit
    *                                      animations on entities (each frame).
    */
   constructor(group, localUserId = null, avgUpdateTime = 0.05,

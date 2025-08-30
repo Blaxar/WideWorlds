@@ -18,7 +18,7 @@ class BackgroundScenery {
   /**
    * @constructor
    * @param {Group} group - Group holding the background scenery.
-   * @param {function} getId - Function returning an ID value for
+   * @param {Function} getId - Function returning an ID value for
    *                           each object, returns the Object3D
    *                           ID value by default.
    */

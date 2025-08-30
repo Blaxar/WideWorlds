@@ -28,7 +28,6 @@ const actualAssetName = 'actual';
 /**
  * @typedef ElevationData
  * @type {Uint16Array}
- *
  * @description
  * The elevation data array encodes the whole elevation for a single
  * terrain page.
@@ -53,7 +52,6 @@ const actualAssetName = 'actual';
 /**
  * @typedef TextureData
  * @type {Uint16Array}
- *
  * @description
  * The texture data array encodes the whole texture information for a
  * single terrain page, it matches the dimensions of {@link ElevationData}.

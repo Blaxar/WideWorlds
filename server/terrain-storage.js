@@ -285,7 +285,7 @@ class TerrainStorage {
    * available (null otherwise)
    * @param {integer} pageX - X coordinate of the page.
    * @param {integer} pageZ - Z coordinate of the page.
-   * @return {Object} Elevation and terrain file paths
+   * @return {object} Elevation and terrain file paths
    */
   getPageFilePaths(pageX, pageZ) {
     const pageName = getPageName(pageX, pageZ);

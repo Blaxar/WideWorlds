@@ -149,7 +149,7 @@ class Engine3D {
 
   /**
    * Change the colors of the sky
-   * @param {array} colors - Color components, 18 total.
+   * @param {Array} colors - Color components, 18 total.
    */
   setSkyColors(colors) {
     this.reversedOctahedron.geometry.setAttribute('color',
@@ -271,11 +271,11 @@ class Engine3D {
   /**
    * Update the bounds tree (for collision detection) on a node
    * @param {integer} id - ID of the node to generate a bounds tree for.
-   * @param {function} filter - Filter function to use when flattening
+   * @param {Function} filter - Filter function to use when flattening
    *                            group, gets fed every mesh and group
    *                            and returns true to accept them in the
    *                            final mesh.
-   * @param {function} preSelector - Function in charge of selecting a
+   * @param {Function} preSelector - Function in charge of selecting a
    *                                 specific asset within the node group
    *                                 as the actual geometry, this happens
    *                                 before the filtering and merging
@@ -681,13 +681,13 @@ class Engine3D {
    * Update all LOD levels based on current hiding distance and
    * camera position
    * @param {Set<integer>} lodNodeIDs - ID of the LOD nodes to update,
-   +                                    non-LOD nodes or none existing
+   * +                                    non-LOD nodes or none existing
    *                                    nodes will be ignored.
    * @param {Camera} camera - Camera to use as a reference to update the
    *                          displayed level of each LOD node.
    * @param {number} now - Timestamp (ms) of the current point in
    *                       time.
-   * @return {Object} Sets of nodes that turned and stayed visible
+   * @return {object} Sets of nodes that turned and stayed visible
    *                  and also nodes that became invisible
    */
   updateLODs(lodNodeIDs, camera = this.camera, now = Date.now()) {

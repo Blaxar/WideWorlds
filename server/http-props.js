@@ -14,15 +14,22 @@ const ok = 200;
 /**
  * Add filters to props database query
  *
- * @param {QueryBuilder} queryBuilder - Instance of the TypeORM query builder.
+ * @param {QueryBuilder} queryBuilder - Instance of the TypeORM query
+ *                                      builder.
  * @param {integer} wid - ID of the world holding the props.
- * @param {integer} minX - Minimum (including) X coordinate to filter props by.
- * @param {integer} maxX - Maximum (exluding) X coordinate to filter props by.
- * @param {integer} minY - Minimum (including) Y coordinate to filter props by.
- * @param {integer} maxY - Maximum (exluding) Y coordinate to filter props by.
- * @param {integer} minZ - Minimum (including) Z coordinate to filter props by.
- * @param {integer} maxZ - Maximum (exluding) Z coordinate to filter props by.
- *
+ * @param {object} param - Object holding all remaining parameters.
+ * @param {integer} param.minX - Minimum (including) X coordinate to filter
+ *                               props by.
+ * @param {integer} param.maxX - Maximum (exluding) X coordinate to filter
+ *                               props by.
+ * @param {integer} param.minY - Minimum (including) Y coordinate to filter
+ *                               props by.
+ * @param {integer} param.maxY - Maximum (exluding) Y coordinate to filter
+ *                               props by.
+ * @param {integer} param.minZ - Minimum (including) Z coordinate to filter
+ *                               props by.
+ * @param {integer} param.maxZ - Maximum (exluding) Z coordinate to filter
+ *                               props by.
  * @return {integer} HTTP status code to respond with.
  */
 function filterPropsQuery(queryBuilder, wid,
@@ -96,11 +103,11 @@ function filterPropsQuery(queryBuilder, wid,
 
 /**
  * Register props-related endpoints into the expressjs app
- * @param {Object} app - express.js app.
- * @param {function} authenticate - Authentication function for the http
+ * @param {object} app - express.js app.
+ * @param {Function} authenticate - Authentication function for the http
  *                                  requests.
- * @param {Object} connection - TypeORM connection instance.
- * @param {Object} ctx - Parent HTTP spawner context.
+ * @param {object} connection - TypeORM connection instance.
+ * @param {object} ctx - Parent HTTP spawner context.
  */
 function registerPropsEndpoints(app, authenticate, connection, ctx) {
   app.get('/api/worlds/:id/props', authenticate, (req, res) => {

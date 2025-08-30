@@ -296,7 +296,7 @@ class ModelRegistry {
    * Parse action string into an action dictionary
    * @param {string} actionString - Content of the action string.
    * @param {string} description - Content of the descritpion string.
-   * @return {Object} Dictionary holding actions, scenerySignature and
+   * @return {object} Dictionary holding actions, scenerySignature and
    *                  sceneryTransform properties.
    */
   parseActions(actionString, description = null) {
@@ -414,7 +414,7 @@ class ModelRegistry {
    * @param {Object3D} obj3d - 3D asset to apply the transformation to.
    * @param {Matrix4} transform - Transformation matrix.
    */
-  transformRecursiveImpl(obj3d, transform, name) {
+  transformRecursiveImpl(obj3d, transform) {
     // We are dealing with a group, this means we must
     // perform a recursive call to its children
     obj3d.matrixAutoUpdate = false;
@@ -430,8 +430,8 @@ class ModelRegistry {
    * Recursively apply parsed action commands to the given 3D prop,
    * for internal use by {@link applyActionString}
    * @param {Object3D} obj3d - 3D asset to apply the action string to.
-   * @param {Object} actions - Parsed action commands.
-   * @param {Object} obj3dUserData - userData of obj3d.
+   * @param {object} actions - Parsed action commands.
+   * @param {object} obj3dUserData - userData of obj3d.
    */
   applyActionsRecursive(obj3d, actions, obj3dUserData) {
     // Only deal with 'create' actions for the moment
@@ -559,8 +559,8 @@ class ModelRegistry {
    * use by {@link applyActionsRecursive}
    * @param {Material} material - three.js material for the sign
    * @param {string} text - Text to write on the canvas
-   * @param {Object} textColor - Text colour for the canvas
-   * @param {Object} backgroundColor - Background colour for the canvas
+   * @param {object} textColor - Text colour for the canvas
+   * @param {object} backgroundColor - Background colour for the canvas
   */
   writeTextToCanvas(material, text = '',
       textColor = {r: 255, g: 255, b: 255},
