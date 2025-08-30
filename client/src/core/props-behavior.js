@@ -837,8 +837,8 @@ class PropsSelector {
   }
 
   /**
-   * Snap current prop selection to grid
-      * to the nearest whole integers on the X, Y, and Z axes.
+   * Snap current prop selection to grid to the nearest whole integers on the X,
+   * Y, and Z axes.
    * Executes on an individual basis on each object, and not on the entire group
    */
   snapToGrid() {
@@ -890,111 +890,132 @@ class PropsBehavior extends SubjectBehavior {
   /**
    * Update props position and rotation based input commands
    * @param {number} delta - Elapsed number of seconds since last call.
+   * @param {UserInputEvent[]} buffer - List on user input events since last
+   *                                    {@link step} call.
+   * @param {integer} now - Current timestamp in milliseconds.
+   * @param {integer} lastStep - Timestamp of previous {@link step} call in
+   *                             milliseconds.
    */
-  step(delta) {
+  step(delta, buffer, now, lastStep) {
     const propsSelector = this.subject;
-    let now = Date.now();
-    let moveLength = defaultMoveLength;
-    let rotationAngle = defaultRotationAngle;
 
-    this.moveDirection.set(0.0, 0.0, 0.0);
+    /*
+     * The trick is to take into account buffered events in case more
+     * than one key press/release happened between two updates, but
+     * also to mind the current state of the keys as some of them can
+     * be held pressed without any event being triggered.
+     *
+     * The solution is to make a dummy event out of the current state,
+     * it just needs to hold the state of the keys and a meaningful
+     * delta value so it can be accounted for in the same way "real"
+     * events are.
+     */
+    const event = {state: this, delta: (now - lastStep) * 0.001};
 
-    if (this.exit()) {
-      propsSelector.commitAndClear();
-      return;
-    } else if (this.delete()) {
-      propsSelector.removeAndClear();
-      return;
+    for (const {state, delta} of [...buffer, event]) {
+      let localNow = lastStep + delta * 1000;
+      let moveLength = defaultMoveLength;
+      let rotationAngle = defaultRotationAngle;
+
+      this.moveDirection.set(0.0, 0.0, 0.0);
+
+      if (state.exit()) {
+        propsSelector.commitAndClear();
+        return;
+      } else if (state.delete()) {
+        propsSelector.removeAndClear();
+        return;
+      }
+
+      if (!state.duplicate()) {
+        this.duplicating = false;
+      }
+
+      if (!state.moveUp() && !state.moveDown() &&
+          !state.forward() && !state.backward() &&
+          !state.left() && !state.right() &&
+          !state.turnLeft() && !state.turnRight() &&
+          !state.duplicate()) {
+        // If no key is being pressed: disable the skipping
+        // behavior below, this allows for fast sequential key
+        // strokes without enduring the input cooldown
+        localNow = 0;
+      }
+
+      if (localNow - this.lastInput < inputCooldown) {
+        // Too soon to do anything, skip
+        return;
+      }
+
+      this.lastInput = localNow;
+
+      // Only duplicate selection once per key stroke
+      if (state.duplicate() && !this.duplicating) {
+        propsSelector.duplicate(this.run());
+        this.duplicating = true;
+        return;
+      }
+
+      // Small units
+      if (state.strafe() && !state.run()) {
+        moveLength = smallMoveLength;
+        rotationAngle = smallRotationAngle;
+      }
+      // Very small units
+      if (state.strafe() && state.run()) {
+        moveLength = verySmallMoveLength;
+        rotationAngle = verySmallRotationAngle;
+      }
+
+      let move = false;
+
+      // All the input will be considered, in the final move direction
+      // in case more than one axis is involved
+      if (state.moveUp() && !state.moveDown()) {
+        this.moveDirection.setY(moveLength);
+        move = true;
+      } else if (!state.moveUp() && state.moveDown()) {
+        this.moveDirection.setY(- moveLength);
+        move = true;
+      }
+
+      if (state.forward() && !state.backward()) {
+        this.moveDirection.add(propsSelector.cloneDirection()
+            .multiplyScalar(moveLength));
+        move = true;
+      } else if (!state.forward() && state.backward()) {
+        this.moveDirection.sub(propsSelector.cloneDirection()
+            .multiplyScalar(moveLength));
+        move = true;
+      }
+
+      if (this.left() && !this.right()) {
+        this.moveDirection.add(propsSelector.cloneDirection()
+            .applyAxisAngle(this.upAxis, Math.PI / 2)
+            .multiplyScalar(moveLength));
+        move = true;
+      } else if (!state.left() && state.right()) {
+        this.moveDirection.add(propsSelector.cloneDirection()
+            .applyAxisAngle(this.upAxis, - Math.PI / 2)
+            .multiplyScalar(moveLength));
+        move = true;
+      }
+
+      if (move) propsSelector.move(this.moveDirection);
+
+      let rotate = false;
+
+      if (state.turnLeft() && !state.turnRight()) {
+        this.rotationAxis.set(0.0, 1.0, 0.0);
+        rotate = true;
+      } else if (!state.turnLeft() && state.turnRight()) {
+        this.rotationAxis.set(0.0, 1.0, 0.0);
+        rotationAngle = - rotationAngle;
+        rotate = true;
+      }
+
+      if (rotate) propsSelector.rotate(this.rotationAxis, rotationAngle);
     }
-
-    if (!this.duplicate()) {
-      this.duplicating = false;
-    }
-
-    if (!this.moveUp() && !this.moveDown() &&
-        !this.forward() && !this.backward() &&
-        !this.left() && !this.right() &&
-        !this.turnLeft() && !this.turnRight() &&
-        !this.duplicate()) {
-      // If no key is being pressed: disable the skipping
-      // behavior below, this allows for fast sequential key
-      // strokes without enduring the input cooldown
-      now = 0;
-    }
-
-    if (now - this.lastInput < inputCooldown) {
-      // Too soon to do anything, skip
-      return;
-    }
-
-    // Only duplicate selection once per key stroke
-    if (this.duplicate() && !this.duplicating) {
-      propsSelector.duplicate(this.run());
-      this.duplicating = true;
-      return;
-    }
-
-    // Small units
-    if (this.strafe() && !this.run()) {
-      moveLength = smallMoveLength;
-      rotationAngle = smallRotationAngle;
-    }
-    // Very small units
-    if (this.strafe() && this.run()) {
-      moveLength = verySmallMoveLength;
-      rotationAngle = verySmallRotationAngle;
-    }
-
-    this.lastInput = now;
-
-    let move = false;
-
-    // All the input will be considered, in the final move direction
-    // in case more than one axis is involved
-    if (this.moveUp() && !this.moveDown()) {
-      this.moveDirection.setY(moveLength);
-      move = true;
-    } else if (!this.moveUp() && this.moveDown()) {
-      this.moveDirection.setY(- moveLength);
-      move = true;
-    }
-
-    if (this.forward() && !this.backward()) {
-      this.moveDirection.add(propsSelector.cloneDirection()
-          .multiplyScalar(moveLength));
-      move = true;
-    } else if (!this.forward() && this.backward()) {
-      this.moveDirection.sub(propsSelector.cloneDirection()
-          .multiplyScalar(moveLength));
-      move = true;
-    }
-
-    if (this.left() && !this.right()) {
-      this.moveDirection.add(propsSelector.cloneDirection()
-          .applyAxisAngle(this.upAxis, Math.PI / 2)
-          .multiplyScalar(moveLength));
-      move = true;
-    } else if (!this.left() && this.right()) {
-      this.moveDirection.add(propsSelector.cloneDirection()
-          .applyAxisAngle(this.upAxis, - Math.PI / 2)
-          .multiplyScalar(moveLength));
-      move = true;
-    }
-
-    if (move) propsSelector.move(this.moveDirection);
-
-    let rotate = false;
-
-    if (this.turnLeft() && !this.turnRight()) {
-      this.rotationAxis.set(0.0, 1.0, 0.0);
-      rotate = true;
-    } else if (!this.turnLeft() && this.turnRight()) {
-      this.rotationAxis.set(0.0, 1.0, 0.0);
-      rotationAngle = - rotationAngle;
-      rotate = true;
-    }
-
-    if (rotate) propsSelector.rotate(this.rotationAxis, rotationAngle);
   }
 }
 

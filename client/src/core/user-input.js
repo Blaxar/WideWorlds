@@ -110,6 +110,7 @@ class SubjectBehavior {
    *                               false is released.
    * @property {number} delta - Elapsed number of seconds since the last
    *                            {@link step} call.
+   * @property {object} state - State of all commands.
    */
 
   /**
@@ -289,9 +290,11 @@ class UserInputListener {
         this[`${name}Pressed`] = true;
 
         // Commit the event to the buffer
-        this.buffer.push(
-            {name, pressed: true, delta: (Date.now() - this.lastStep) * 0.001},
-        );
+        this.buffer.push({
+          name, pressed: true,
+          delta: (Date.now() - this.lastStep) * 0.001,
+          state: this.copyState(),
+        });
 
         break;
       }
@@ -308,9 +311,11 @@ class UserInputListener {
         this[`${name}Pressed`] = false;
 
         // Commit the event to the buffer
-        this.buffer.push(
-            {name, pressed: false, delta: (Date.now() - this.lastStep) * 0.001},
-        );
+        this.buffer.push({
+          name, pressed: false,
+          delta: (Date.now() - this.lastStep) * 0.001,
+          state: this.copyState(),
+        });
 
         break;
       }
@@ -333,12 +338,28 @@ class UserInputListener {
         }
       }
 
-      this.subjectBehavior.step(delta, this.buffer);
+      this.subjectBehavior.step(delta, this.buffer, now, this.lastStep);
 
       // Update timestamp and clear the event buffer
       this.lastStep = now;
       this.buffer = [];
     }
+  }
+
+  /**
+   * Makes a copy of the state of all commands
+   * @return {object} State of all commands.
+   */
+  copyState() {
+    const state = {};
+    for (const name of UserInput) {
+      state[`${name}Pressed`] = this[`${name}Pressed`];
+      state[`${name}`] = () => {
+        return state[`${name}Pressed`];
+      };
+    }
+
+    return state;
   }
 }
 
