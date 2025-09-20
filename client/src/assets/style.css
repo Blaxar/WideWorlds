@@ -263,6 +263,10 @@ body {
   th.controls-header {
     text-align: left;
   }
+
+  article#tab-account table tbody tr td:nth-child(1) {
+    font-weight: bold;
+  }
 }
 
 .compass-at-x {

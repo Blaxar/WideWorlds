@@ -99,6 +99,10 @@ const props = defineProps({
     type: String,
     default: 'Cleared every chunk of props from local cache',
   },
+  userInfo: {
+    type: Object,
+    default: null,
+  },
 });
 
 // Alias to shorten the path
@@ -371,6 +375,12 @@ onUnmounted(() => {
         >
           Misc
         </button>
+        <button
+          role="tab"
+          aria-controls="tab-account"
+        >
+          Account
+        </button>
       </menu>
       <article
         id="tab-controls"
@@ -640,6 +650,48 @@ onUnmounted(() => {
                 <button @click="clearChunkCache">
                   {{ clearChunkCacheText }}
                 </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </article>
+      <article
+        id="tab-account"
+        role="tabpanel"
+        hidden
+      >
+        <table>
+          <tbody>
+            <tr>
+              <td>
+                Username:
+              </td>
+              <td>
+                {{ userInfo?.name }}
+              </td>
+            </tr>
+            <tr>
+              <td>
+                Role:
+              </td>
+              <td>
+                {{ userInfo?.role }}
+              </td>
+            </tr>
+            <tr>
+              <td>
+                Email:
+              </td>
+              <td>
+                {{ userInfo?.email }}
+              </td>
+            </tr>
+            <tr>
+              <td>
+                ID:
+              </td>
+              <td>
+                {{ userInfo?.id }}
               </td>
             </tr>
           </tbody>

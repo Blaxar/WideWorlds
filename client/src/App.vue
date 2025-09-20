@@ -91,6 +91,7 @@ const main = reactive({
   propSettings: {run: false, strafe: false},
   holdingMovableWindow: null,
   mousePosition: {x: 0, y: 0},
+  userInfo: {},
 });
 
 
@@ -131,11 +132,23 @@ const worldPathRegistry = new WorldPathRegistry(new LoadingManager(), 'rwx',
     'textures', userConfig.at('network').at('imageService'), rasterizeHTML,
     userConfig.at('graphics').at('useHtmlSignRendering'));
 
+// Ready http client for REST API usage
+const httpClient = new HttpClient(import.meta.env.VITE_SERVER_URL + '/api',
+    true);
+
+const fetchUserInfo = async () => {
+  const userInfo = await httpClient.getUser(main.userId);
+  console.log(userInfo);
+  main.userInfo = userInfo;
+};
+
 if (localStorage.getItem('token') && localStorage.getItem('userId')) {
   // If there's an authentication token in local storage: we skip
   // past the sign-in step
+  httpClient.setAuthToken(localStorage.getItem('token'));
   wsClient.setAuthToken(localStorage.getItem('token'));
   main.userId = parseInt(localStorage.getItem('userId'));
+  fetchUserInfo();
   main.state = AppStates.WORLD_UNLOADED;
 }
 
@@ -144,10 +157,6 @@ if (localStorage.getItem('defaultWorldId')) {
   // selection screen, if any
   defaultWorldId = parseInt(localStorage.getItem('defaultWorldId'));
 }
-
-// Ready http client for REST API usage
-const httpClient = new HttpClient(import.meta.env.VITE_SERVER_URL + '/api',
-    true, localStorage.getItem('token'));
 
 const entranceHook = (state) => {
   console.log('Entering "' + state + '" state.');
@@ -175,7 +184,6 @@ const fetchWorldList = () => {
         }
       });
 };
-
 
 const plugWorldChat = async () => {
   worldChat = await wsClient.worldChatConnect(main.worldId);
@@ -263,6 +271,7 @@ const handleLogin = (credentials) => {
         localStorage.setItem('token', token);
         localStorage.setItem('userId', id);
         main.userId = id;
+        fetchUserInfo();
 
         wsClient.setAuthToken(token);
 
@@ -684,6 +693,7 @@ const holdMovableWindow = (movableWindow, x, y) => {
               :listener="inputListener"
               :chunk-cache="chunkCache"
               :user-config="userConfig"
+              :user-info="main.userInfo"
               :feed="userFeed"
             />
 

@@ -17,8 +17,8 @@ class HttpClient {
   /**
    * @constructor
    * @param {string} url - Base URL to prepend to API calls.
-   * @param {boolean} cors - Enable CORS policy is true.
-   * @param {string} token - User authetication token.
+   * @param {boolean} cors - Enable CORS policy if true.
+   * @param {string} token - User authentication token.
    */
   constructor(url = '/api', cors = false, token = null) {
     this.headers = new Headers();
