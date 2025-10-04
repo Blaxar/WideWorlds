@@ -420,7 +420,19 @@ describe('http server', () => {
         .set('Authorization', 'Bearer ' + base.adminBearerToken)
         .set('Accept', 'application/json')
         .expect('Content-Type', /json/)
-        .expect(400, done);
+        .expect(400).then((response) => {
+          const body = response.body;
+
+          // We expect only one entry
+          assert.equal(body.length, 1);
+
+          assert.equal(body[0].name, 'invalidBodyPassword');
+          assert.equal(body[0].ctx, 'body');
+          assert.equal(body[0].field, 'password');
+
+          done();
+        })
+        .catch((err) => done(err));
   });
 
   it('POST /api/users (as admin) - Bad Request (invalid role)', (done) => {
@@ -435,7 +447,20 @@ describe('http server', () => {
         .set('Authorization', 'Bearer ' + base.adminBearerToken)
         .set('Accept', 'application/json')
         .expect('Content-Type', /json/)
-        .expect(400, done);
+        .expect(400)
+        .then((response) => {
+          const body = response.body;
+
+          // We expect only one entry
+          assert.equal(body.length, 1);
+
+          assert.equal(body[0].name, 'invalidBodyRole');
+          assert.equal(body[0].ctx, 'body');
+          assert.equal(body[0].field, 'role');
+
+          done();
+        })
+        .catch((err) => done(err));
   });
 
   it('POST /api/users (as admin) - Bad Request (invalid format)', (done) => {
@@ -450,7 +475,20 @@ describe('http server', () => {
         .set('Authorization', 'Bearer ' + base.adminBearerToken)
         .set('Accept', 'application/json')
         .expect('Content-Type', /json/)
-        .expect(400, done);
+        .expect(400)
+        .then((response) => {
+          const body = response.body;
+
+          // We expect only one entry
+          assert.equal(body.length, 1);
+
+          assert.equal(body[0].name, 'invalidBodyName');
+          assert.equal(body[0].ctx, 'body');
+          assert.equal(body[0].field, 'name');
+
+          done();
+        })
+        .catch((err) => done(err));
   });
 
   it('POST /api/users (as admin) - Bad Request (passwords identical)', (done) => {
@@ -466,7 +504,20 @@ describe('http server', () => {
         .set('Authorization', 'Bearer ' + base.adminBearerToken)
         .set('Accept', 'application/json')
         .expect('Content-Type', /json/)
-        .expect(400, done);
+        .expect(400)
+        .then((response) => {
+          const body = response.body;
+
+          // We expect only one entry
+          assert.equal(body.length, 1);
+
+          assert.equal(body[0].name, 'invalidBodyPrivilegePassword');
+          assert.equal(body[0].ctx, 'body');
+          assert.equal(body[0].field, 'privilegePassword');
+
+          done();
+        })
+        .catch((err) => done(err));
   });
 
   it('POST /api/users (as admin) - Bad Request (name already taken)', (done) => {
@@ -481,7 +532,20 @@ describe('http server', () => {
         .set('Authorization', 'Bearer ' + base.adminBearerToken)
         .set('Accept', 'application/json')
         .expect('Content-Type', /json/)
-        .expect(400, done);
+        .expect(400)
+        .then((response) => {
+          const body = response.body;
+
+          // We expect only one entry
+          assert.equal(body.length, 1);
+
+          assert.equal(body[0].name, 'nonUniqueBodyName');
+          assert.equal(body[0].ctx, 'body');
+          assert.equal(body[0].field, 'name');
+
+          done();
+        })
+        .catch((err) => done(err));
   });
 
   it('POST /api/users (as admin) - Bad Request (email already taken)', (done) => {
@@ -496,7 +560,20 @@ describe('http server', () => {
         .set('Authorization', 'Bearer ' + base.adminBearerToken)
         .set('Accept', 'application/json')
         .expect('Content-Type', /json/)
-        .expect(400, done);
+        .expect(400)
+        .then((response) => {
+          const body = response.body;
+
+          // We expect only one entry
+          assert.equal(body.length, 1);
+
+          assert.equal(body[0].name, 'nonUniqueBodyEmail');
+          assert.equal(body[0].ctx, 'body');
+          assert.equal(body[0].field, 'email');
+
+          done();
+        })
+        .catch((err) => done(err));
   });
 
   it('POST /api/users (as admin) - Bad Request (invalid email)', (done) => {
@@ -511,7 +588,20 @@ describe('http server', () => {
         .set('Authorization', 'Bearer ' + base.adminBearerToken)
         .set('Accept', 'application/json')
         .expect('Content-Type', /json/)
-        .expect(400, done);
+        .expect(400)
+        .then((response) => {
+          const body = response.body;
+
+          // We expect only one entry
+          assert.equal(body.length, 1);
+
+          assert.equal(body[0].name, 'invalidBodyEmail');
+          assert.equal(body[0].ctx, 'body');
+          assert.equal(body[0].field, 'email');
+
+          done();
+        })
+        .catch((err) => done(err));
   });
 
   it('POST /api/users (as admin) - OK', (done) => {

@@ -10,7 +10,7 @@ import TerrainStorage from './terrain-storage.js';
 import WaterStorage from './water-storage.js';
 import {packElevationData} from '../common/terrain-utils.js';
 import {hasUserRole, hasUserIdInParams, middleOr, forbiddenOnFalse,
-  getAuthenticationCallback} from './utils.js';
+  getAuthenticationCallback, formatHttpErrors} from './utils.js';
 import registerPropsEndpoints from './http-props.js';
 import {createServer} from 'http';
 import jwt from 'jsonwebtoken';
@@ -23,6 +23,24 @@ import logger from './logger.js';
 const minNbUsersPerPage = 1;
 const defaultNbUsersPerPage = 200;
 const maxNbUsersPerPage = defaultNbUsersPerPage*10;
+
+/*
+ * Validators for user API POST (mandatory = true) and
+ * PUT (mandatory = false) requests
+ */
+const userValidators = (mandatory) => [
+  body('email').isEmail().optional(mandatory ? false : {nullable: false})
+      .withMessage('Must be a valid email string'),
+  body('name').isString().optional(mandatory ? false : {nullable: false})
+      .withMessage('Must be a string'),
+  body('role').isIn(['admin', 'citizen', 'tourist'])
+      .optional(mandatory ? false : {nullable: false})
+      .withMessage('Must be either one of "admin", "citizen" or "tourist"'),
+  body('password').isString().optional(mandatory ? false : {nullable: false})
+      .withMessage('Must be a string'),
+  body('privilegePassword').isString().optional({nullable: true})
+      .withMessage('Must be either null or a string'),
+];
 
 const spawnHttpServer = async (path, port, secret, worldFolder, userCache,
     terrainCache, waterCache) => {
@@ -680,6 +698,10 @@ const spawnHttpServer = async (path, port, secret, worldFolder, userCache,
      *               $ref: '#/components/schemas/User'
      *       400:
      *         description: Invalid value(s) provided
+     *         content:
+     *           application/json:
+     *             schema:
+     *               $ref: '#/components/schemas/ValidationErrorResponse'
      *       401:
      *         description: Authentication required
      *       403:
@@ -689,32 +711,54 @@ const spawnHttpServer = async (path, port, secret, worldFolder, userCache,
      *         description: Internal error
      */
     app.post('/api/users', authenticate, forbiddenOnFalse(hasUserRole('admin')),
-        body('email').isEmail(),
-        body('name').isString(),
-        body('role').isIn(['admin', 'citizen', 'tourist']),
-        body('password').isString(),
-        body('privilegePassword').isString().optional({nullable: true}),
+        ...userValidators(true),
         (req, res) => {
           const errors = validationResult(req);
           res.setHeader('Content-Type', 'application/json');
 
           const value = req.body;
+          const errorsJson = [];
 
           if (!errors.isEmpty()) {
-            res.status(400).json({});
-            return;
+            errorsJson.push(...formatHttpErrors(errors));
           }
 
           // Account password and privilege password cannot be the same
-          if (value.password === value.privilegePassword) {
-            res.status(400).json({});
-            return;
+          if (value.password && (value.password === value.privilegePassword)) {
+            errorsJson.push({
+              name: 'invalidBodyPrivilegePassword',
+              ctx: 'body',
+              field: 'privilegePassword',
+              desc: 'Account and privilege passwords must be different',
+            });
           }
 
-          // Name and email must not already be taken
-          if ([...userCache.values()].some(
-              ({name, email}) => name == value.name || email == value.email)) {
-            res.status(400).json({});
+          // Name and email must not already be taken by another user
+
+          for (const other of userCache.values()) {
+            const {name, email} = other;
+
+            if (name == value.name) {
+              errorsJson.push({
+                name: 'nonUniqueBodyName',
+                ctx: 'body',
+                field: 'name',
+                desc: 'Name is already taken',
+              });
+            }
+
+            if (email == value.email) {
+              errorsJson.push({
+                name: 'nonUniqueBodyEmail',
+                ctx: 'body',
+                field: 'email',
+                desc: 'Email is already in use',
+              });
+            }
+          }
+
+          if (errorsJson.length) {
+            res.status(400).json(errorsJson);
             return;
           }
 
@@ -821,12 +865,7 @@ const spawnHttpServer = async (path, port, secret, worldFolder, userCache,
     app.put('/api/users/:id', authenticate,
         forbiddenOnFalse(middleOr(hasUserRole('admin'),
             hasUserIdInParams('id'))),
-        body('email').isEmail().optional({nullable: false}),
-        body('name').isString().optional({nullable: false}),
-        body('role').isIn(['admin', 'citizen', 'tourist'])
-            .optional({nullable: false}),
-        body('password').isString().optional({nullable: false}),
-        body('privilegePassword').isString().optional({nullable: true}),
+        ...userValidators(false),
         async (req, res, next) => {
           const errors = validationResult(req);
           res.setHeader('Content-Type', 'application/json');
@@ -890,10 +929,10 @@ const spawnHttpServer = async (path, port, secret, worldFolder, userCache,
             return;
           }
 
-          // Name and email must not already be taken by another user
+          // Name and email must not already be taken
           if ([...userCache.entries()].some(
               ([id, {name, email}]) => user.id != id &&
-                (name == value.name || email == value.email))) {
+                name == value.name || email == value.email)) {
             res.status(400).json({});
             next();
             return;
