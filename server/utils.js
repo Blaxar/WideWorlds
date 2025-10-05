@@ -102,37 +102,6 @@ const requestRemoteAddress = (req) => {
 const upFirstChar = (str) => str.charAt(0).toUpperCase() + str.slice(1);
 
 /**
- * @openapi
- * components:
- *   schemas:
- *     ValidationErrorEntry:
- *       type: object
- *       properties:
- *         name:
- *           description: Full name of the error
- *           type: string
- *           example: nonUniqueBodyEmail
- *         ctx:
- *           description: Location of the field
- *           type: string
- *           example: body
- *         field:
- *           description: Name of the field
- *           type: string
- *           example: email
- *         desc:
- *           description: Human-readable description of the error
- *           type: string
- *           example: Email is already in use
- *
- *     ValidationErrorResponse:
- *       type: array
- *       description: List of validation errors
- *       items:
- *         $ref: '#/components/schemas/ValidationErrorEntry'
- */
-
-/**
  * Format HTTP validation errors from requests
  * @param {object[]} errs - Errors from Express' validationResult().
  * @return {object[]} List of HTTP validation errors.
