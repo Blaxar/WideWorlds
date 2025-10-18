@@ -16,7 +16,7 @@ import {createServer} from 'http';
 import jwt from 'jsonwebtoken';
 import cors from 'cors';
 import express from 'express';
-import {body, validationResult} from 'express-validator';
+import {param, body, validationResult} from 'express-validator';
 import {join} from 'node:path';
 import logger from './logger.js';
 
@@ -59,7 +59,7 @@ const maxNbUsersPerPage = defaultNbUsersPerPage*10;
  * Validators for user API POST (mandatory = true) and
  * PUT (mandatory = false) requests
  */
-const userValidators = (mandatory) => [
+const userBodyValidators = (mandatory) => [
   body('email').isEmail().optional(mandatory ? false : {nullable: false})
       .withMessage('Must be a valid email string'),
   body('name').isString().optional(mandatory ? false : {nullable: false})
@@ -104,6 +104,16 @@ const spawnHttpServer = async (path, port, secret, worldFolder, userCache,
     ctx.propsChangedCallback = cb;
   };
 
+  /*
+   * ID sanitizer for requests with an :id parameter, parses it to integer
+   */
+  const pathIdSanitizer = param('id').customSanitizer((id) => parseInt(id));
+
+  /*
+   * User ID validator for user API requests (GET, PUT and DELETE)
+   */
+  const userIdValidator = param('id').custom((id) => userCache.has(id));
+
   return db.init(path).then(async (connection) => {
     // Ready the express app
     const app = express().use(express.json()).use(cors());
@@ -117,7 +127,7 @@ const spawnHttpServer = async (path, port, secret, worldFolder, userCache,
           // Fill-in the cache by binding IDs to names and roles
           for (const user of users) {
             userCache.set(user.id,
-                (({name, role, email}) => ({name, role, email}))(user));
+                (({id, name, role, email}) => ({id, name, role, email}))(user));
           }
         }); // TODO: handle error (if any)
 
@@ -650,27 +660,30 @@ const spawnHttpServer = async (path, port, secret, worldFolder, userCache,
      *         description: Action not allowed for this user, admin level
      *                      required or the user ID needs to match the one
      *                      from the user issuing the request
+     *       404:
+     *         description: User not found given the provided ID
+     *         content:
+     *           application/json:
+     *             schema:
+     *               $ref: '#/components/schemas/ValidationErrorResponse'
      *       500:
      *         description: Internal error
      */
     app.get('/api/users/:id', authenticate, forbiddenOnFalse(
         middleOr(hasUserRole('admin'), hasUserIdInParams('id'))),
+    pathIdSanitizer,
+    userIdValidator,
     (req, res) => {
+      const errors = validationResult(req);
       res.setHeader('Content-Type', 'application/json');
-      // Get a single user using their id (return 404 if not found)
-      connection.manager.createQueryBuilder(User, 'user')
-          .where('user.id = :id', {id: req.params.id}).getOne().then((user) => {
-            if (user) {
-              res.send(JSON.stringify(user, ['id', 'name', 'email', 'role']));
-            } else {
-              res.status(404).json({});
-            }
-          })
-          .catch((e) => {
-            logger.fatal('Critical DB access error while trying to get user ' +
-                         `#${req.params.id}: ` + e);
-            res.status(500).json({});
-          });
+
+      // Get a single user using their ID (return 404 if not found)
+      if (!errors.isEmpty()) {
+        res.status(404).json(formatHttpErrors(errors));
+        return;
+      }
+
+      res.json(userCache.get(req.params.id));
     });
 
     /**
@@ -742,7 +755,7 @@ const spawnHttpServer = async (path, port, secret, worldFolder, userCache,
      *         description: Internal error
      */
     app.post('/api/users', authenticate, forbiddenOnFalse(hasUserRole('admin')),
-        ...userValidators(true),
+        ...userBodyValidators(true),
         (req, res) => {
           const errors = validationResult(req);
           res.setHeader('Content-Type', 'application/json');
@@ -890,31 +903,32 @@ const spawnHttpServer = async (path, port, secret, worldFolder, userCache,
      *         description: Authentication required
      *       403:
      *         description: Action not allowed
+     *       404:
+     *         description: User not found given the provided ID
+     *         content:
+     *           application/json:
+     *             schema:
+     *               $ref: '#/components/schemas/ValidationErrorResponse'
      *       500:
      *         description: Internal error
      */
     app.put('/api/users/:id', authenticate,
         forbiddenOnFalse(middleOr(hasUserRole('admin'),
             hasUserIdInParams('id'))),
-        ...userValidators(false),
+        pathIdSanitizer,
+        userIdValidator,
+        ...userBodyValidators(false),
         async (req, res, next) => {
           const errors = validationResult(req);
           res.setHeader('Content-Type', 'application/json');
 
-          const uid = parseInt(req.params.id);
+          const uid = req.params.id;
           const userId = parseInt(req.userId);
           const value = req.body;
 
-          // Lookup user from the cache first, 404 if not found
-          if (!userCache.has(uid)) {
-            // User not found
-            res.status(404).json({});
-            next();
-            return;
-          }
-
           if (!errors.isEmpty()) {
-            res.status(400).json({});
+            res.status(errors.array()[0].location == 'params' ? 404 : 400)
+                .json(formatHttpErrors(errors));
             next();
             return;
           }
@@ -924,9 +938,7 @@ const spawnHttpServer = async (path, port, secret, worldFolder, userCache,
                 if (user) {
                   return user;
                 } else {
-                  res.status(404).json({});
-                  next();
-                  return null;
+                  throw Error('The user should exist in DB if it is in cache');
                 }
               })
               .catch((e) => {
@@ -1024,16 +1036,29 @@ const spawnHttpServer = async (path, port, secret, worldFolder, userCache,
      *                      required or self-delete requested
      *       404:
      *         description: User not found given the provided ID
+     *         content:
+     *           application/json:
+     *             schema:
+     *               $ref: '#/components/schemas/ValidationErrorResponse'
      *       500:
      *         description: Internal error
      */
     app.delete('/api/users/:id', authenticate,
         forbiddenOnFalse(hasUserRole('admin')),
+        pathIdSanitizer,
+        userIdValidator,
         (req, res) => {
+          const errors = validationResult(req);
           res.setHeader('Content-Type', 'application/json');
 
+          // Get a single user using their id (return 404 if not found)
+          if (!errors.isEmpty()) {
+            res.status(404).json(formatHttpErrors(errors));
+            return;
+          }
+
           // Get user ID from request parameter
-          const uid = parseInt(req.params.id);
+          const uid = req.params.id;
 
           // Get user ID from authorization
           const userId = parseInt(req.userId);
@@ -1041,12 +1066,6 @@ const spawnHttpServer = async (path, port, secret, worldFolder, userCache,
           // A user cannot delete themself
           if (uid === userId) {
             res.status(403).json({});
-            return;
-          }
-
-          if (!userCache.has(uid)) {
-            // User not found
-            res.status(404).json({});
             return;
           }
 

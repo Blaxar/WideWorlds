@@ -129,7 +129,7 @@ describe('http server', () => {
         .expect(403, done);
   });
 
-  it('GET /api/worlds/id - Not found', (done) => {
+  it('GET /api/worlds/id - Not Found', (done) => {
     request(base.server)
         .get('/api/worlds/66666')
         .set('Authorization', 'Bearer ' + base.adminBearerToken)
@@ -153,7 +153,7 @@ describe('http server', () => {
         .catch((err) => done(err));
   });
 
-  it('GET /api/worlds/id/terrain/x/z/elevation - Not found', (done) => {
+  it('GET /api/worlds/id/terrain/x/z/elevation - Not Found', (done) => {
     request(base.server)
       .get('/api/worlds/' + (base.worldId + 3000) + '/terrain/a/b/elevation')
         .set('Authorization', 'Bearer ' + base.adminBearerToken)
@@ -187,7 +187,7 @@ describe('http server', () => {
         .catch((err) => done(err));
   });
 
-  it('GET /api/worlds/id/terrain/x/z/texture - Not found', (done) => {
+  it('GET /api/worlds/id/terrain/x/z/texture - Not Found', (done) => {
     request(base.server)
       .get('/api/worlds/' + base.worldId + '/terrain/a/b/texture.png')
       .set('Authorization', 'Bearer ' + base.adminBearerToken)
@@ -223,7 +223,7 @@ describe('http server', () => {
         .catch((err) => done(err));
   });
 
-  it('GET /api/worlds/id/water/x/z - Not found', (done) => {
+  it('GET /api/worlds/id/water/x/z - Not Found', (done) => {
     request(base.server)
       .get('/api/worlds/' + (base.worldId + 3000) + '/water/a/b')
         .set('Authorization', 'Bearer ' + base.adminBearerToken)
@@ -400,13 +400,24 @@ describe('http server', () => {
         .expect(403, done);
   });
 
-  it('GET /api/users/id (as admin) - Not found', (done) => {
+  it('GET /api/users/id (as admin) - Not Found', (done) => {
     request(base.server)
         .get('/api/users/66666')
         .set('Authorization', 'Bearer ' + base.adminBearerToken)
         .set('Accept', 'application/json')
         .expect('Content-Type', /json/)
-        .expect(404, done);
+        .expect(404).then((response) => {
+          const body = response.body;
+
+          // We expect only one entry
+          assert.equal(body.length, 1);
+
+          assert.equal(body[0].name, 'invalidParamsId');
+          assert.equal(body[0].ctx, 'params');
+          assert.equal(body[0].field, 'id');
+
+          done();
+        }).catch((err) => done(err));
   });
 
   it('POST /api/users (as admin) - Bad Request (missing field)', (done) => {
@@ -689,7 +700,18 @@ describe('http server', () => {
         .set('Authorization', 'Bearer ' + base.adminBearerToken)
         .set('Accept', 'application/json')
         .expect('Content-Type', /json/)
-        .expect(404, done);
+        .expect(404).then((response) => {
+          const body = response.body;
+
+          // We expect only one entry
+          assert.equal(body.length, 1);
+
+          assert.equal(body[0].name, 'invalidParamsId');
+          assert.equal(body[0].ctx, 'params');
+          assert.equal(body[0].field, 'id');
+
+          done();
+        }).catch((err) => done(err));
   });
 
   it('PUT /api/users/id (as admin to self) - Bad Request (change role)', (done) => {
@@ -888,13 +910,24 @@ describe('http server', () => {
         .expect(403, done);
   });
 
-  it('DELETE /api/users/id (as admin) - Not found', (done) => {
+  it('DELETE /api/users/id (as admin) - Not Found', (done) => {
     request(base.server)
         .delete('/api/users/66666')
         .set('Authorization', 'Bearer ' + base.adminBearerToken)
         .set('Accept', 'application/json')
         .expect('Content-Type', /json/)
-        .expect(404, done);
+        .expect(404).then((response) => {
+          const body = response.body;
+
+          // We expect only one entry
+          assert.equal(body.length, 1);
+
+          assert.equal(body[0].name, 'invalidParamsId');
+          assert.equal(body[0].ctx, 'params');
+          assert.equal(body[0].field, 'id');
+
+          done();
+        }).catch((err) => done(err));
   });
 
   // Testing User API (as citizen)
