@@ -827,7 +827,8 @@ const spawnHttpServer = async (path, port, secret, worldFolder, userCache,
 
                 // Update the local user cache for fast lookup elsewhere
                 userCache.set(id,
-                    (({name, role, email}) => ({name, role, email}))(u));
+                    (({id, name, role, email}) =>
+                      ({id, name, role, email}))(u));
                 res.json({id, name, email, role});
               })
               .catch((e) => {
@@ -899,6 +900,10 @@ const spawnHttpServer = async (path, port, secret, worldFolder, userCache,
      *               $ref: '#/components/schemas/User'
      *       400:
      *         description: Invalid value(s) provided
+     *         content:
+     *           application/json:
+     *             schema:
+     *               $ref: '#/components/schemas/ValidationErrorResponse'
      *       401:
      *         description: Authentication required
      *       403:
@@ -926,9 +931,16 @@ const spawnHttpServer = async (path, port, secret, worldFolder, userCache,
           const userId = parseInt(req.userId);
           const value = req.body;
 
+          const errorsJson = [];
+          let errorCode = 400;
+
           if (!errors.isEmpty()) {
-            res.status(errors.array()[0].location == 'params' ? 404 : 400)
-                .json(formatHttpErrors(errors));
+            errorsJson.push(...formatHttpErrors(errors));
+          }
+
+          if (errorsJson.length) {
+            res.status(errors.array()[0].location == 'params' ? 404 : errorCode)
+                .json(errorsJson);
             next();
             return;
           }
@@ -967,23 +979,52 @@ const spawnHttpServer = async (path, port, secret, worldFolder, userCache,
 
           // Account password and privilege password cannot be the same
           if (user.password === user.privilegePassword) {
-            res.status(400).json({});
-            next();
-            return;
+            errorsJson.push({
+              name: 'invalidBodyPrivilegePassword',
+              ctx: 'body',
+              field: 'privilegePassword',
+              desc: 'Account and privilege passwords must be different',
+            });
           }
 
           // Name and email must not already be taken
-          if ([...userCache.entries()].some(
-              ([id, {name, email}]) => user.id != id &&
-                name == value.name || email == value.email)) {
-            res.status(400).json({});
-            next();
-            return;
+          for (const other of userCache.entries()) {
+            const [id, {name, email}] = other;
+
+            if (user.id == id) continue;
+
+            if (name == value.name) {
+              errorsJson.push({
+                name: 'nonUniqueBodyName',
+                ctx: 'body',
+                field: 'name',
+                desc: 'Name is already taken',
+              });
+            }
+
+            if (email == value.email) {
+              errorsJson.push({
+                name: 'nonUniqueBodyEmail',
+                ctx: 'body',
+                field: 'email',
+                desc: 'Email is already in use',
+              });
+            }
           }
 
           // The user issuing the request cannot modify its own role,
           if (userId === uid && userCache.get(uid).role != user.role) {
-            res.status(403).json({});
+            errorCode = 403;
+            errorsJson.push({
+              name: 'staticBodyRole',
+              ctx: 'body',
+              field: 'role',
+              desc: 'Cannot modify own role',
+            });
+          }
+
+          if (errorsJson.length) {
+            res.status(errorCode).json(errorsJson);
             next();
             return;
           }
@@ -994,7 +1035,8 @@ const spawnHttpServer = async (path, port, secret, worldFolder, userCache,
 
                 // Update the local user cache for fast lookup elsewhere
                 userCache.set(id,
-                    (({name, role, email}) => ({name, role, email}))(u));
+                    (({id, name, role, email}) =>
+                      ({id, name, role, email}))(u));
 
                 res.json({id, name, email, role});
                 next();

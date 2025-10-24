@@ -714,7 +714,7 @@ describe('http server', () => {
         }).catch((err) => done(err));
   });
 
-  it('PUT /api/users/id (as admin to self) - Bad Request (change role)', (done) => {
+  it('PUT /api/users/id (as admin to self) - Forbidden (change role)', (done) => {
     request(base.server)
         .put('/api/users/' + base.adminId)
         .send({
@@ -723,7 +723,20 @@ describe('http server', () => {
         .set('Authorization', 'Bearer ' + base.adminBearerToken)
         .set('Accept', 'application/json')
         .expect('Content-Type', /json/)
-        .expect(403, done);
+        .expect(403)
+        .then((response) => {
+          const body = response.body;
+
+          // We expect only one entry
+          assert.equal(body.length, 1);
+
+          assert.equal(body[0].name, 'staticBodyRole');
+          assert.equal(body[0].ctx, 'body');
+          assert.equal(body[0].field, 'role');
+
+          done();
+        })
+        .catch((err) => done(err));
   });
 
   it('PUT /api/users/id (as admin to other) - Bad Request (invalid role)', (done) => {
@@ -735,7 +748,20 @@ describe('http server', () => {
         .set('Authorization', 'Bearer ' + base.adminBearerToken)
         .set('Accept', 'application/json')
         .expect('Content-Type', /json/)
-        .expect(400, done);
+        .expect(400)
+        .then((response) => {
+          const body = response.body;
+
+          // We expect only one entry
+          assert.equal(body.length, 1);
+
+          assert.equal(body[0].name, 'invalidBodyRole');
+          assert.equal(body[0].ctx, 'body');
+          assert.equal(body[0].field, 'role');
+
+          done();
+        })
+        .catch((err) => done(err));
   });
 
   it('PUT /api/users/id (as admin to other) - Bad Request (invalid format)', (done) => {
@@ -750,7 +776,20 @@ describe('http server', () => {
         .set('Authorization', 'Bearer ' + base.adminBearerToken)
         .set('Accept', 'application/json')
         .expect('Content-Type', /json/)
-        .expect(400, done);
+        .expect(400)
+        .then((response) => {
+          const body = response.body;
+
+          // We expect only one entry
+          assert.equal(body.length, 1);
+
+          assert.equal(body[0].name, 'invalidBodyName');
+          assert.equal(body[0].ctx, 'body');
+          assert.equal(body[0].field, 'name');
+
+          done();
+        })
+        .catch((err) => done(err));
   });
 
   it('PUT /api/users/id (as admin to other) - Bad Request (passwords identical)', (done) => {
@@ -762,7 +801,20 @@ describe('http server', () => {
         .set('Authorization', 'Bearer ' + base.adminBearerToken)
         .set('Accept', 'application/json')
         .expect('Content-Type', /json/)
-        .expect(400, done);
+        .expect(400)
+        .then((response) => {
+          const body = response.body;
+
+          // We expect only one entry
+          assert.equal(body.length, 1);
+
+          assert.equal(body[0].name, 'invalidBodyPrivilegePassword');
+          assert.equal(body[0].ctx, 'body');
+          assert.equal(body[0].field, 'privilegePassword');
+
+          done();
+        })
+        .catch((err) => done(err));
   });
 
   it('PUT /api/users/id (as admin to other) - Bad Request (name already taken)', (done) => {
@@ -774,7 +826,20 @@ describe('http server', () => {
         .set('Authorization', 'Bearer ' + base.adminBearerToken)
         .set('Accept', 'application/json')
         .expect('Content-Type', /json/)
-        .expect(400, done);
+        .expect(400)
+        .then((response) => {
+          const body = response.body;
+
+          // We expect only one entry
+          assert.equal(body.length, 1);
+
+          assert.equal(body[0].name, 'nonUniqueBodyName');
+          assert.equal(body[0].ctx, 'body');
+          assert.equal(body[0].field, 'name');
+
+          done();
+        })
+        .catch((err) => done(err));
   });
 
   it('PUT /api/users/id (as admin to other) - Bad Request (email already taken)', (done) => {
@@ -786,7 +851,19 @@ describe('http server', () => {
         .set('Authorization', 'Bearer ' + base.adminBearerToken)
         .set('Accept', 'application/json')
         .expect('Content-Type', /json/)
-        .expect(400, done);
+        .then((response) => {
+          const body = response.body;
+
+          // We expect only one entry
+          assert.equal(body.length, 1);
+
+          assert.equal(body[0].name, 'nonUniqueBodyEmail');
+          assert.equal(body[0].ctx, 'body');
+          assert.equal(body[0].field, 'email');
+
+          done();
+        })
+        .catch((err) => done(err));
   });
 
   it('PUT /api/users/id (as admin to other) - Bad Request (invalid email)', (done) => {
@@ -798,7 +875,20 @@ describe('http server', () => {
         .set('Authorization', 'Bearer ' + base.adminBearerToken)
         .set('Accept', 'application/json')
         .expect('Content-Type', /json/)
-        .expect(400, done);
+        .expect(400)
+        .then((response) => {
+          const body = response.body;
+
+          // We expect only one entry
+          assert.equal(body.length, 1);
+
+          assert.equal(body[0].name, 'invalidBodyEmail');
+          assert.equal(body[0].ctx, 'body');
+          assert.equal(body[0].field, 'email');
+
+          done();
+        })
+        .catch((err) => done(err));
   });
 
   it('PUT /api/users/id (as admin to other) - OK', (done) => {
@@ -1050,16 +1140,29 @@ describe('http server', () => {
         .expect(403, done);
   });
 
-  it('PUT /api/users/id (as citizen to self) - Bad Request (change role)', (done) => {
+  it('PUT /api/users/id (as citizen to self) - Forbidden (change role)', (done) => {
     request(base.server)
-        .put('/api/users/' + base.adminId)
+        .put('/api/users/' + base.citizenId)
         .send({
           role: 'admin',
         })
         .set('Authorization', 'Bearer ' + base.citizenBearerToken)
         .set('Accept', 'application/json')
         .expect('Content-Type', /json/)
-        .expect(403, done);
+        .expect(403)
+        .then((response) => {
+          const body = response.body;
+
+          // We expect only one entry
+          assert.equal(body.length, 1);
+
+          assert.equal(body[0].name, 'staticBodyRole');
+          assert.equal(body[0].ctx, 'body');
+          assert.equal(body[0].field, 'role');
+
+          done();
+        })
+        .catch((err) => done(err));
   });
 
   it('PUT /api/users/id (as citizen to self) - Bad Request (invalid format)', (done) => {
@@ -1073,7 +1176,20 @@ describe('http server', () => {
         .set('Authorization', 'Bearer ' + base.citizenBearerToken)
         .set('Accept', 'application/json')
         .expect('Content-Type', /json/)
-        .expect(400, done);
+        .expect(400)
+        .then((response) => {
+          const body = response.body;
+
+          // We expect only one entry
+          assert.equal(body.length, 1);
+
+          assert.equal(body[0].name, 'invalidBodyName');
+          assert.equal(body[0].ctx, 'body');
+          assert.equal(body[0].field, 'name');
+
+          done();
+        })
+        .catch((err) => done(err));
   });
 
   it('PUT /api/users/id (as citizen to self) - Bad Request (passwords identical)', (done) => {
@@ -1085,7 +1201,20 @@ describe('http server', () => {
         .set('Authorization', 'Bearer ' + base.citizenBearerToken)
         .set('Accept', 'application/json')
         .expect('Content-Type', /json/)
-        .expect(400, done);
+        .expect(400)
+        .then((response) => {
+          const body = response.body;
+
+          // We expect only one entry
+          assert.equal(body.length, 1);
+
+          assert.equal(body[0].name, 'invalidBodyPrivilegePassword');
+          assert.equal(body[0].ctx, 'body');
+          assert.equal(body[0].field, 'privilegePassword');
+
+          done();
+        })
+        .catch((err) => done(err));
   });
 
   it('PUT /api/users/id (as citizen to self) - Bad Request (name already taken)', (done) => {
@@ -1097,7 +1226,20 @@ describe('http server', () => {
         .set('Authorization', 'Bearer ' + base.citizenBearerToken)
         .set('Accept', 'application/json')
         .expect('Content-Type', /json/)
-        .expect(400, done);
+        .expect(400)
+        .then((response) => {
+          const body = response.body;
+
+          // We expect only one entry
+          assert.equal(body.length, 1);
+
+          assert.equal(body[0].name, 'nonUniqueBodyName');
+          assert.equal(body[0].ctx, 'body');
+          assert.equal(body[0].field, 'name');
+
+          done();
+        })
+        .catch((err) => done(err));
   });
 
   it('PUT /api/users/id (as citizen to self) - Bad Request (email already taken)', (done) => {
@@ -1109,7 +1251,20 @@ describe('http server', () => {
         .set('Authorization', 'Bearer ' + base.citizenBearerToken)
         .set('Accept', 'application/json')
         .expect('Content-Type', /json/)
-        .expect(400, done);
+        .expect(400)
+        .then((response) => {
+          const body = response.body;
+
+          // We expect only one entry
+          assert.equal(body.length, 1);
+
+          assert.equal(body[0].name, 'nonUniqueBodyEmail');
+          assert.equal(body[0].ctx, 'body');
+          assert.equal(body[0].field, 'email');
+
+          done();
+        })
+        .catch((err) => done(err));
   });
 
   it('PUT /api/users/id (as citizen to self) - Bad Request (invalid email)', (done) => {
@@ -1121,7 +1276,20 @@ describe('http server', () => {
         .set('Authorization', 'Bearer ' + base.citizenBearerToken)
         .set('Accept', 'application/json')
         .expect('Content-Type', /json/)
-        .expect(400, done);
+        .expect(400)
+        .then((response) => {
+          const body = response.body;
+
+          // We expect only one entry
+          assert.equal(body.length, 1);
+
+          assert.equal(body[0].name, 'invalidBodyEmail');
+          assert.equal(body[0].ctx, 'body');
+          assert.equal(body[0].field, 'email');
+
+          done();
+        })
+        .catch((err) => done(err));
   });
 
   it('PUT /api/users/id (as citizen to other) - Forbidden', (done) => {
