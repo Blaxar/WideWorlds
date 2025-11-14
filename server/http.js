@@ -73,8 +73,8 @@ const userBodyValidators = (mandatory) => [
       .withMessage('Must be either null or a string'),
 ];
 
-const spawnHttpServer = async (path, port, secret, worldFolder, userCache,
-    terrainCache, waterCache) => {
+const spawnHttpServer = async (path, port, secret, worldFolder, worldCache,
+    userCache, terrainCache, waterCache) => {
   // Get a version of the authentication method working with the
   // secret we need
   const authenticate = getAuthenticationCallback(secret);
@@ -114,12 +114,43 @@ const spawnHttpServer = async (path, port, secret, worldFolder, userCache,
    */
   const userIdValidator = param('id').custom((id) => userCache.has(id));
 
+  /*
+   * World ID validator for user API requests (GET, PUT and DELETE)
+   */
+  const worldIdValidator = param('id').custom((id) => worldCache.has(id));
+
+  /*
+   * Page sanitizers for requests with :x and :z parameters, parses them
+   * to integers
+   */
+  const worldPageSanitizers = [
+    (param('x').customSanitizer((x) => parseInt(x))),
+    (param('z').customSanitizer((z) => parseInt(z))),
+  ];
+
+  /*
+   * World Page (X and Z) validators for user API requests
+   */
+  const worldPageValidators = [
+    (param('x').custom((x) => !isNaN(x))),
+    (param('z').custom((z) => !isNaN(z))),
+  ];
+
   return db.init(path).then(async (connection) => {
     // Ready the express app
     const app = express().use(express.json()).use(cors());
 
     // Create http server
     const server = createServer(app);
+
+    // Load world cache
+    connection.manager.createQueryBuilder(World, 'world').getMany()
+        .then((worlds) => {
+          for (const world of worlds) {
+            worldCache.set(world.id,
+                (({id, name, data}) => ({id, name, data}))(world));
+          }
+        }); // TODO: handle error (if any)
 
     // Load user cache
     connection.manager.createQueryBuilder(User, 'user').getMany()
@@ -264,14 +295,9 @@ const spawnHttpServer = async (path, port, secret, worldFolder, userCache,
      */
     app.get('/api/worlds', authenticate, (req, res) => {
       res.setHeader('Content-Type', 'application/json');
+
       // Get a list of all existing worlds
-      connection.manager.createQueryBuilder(World, 'world')
-          .getMany().then((worlds) => res.send(worlds))
-          .catch((e) => {
-            logger.fatal('Critical DB access error while trying to get list ' +
-                         'of worlds: ' + e);
-            return res.status(500).json({});
-          });
+      res.json([...worldCache.values()]);
     });
 
     /**
@@ -302,29 +328,29 @@ const spawnHttpServer = async (path, port, secret, worldFolder, userCache,
      *       403:
      *         description: Action not allowed for this user
      *       404:
-     *         description: No world found matching this ID
+     *         description: World not found given the provided ID
+     *         content:
+     *           application/json:
+     *             schema:
+     *               $ref: '#/components/schemas/ValidationErrorResponse'
      *       500:
      *         description: Internal error
      */
-    app.get('/api/worlds/:id', authenticate, (req, res) => {
-      res.setHeader('Content-Type', 'application/json');
-      // Get a single world using its id (return 404 if not found)
-      connection.manager.createQueryBuilder(World, 'world')
-          .where('world.id = :id', {id: req.params.id})
-          .getOne().then((world) => {
-            if (world) {
-              res.send(world);
-            } else {
-              res.status(404).json({});
-            }
-          })
-          .catch((e) => {
-            logger.fatal('Critical DB access error while trying to get world ' +
-                         `#${req.params.id}}: ` + e);
-            return res.status(500).json({});
-          });
-    });
+    app.get('/api/worlds/:id', authenticate, pathIdSanitizer,
+        worldIdValidator, (req, res) => {
+          const errors = validationResult(req);
+          res.setHeader('Content-Type', 'application/json');
 
+          // Get a single world using its id (return 404 if not found)
+          if (!errors.isEmpty()) {
+            res.status(404).json(formatHttpErrors(errors));
+            return;
+          }
+
+          res.json(worldCache.get(req.params.id));
+        });
+
+    // Props endpoints are handled in a separate file
     registerPropsEndpoints(app, authenticate, connection, ctx);
 
     /**
@@ -368,41 +394,40 @@ const spawnHttpServer = async (path, port, secret, worldFolder, userCache,
      *       403:
      *         description: Action not allowed for this user
      *       404:
-     *         description: No world found matching this ID
+     *         description: World or page not found given the provided IDs
+     *         content:
+     *           application/json:
+     *             schema:
+     *               $ref: '#/components/schemas/ValidationErrorResponse'
      *       500:
      *         description: Internal error
      */
     app.get('/api/worlds/:id/terrain/:x/:z/elevation', authenticate,
-        (req, res) => {
-          res.setHeader('Content-Type', 'application/octet-stream');
-          const wid = req.params.id;
-          const pageX = parseInt(req.params.x);
-          const pageZ = parseInt(req.params.z);
+        pathIdSanitizer, ...worldPageSanitizers, worldIdValidator,
+        ...worldPageValidators, (req, res) => {
+          const errors = validationResult(req);
 
-          if (isNaN(pageX) || isNaN(pageZ)) {
-            res.status(404).send();
+          const wid = req.params.id;
+          const pageX = req.params.x;
+          const pageZ = req.params.z;
+
+          if (!errors.isEmpty()) {
+            res.setHeader('Content-Type', 'application/json');
+            res.status(404).json(formatHttpErrors(errors));
             return;
           }
 
-          connection.manager.createQueryBuilder(World, 'world')
-              .where('world.id = :wid', {wid}).getOne().then((world) => {
-                if (!world) {
-                  res.status(404).send();
-                  return;
-                }
-
-                getTerrainStorage(wid).getPage(pageX, pageZ).then(
-                    (page) => {
-                      const packed = packElevationData(page.elevationData);
-                      res.send(Buffer.from(packed, 'binary'));
-                    },
-                );
+          getTerrainStorage(wid).getPage(pageX, pageZ).then(
+              (page) => {
+                const packed = packElevationData(page.elevationData);
+                res.setHeader('Content-Type', 'application/octet-stream');
+                res.send(Buffer.from(packed, 'binary'));
               });
         });
 
     /**
      * @openapi
-     * /api/worlds/{worldId}/{x}/{z}/elevation:
+     * /api/worlds/{worldId}/{x}/{z}/texture:
      *   get:
      *     description: Get terrain texture data for a single page
      *                  a of a single world
@@ -441,33 +466,33 @@ const spawnHttpServer = async (path, port, secret, worldFolder, userCache,
      *       403:
      *         description: Action not allowed for this user
      *       404:
-     *         description: No world found matching this ID
+     *         description: World or page not found given the provided ID
+     *         content:
+     *           application/json:
+     *             schema:
+     *               $ref: '#/components/schemas/ValidationErrorResponse'
      *       500:
      *         description: Internal error
      */
     app.get('/api/worlds/:id/terrain/:x/:z/texture', authenticate,
-        (req, res) => {
-          res.setHeader('Content-Type', 'application/octet-stream');
-          const wid = req.params.id;
-          const pageX = parseInt(req.params.x);
-          const pageZ = parseInt(req.params.z);
+        pathIdSanitizer, ...worldPageSanitizers, worldIdValidator,
+        ...worldPageValidators, (req, res) => {
+          const errors = validationResult(req);
 
-          if (isNaN(pageX) || isNaN(pageZ)) {
-            res.status(404).send();
+          const wid = req.params.id;
+          const pageX = req.params.x;
+          const pageZ = req.params.z;
+
+          if (!errors.isEmpty()) {
+            res.setHeader('Content-Type', 'application/json');
+            res.status(404).json(formatHttpErrors(errors));
             return;
           }
 
-          connection.manager.createQueryBuilder(World, 'world')
-              .where('world.id = :wid', {wid}).getOne().then((world) => {
-                if (!world) {
-                  res.status(404).send();
-                } else {
-                  getTerrainStorage(wid).getPage(pageX, pageZ).then(
-                      (page) => {
-                        res.end(Buffer.from(page.textureData, 'binary'));
-                      },
-                  );
-                }
+          getTerrainStorage(wid).getPage(pageX, pageZ).then(
+              (page) => {
+                res.setHeader('Content-Type', 'application/octet-stream');
+                res.end(Buffer.from(page.textureData, 'binary'));
               });
         });
 
@@ -512,36 +537,36 @@ const spawnHttpServer = async (path, port, secret, worldFolder, userCache,
      *       403:
      *         description: Action not allowed for this user
      *       404:
-     *         description: No world found matching this ID
+     *         description: World or page not found given the provided ID
+     *         content:
+     *           application/json:
+     *             schema:
+     *               $ref: '#/components/schemas/ValidationErrorResponse'
      *       500:
      *         description: Internal error
      */
     app.get('/api/worlds/:id/water/:x/:z', authenticate,
-        (req, res) => {
-          res.setHeader('Content-Type', 'application/octet-stream');
-          const wid = req.params.id;
-          const pageX = parseInt(req.params.x);
-          const pageZ = parseInt(req.params.z);
+        pathIdSanitizer, ...worldPageSanitizers, worldIdValidator,
+        ...worldPageValidators, (req, res) => {
+          const errors = validationResult(req);
 
-          if (isNaN(pageX) || isNaN(pageZ)) {
-            res.status(404).send();
+          const wid = req.params.id;
+          const pageX = req.params.x;
+          const pageZ = req.params.z;
+
+          if (!errors.isEmpty()) {
+            res.setHeader('Content-Type', 'application/json');
+            res.status(404).json(formatHttpErrors(errors));
             return;
           }
 
-          connection.manager.createQueryBuilder(World, 'world')
-              .where('world.id = :wid', {wid}).getOne().then((world) => {
-                if (!world) {
-                  res.status(404).send();
-                  return;
-                }
-
-                getWaterStorage(wid).getPage(pageX, pageZ).then(
-                    (page) => {
-                      const packed = packElevationData(page);
-                      res.send(Buffer.from(packed, 'binary'));
-                    },
-                );
-              });
+          getWaterStorage(wid).getPage(pageX, pageZ).then(
+              (page) => {
+                const packed = packElevationData(page);
+                res.setHeader('Content-Type', 'application/octet-stream');
+                res.send(Buffer.from(packed, 'binary'));
+              },
+          );
         });
 
     /**

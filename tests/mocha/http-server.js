@@ -135,7 +135,18 @@ describe('http server', () => {
         .set('Authorization', 'Bearer ' + base.adminBearerToken)
         .set('Accept', 'application/json')
         .expect('Content-Type', /json/)
-        .expect(404, done);
+        .expect(404).then((response) => {
+          const body = response.body;
+
+          // We expect only one entry
+          assert.equal(body.length, 1);
+
+          assert.equal(body[0].name, 'invalidParamsId');
+          assert.equal(body[0].ctx, 'params');
+          assert.equal(body[0].field, 'id');
+
+          done();
+        }).catch((err) => done(err));
   });
 
   // Testing terrain API
@@ -156,8 +167,28 @@ describe('http server', () => {
   it('GET /api/worlds/id/terrain/x/z/elevation - Not Found', (done) => {
     request(base.server)
       .get('/api/worlds/' + (base.worldId + 3000) + '/terrain/a/b/elevation')
-        .set('Authorization', 'Bearer ' + base.adminBearerToken)
-      .expect(404, done);
+      .set('Authorization', 'Bearer ' + base.adminBearerToken)
+      .expect('Content-Type', /json/)
+      .expect(404).then((response) => {
+          const body = response.body;
+
+          // We expect all 3 entries
+          assert.equal(body.length, 3);
+
+          assert.equal(body[0].name, 'invalidParamsId');
+          assert.equal(body[0].ctx, 'params');
+          assert.equal(body[0].field, 'id');
+
+          assert.equal(body[1].name, 'invalidParamsX');
+          assert.equal(body[1].ctx, 'params');
+          assert.equal(body[1].field, 'x');
+
+          assert.equal(body[2].name, 'invalidParamsZ');
+          assert.equal(body[2].ctx, 'params');
+          assert.equal(body[2].field, 'z');
+
+          done();
+        }).catch((err) => done(err));
   });
 
   it('GET /api/worlds/id/terrain/x/z/elevation - Unauthorized', (done) => {
@@ -189,9 +220,29 @@ describe('http server', () => {
 
   it('GET /api/worlds/id/terrain/x/z/texture - Not Found', (done) => {
     request(base.server)
-      .get('/api/worlds/' + base.worldId + '/terrain/a/b/texture.png')
+      .get('/api/worlds/' + (base.worldId + 3000) + '/terrain/a/b/texture')
       .set('Authorization', 'Bearer ' + base.adminBearerToken)
-      .expect(404, done);;
+      .expect('Content-Type', /json/)
+      .expect(404).then((response) => {
+          const body = response.body;
+
+          // We expect all 3 entries
+          assert.equal(body.length, 3);
+
+          assert.equal(body[0].name, 'invalidParamsId');
+          assert.equal(body[0].ctx, 'params');
+          assert.equal(body[0].field, 'id');
+
+          assert.equal(body[1].name, 'invalidParamsX');
+          assert.equal(body[1].ctx, 'params');
+          assert.equal(body[1].field, 'x');
+
+          assert.equal(body[2].name, 'invalidParamsZ');
+          assert.equal(body[2].ctx, 'params');
+          assert.equal(body[2].field, 'z');
+
+          done();
+        }).catch((err) => done(err));
   });
 
   it('GET /api/worlds/id/terrain/x/z/texture - Unauthorized', (done) => {
@@ -226,8 +277,28 @@ describe('http server', () => {
   it('GET /api/worlds/id/water/x/z - Not Found', (done) => {
     request(base.server)
       .get('/api/worlds/' + (base.worldId + 3000) + '/water/a/b')
-        .set('Authorization', 'Bearer ' + base.adminBearerToken)
-      .expect(404, done);
+      .set('Authorization', 'Bearer ' + base.adminBearerToken)
+      .expect('Content-Type', /json/)
+      .expect(404).then((response) => {
+          const body = response.body;
+
+          // We expect all 3 entries
+          assert.equal(body.length, 3);
+
+          assert.equal(body[0].name, 'invalidParamsId');
+          assert.equal(body[0].ctx, 'params');
+          assert.equal(body[0].field, 'id');
+
+          assert.equal(body[1].name, 'invalidParamsX');
+          assert.equal(body[1].ctx, 'params');
+          assert.equal(body[1].field, 'x');
+
+          assert.equal(body[2].name, 'invalidParamsZ');
+          assert.equal(body[2].ctx, 'params');
+          assert.equal(body[2].field, 'z');
+
+          done();
+        }).catch((err) => done(err));
   });
 
   it('GET /api/worlds/id/water/x/z - Unauthorized', (done) => {

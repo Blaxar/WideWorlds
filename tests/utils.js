@@ -52,6 +52,7 @@ const makeHttpTestBase = (port = 62931, dbFile = 'mocha-http-test-db.sqlite3', s
     adminBearerToken: '',
     citizenBearerToken: '',
     worldFolder: join(tmpdir(), `base${Date.now()}`),
+    worldCache: new Map(),
     userCache: new Map(),
     terrainCache: new Map(),
     waterCache: new Map()
@@ -63,7 +64,8 @@ const makeHttpTestBase = (port = 62931, dbFile = 'mocha-http-test-db.sqlite3', s
     }
 
     const {server, onPropsChange} = await spawnHttpServer(base.dbFile, base.port,
-        base.secret, base.worldFolder, base.userCache, base.terrainCache, base.waterCache);
+        base.secret, base.worldFolder, base.worldCache, base.userCache, base.terrainCache,
+        base.waterCache);
 
     /* TODO: revert to solely using the server object once it works again with superwstest */
     base.srv = server;
@@ -86,6 +88,7 @@ const makeHttpTestBase = (port = 62931, dbFile = 'mocha-http-test-db.sqlite3', s
     base.citizenId = await makeTestUser(TypeORM.getConnection(), 'oOo_Al1ce_oOo',
         '3p1cP4sSw0Rd', 'test2@somemail.com', 'citizen');
 
+    base.worldCache.set(base.worldId, {id: base.worldId, name: 'Test World', data: '{}'});
     base.userCache.set(base.adminId, {id: base.adminId, name: 'xXx_B0b_xXx', role: 'admin', email: 'test@somemail.com'});
     base.userCache.set(base.citizenId, {id: base.citizenId, name: 'oOo_Al1ce_oOo', role: 'citizen', email: 'test2@somemail.com'});
 
@@ -136,6 +139,7 @@ const makeHttpTestBase = (port = 62931, dbFile = 'mocha-http-test-db.sqlite3', s
       await repository.clear();
     }
 
+    base.worldCache.clear();
     base.userCache.clear();
   };
 
