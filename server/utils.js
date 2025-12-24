@@ -5,6 +5,8 @@
 import jwt from 'jsonwebtoken';
 import {URL} from 'url';
 import logger from './logger.js';
+import World from '../common/db/model/World.js';
+import User from '../common/db/model/User.js';
 
 const roleLevels = {
   'tourist': 0,
@@ -114,5 +116,52 @@ const formatHttpErrors = (errs) => errs.formatWith((err) => ({
   desc: err.msg,
 })).array();
 
+/**
+ * @typedef WorldCacheEntry
+ * @type {object}
+ * @property {integer} id - ID of the world.
+ * @property {string} name - Name of the world.
+ * @property {string} data - JSON object holding various world properties.
+ */
+
+/**
+ * @typedef UserCacheEntry
+ * @type {object}
+ * @property {integer} id - ID of the user.
+ * @property {string} name - Name of the user.
+ * @property {string} role - Role of the user.
+ * @property {string} email - Email address of the user.
+ */
+
+/**
+ * Load world and user caches from database, meant to be called once at startup
+ * @param {object} dbManager - TypeORM manager to perform database queries.
+ * @param {Map<integer, WorldCacheEntry>} worldCache - World cache map, indexed
+ *                                                     by ID.
+ * @param {Map<integer, userCacheEntry>} userCache - User cache map, indexed by
+ *                                                   ID.
+ */
+function loadCaches(dbManager, worldCache, userCache) {
+  // Load world cache
+  dbManager.createQueryBuilder(World, 'world').getMany()
+      .then((worlds) => {
+        for (const world of worlds) {
+          worldCache.set(world.id,
+              (({id, name, data}) => ({id, name, data}))(world));
+        }
+      }); // TODO: handle error (if any)
+
+  // Load user cache
+  dbManager.createQueryBuilder(User, 'user').getMany()
+      .then((users) => {
+      // Fill-in the cache by binding IDs to names and roles
+        for (const user of users) {
+          userCache.set(user.id,
+              (({id, name, role, email}) => ({id, name, role, email}))(user));
+        }
+      }); // TODO: handle error (if any)
+}
+
 export {roleLevels, hasUserRole, hasUserIdInParams, middleOr, formatHttpErrors,
-  middleAnd, forbiddenOnFalse, getAuthenticationCallback, requestRemoteAddress};
+  middleAnd, forbiddenOnFalse, getAuthenticationCallback, requestRemoteAddress,
+  loadCaches};

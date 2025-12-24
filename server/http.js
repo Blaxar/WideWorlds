@@ -3,14 +3,13 @@
  */
 
 import * as db from '../common/db/utils.js';
-import World from '../common/db/model/World.js';
 import User from '../common/db/model/User.js';
 import * as crypto from 'crypto';
 import TerrainStorage from './terrain-storage.js';
 import WaterStorage from './water-storage.js';
 import {packElevationData} from '../common/terrain-utils.js';
 import {hasUserRole, hasUserIdInParams, middleOr, forbiddenOnFalse,
-  getAuthenticationCallback, formatHttpErrors} from './utils.js';
+  getAuthenticationCallback, formatHttpErrors, loadCaches} from './utils.js';
 import registerPropsEndpoints from './http-props.js';
 import {createServer} from 'http';
 import jwt from 'jsonwebtoken';
@@ -143,24 +142,8 @@ const spawnHttpServer = async (path, port, secret, worldFolder, worldCache,
     // Create http server
     const server = createServer(app);
 
-    // Load world cache
-    connection.manager.createQueryBuilder(World, 'world').getMany()
-        .then((worlds) => {
-          for (const world of worlds) {
-            worldCache.set(world.id,
-                (({id, name, data}) => ({id, name, data}))(world));
-          }
-        }); // TODO: handle error (if any)
-
-    // Load user cache
-    connection.manager.createQueryBuilder(User, 'user').getMany()
-        .then((users) => {
-          // Fill-in the cache by binding IDs to names and roles
-          for (const user of users) {
-            userCache.set(user.id,
-                (({id, name, role, email}) => ({id, name, role, email}))(user));
-          }
-        }); // TODO: handle error (if any)
+    // Load world and user caches
+    loadCaches(connection.manager, worldCache, userCache);
 
     /**
      * @openapi

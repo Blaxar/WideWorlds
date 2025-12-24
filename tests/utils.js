@@ -6,6 +6,7 @@ import * as db from '../common/db/utils.js';
 import {hashProps} from '../common/props-data-format.js';
 import {spawnHttpServer} from '../server/http.js';
 import {spawnWsServer} from '../server/ws.js';
+import {loadCaches} from '../server/utils.js';
 import World from '../common/db/model/World.js';
 import Prop from '../common/db/model/Prop.js';
 import User from '../common/db/model/User.js';
@@ -88,9 +89,8 @@ const makeHttpTestBase = (port = 62931, dbFile = 'mocha-http-test-db.sqlite3', s
     base.citizenId = await makeTestUser(TypeORM.getConnection(), 'oOo_Al1ce_oOo',
         '3p1cP4sSw0Rd', 'test2@somemail.com', 'citizen');
 
-    base.worldCache.set(base.worldId, {id: base.worldId, name: 'Test World', data: '{}'});
-    base.userCache.set(base.adminId, {id: base.adminId, name: 'xXx_B0b_xXx', role: 'admin', email: 'test@somemail.com'});
-    base.userCache.set(base.citizenId, {id: base.citizenId, name: 'oOo_Al1ce_oOo', role: 'citizen', email: 'test2@somemail.com'});
+    // Initialize world and user caches to be in sync with the database
+    loadCaches(TypeORM.getConnection().manager, base.worldCache, base.userCache);
 
     base.adminBearerToken = await request(base.server)
       .post('/api/login')
