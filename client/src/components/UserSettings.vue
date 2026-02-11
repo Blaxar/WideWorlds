@@ -3,6 +3,7 @@
  * @author Julien 'Blaxar' Bardagi <blaxar.waldarax@gmail.com>
  */
 
+import UserInfo from './shared/UserInfo.vue';
 import {onMounted, onUnmounted, ref} from 'vue';
 import ChunkCache from '../core/chunk-cache.js';
 import UserInput, {UserInputListener, qwertyBindings}
@@ -660,42 +661,7 @@ onUnmounted(() => {
         role="tabpanel"
         hidden
       >
-        <table>
-          <tbody>
-            <tr>
-              <td>
-                Username:
-              </td>
-              <td>
-                {{ userInfo?.name }}
-              </td>
-            </tr>
-            <tr>
-              <td>
-                Role:
-              </td>
-              <td>
-                {{ userInfo?.role }}
-              </td>
-            </tr>
-            <tr>
-              <td>
-                Email:
-              </td>
-              <td>
-                {{ userInfo?.email }}
-              </td>
-            </tr>
-            <tr>
-              <td>
-                ID:
-              </td>
-              <td>
-                {{ userInfo?.id }}
-              </td>
-            </tr>
-          </tbody>
-        </table>
+        <UserInfo :user-info="userInfo" />
       </article>
     </section>
   </div>
