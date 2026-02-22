@@ -72,9 +72,10 @@ const thirdPersonCameraDistance = 8;
 let cameraMode = 0; // 0 is first person view, 1 is rear view, 2 is front view
 let lastAvatarUpdate = 0;
 
-const wsClient = new WsClient(
-    import.meta.env.VITE_SERVER_URL.replace(/http\:\/\//g, 'ws://')
-        .replace(/https\:\/\//g, 'wss://') + '/api');
+const wsClient =
+   new WsClient((window.location.protocol == 'https:' ? 'wss:' : 'ws:') +
+    '//' + window.location.hostname + (import.meta.env.VITE_SERVER_PORT ? (':' +
+    import.meta.env.VITE_SERVER_PORT) : '') + '/api');
 
 // Define reactive states for Vue.js
 const main = reactive({
@@ -133,12 +134,13 @@ const worldPathRegistry = new WorldPathRegistry(new LoadingManager(), 'rwx',
     userConfig.at('graphics').at('useHtmlSignRendering'));
 
 // Ready http client for REST API usage
-const httpClient = new HttpClient(import.meta.env.VITE_SERVER_URL + '/api',
-    true);
+const httpClient = new HttpClient(window.location.protocol +
+    '//' + window.location.hostname +
+    (import.meta.env.VITE_SERVER_PORT ? (':' +
+    import.meta.env.VITE_SERVER_PORT) : '') + '/api', true);
 
 const fetchUserInfo = async () => {
   const userInfo = await httpClient.getUser(main.userId);
-  console.log(userInfo);
   main.userInfo = userInfo;
 };
 

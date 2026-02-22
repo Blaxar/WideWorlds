@@ -62,12 +62,47 @@ See [aw2db](###aw2db) in the [Tools](##Tools) section.
 To easily build and serve frontend content, you will need to run the following:
 
 ```bash
-VITE_SERVER_URL=http://localhost:8080 npm run client-dev
+VITE_SERVER_PORT=8080 npm run client-dev
 ```
 
-Prepending `VITE_HTTP_SERVER_URL=<url>` as environment variable is essential, as it tells the _Vue.js_ app which base url to use when performing http requests.
+Prepending `VITE_SERVER_PORT=<port>` as environment variable is essential, as it tells the _Vue.js_ app which port to query when performing http requests.
 
-You can then browse the app going to `http://localhost:5173` on your favorite web browser, note that building and serving the _Vue.js_ app this way is only meant for development and debugging purposes, as editing source files from the frontend should trigger a thorough rebuilding and automatically reload the web page, which is convenient for live-testing of various changes.
+You can then browse the app going to `http://localhost:5173` on your favorite web browser, note that building and serving the _Vue.js_ app this way is only meant for development and debugging purposes, as editing source files from the frontend should trigger a thorough rebuilding and automatically reload the web page, which is convenient for live-testing various changes.
+
+## Docker
+
+A _Docker_ image can be built out of both the _Node.js_ backend and the _Vue.js_ frontend, it also runs an _Nginx_ HTTPS server in front of them for production purposed.
+
+```bash
+# Build it
+docker build -t wideworlds:latest .
+
+# Run it
+docker run -v /persistent/storage/data:/data --name wideworlds -p 443:443 -e WW_SERVER_NAME='my-server.com' --rm -it wideworlds:latest
+```
+
+Where `/persistent/storage/data` denotes an actual host folder that the docker container will mount to fetch and store anything meant to persist across runs of the container, it is internally mounted onto `/data`.
+
+When provided, `/data/nginx/ww.key` and `/data/nginx/ww.cert` will be loaded as key and certificate for the Nginx front web server running to offer HTTPS (and WSS), shall those files be missing: the container will still generate ones on the spot (self-signed certificate), which is enough to locally test the container.
+
+Note that `my-server.com` denotes the actual, real domain name that you intent to use for a production deployement of WideWorlds, this domain name needs to match the one of the certifcate when signed by a trusted tier.
+
+Omitting the `WW_SERVER_NAME` environment variable will just result in `localhost` being picked by default, which is enough to just fiddle with the container locally, then you don't need to provide any custom certifcate or key as the self-signed configuration will be enough.
+
+```bash
+docker build -t wideworlds:latest .
+docker run -v /persistent/storage/data:/data -e WW_SERVER_NAME=my-server.com --name wideworlds -p 443:443 --rm -it wideworlds:latest
+
+Created private key to sign HTTPS certifcate...
+To use an existing one: mount the '/data' folder and copy it under '/data/nginx/ww.key'.
+Created certificate signed with '/data/nginx/ww.key' to serve HTTPS...
+To use an existing one: mount the '/data' folder and copy it under '/data/nginx/ww.crt'.
+
+Nginx server will listen on port 443 to server HTTPS and WSS, visit https://localhost
+
+> wideworlds@0.1.0 server
+> node server/app.js --db /data/db.sqlite3 --worldFolder /data/worlds
+```
 
 ## Tools
 
