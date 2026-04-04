@@ -29,10 +29,12 @@ const pageLoadingPattern = [[-1, -1], [0, -1], [1, -1],
   [-1, 0], [0, 0], [1, 0],
   [-1, 1], [0, 1], [1, 1]];
 
-// Ignore non-solid props when computing bounds tree for collision detection
-const chunkNodeColliderFilter =
-    (obj3d) => obj3d.userData.rwx?.solid === undefined ||
-      obj3d.userData.rwx.solid === true;
+// Ignore non-solid and animated props when computing bounds tree for
+// collision detection
+const chunkNodeColliderFilter = (obj3d) =>
+  (obj3d.userData.rwx?.solid === undefined ||
+      obj3d.userData.rwx.solid === true) &&
+      !(obj3d.userData.rotate || obj3d.userData.move);
 
 const twoPi = 2*Math.PI;
 const maxLoadingAttempts = 4;

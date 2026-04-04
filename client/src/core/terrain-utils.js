@@ -40,8 +40,7 @@ const pointMaterial = new THREE.PointsMaterial(
 // only the actual page geometry should be used, not the wireframe
 // and points cloud overlays
 const pageNodeCollisionPreSelector = (obj3d) =>
-  obj3d.getObjectByName(pageAssetName)
-      .userData.lookup.actual;
+  obj3d.getObjectByName(pageAssetName).userData.lookup.actual;
 
 /**
  * Generate all possible terrain tile textures

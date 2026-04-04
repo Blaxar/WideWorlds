@@ -300,8 +300,9 @@ class Engine3D {
     // Preselect geometry
     obj3d = preSelector(obj3d);
 
-    // Make one single mesh
-    const flat = obj3d.isMesh ? obj3d.clone() : flattenGroup(obj3d, filter);
+    // Make one single mesh, filter on both meshes and groups
+    const flat = obj3d.isMesh ? obj3d.clone() :
+        flattenGroup(obj3d, filter, filter);
 
     if (!flat.geometry.getIndex().count) {
       // No face in geometry, so no bounds to compute, return right away
@@ -594,17 +595,11 @@ class Engine3D {
           } else if (obj3d.userData.rotate) {
             animateRotate(node, obj3d, now, this.tmpEul,
                 this.endPosition, this.tmpMat);
-
-            // TODO: find optimization to not trigger this as often
-            this.boundTreesToUpdate.add(id);
           }
 
           // Update objects to move
           if (obj3d.userData.move) {
             animateMove(node, obj3d, now, this.startPosition, this.endPosition);
-
-            // TODO: find optimization to not trigger this as often
-            this.boundTreesToUpdate.add(id);
           }
         }
       });
