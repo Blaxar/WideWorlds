@@ -493,7 +493,7 @@ const makeDefaultUser = (id) => {
   const salt = crypto.randomBytes(db.saltLength).toString('base64');
 
   // Use the name as password
-  return new User(id, name, db.hashPassword(name, salt), '', 'user', salt);
+  return new User(id, name, db.hashPassword(name, salt), '', 'citizen', salt);
 };
 
 db.init(argv.sql).then(async (connection) => {
