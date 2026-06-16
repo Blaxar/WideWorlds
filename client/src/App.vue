@@ -286,7 +286,18 @@ const handleLogin = (credentials) => {
             null, userFeedPriority.error);
         appState.failedSigningIn();
       });
-};
+ };
+
+ const handleUserSubmit = (data) => {
+   httpClient.putUser(main.userInfo.id, data).then((user) => {
+     console.log(user);
+     main.userInfo = user;
+   }).catch((error) => {
+     console.log(error);
+     userFeed.publish(`Failed updating account information`,
+                      null, userFeedPriority.error);
+   });
+ };
 
 // Update camera based on desired mode
 const updateCamera = (cycleMode = false) => {
@@ -697,6 +708,7 @@ const holdMovableWindow = (movableWindow, x, y) => {
               :user-config="userConfig"
               :user-info="main.userInfo"
               :feed="userFeed"
+              @user-submit="handleUserSubmit"
             />
 
             <PropSettings

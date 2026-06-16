@@ -106,6 +106,8 @@ const props = defineProps({
   },
 });
 
+const emit = defineEmits(['user-submit']);
+ 
 // Alias to shorten the path
 const backgroundScenery = () =>
   props.userConfig.at('graphics').at('backgroundScenery');
@@ -270,6 +272,10 @@ const clearChunkCache = () => {
   props.feed.publish(props.chunksClearedMessage, 'Client',
       userFeedPriority.info);
   props.chunkCache.clear();
+ };
+
+const onUserSubmit = (data) => {
+  emit('user-submit', data);
 };
 
 const localRenderingDistance = ref(getRenderingDistance());
@@ -661,7 +667,7 @@ onUnmounted(() => {
         role="tabpanel"
         hidden
       >
-        <UserInfo :user-info="userInfo" />
+        <UserInfo :user-info="userInfo" @submit="onUserSubmit" />
       </article>
     </section>
   </div>
