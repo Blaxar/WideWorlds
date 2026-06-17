@@ -4,6 +4,31 @@
 
 import {unpackElevationData} from '../../../common/terrain-utils.js';
 
+/** Custom error type for negative HTTP response */
+class HttpError extends Error {
+  /**
+   * @constructor
+   * @param {integer} status - HTTP status code of the response.
+   * @param {string} payload - Payload of the response, if any.
+   */
+  constructor(status, payload = null) {
+    if (status == 400 && payload?.length) {
+      // We expect 400 responses to come with a descriptive list of
+      // errors...
+      let message = '';
+      for (const error of payload) {
+        message += `- '${error.field}': ${error.desc};\n`;
+      }
+
+      super(message);
+    } else {
+      super(status);
+    }
+
+    this.name = 'HttpError';
+  }
+}
+
 /**
  * @typedef AuthToken
  * @type {object}
@@ -298,9 +323,11 @@ class HttpClient {
       mode: this.cors ? 'cors' : undefined,
     });
 
-    return await fetch(request).then((response) => {
+    return await fetch(request).then(async (response) => {
       if (response.ok) return response.json();
-      else throw new Error(response.status);
+      else {
+        throw new HttpError(response.status, await response.json());
+      }
     });
   }
 
