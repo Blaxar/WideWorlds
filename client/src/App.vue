@@ -3,7 +3,7 @@
  * @author Julien 'Blaxar' Bardagi <blaxar.waldarax@gmail.com>
  */
 
-import {computed, reactive, onMounted} from 'vue';
+import {computed, reactive, onMounted, ref} from 'vue';
 import LoginForm from './components/LoginForm.vue';
 import WorldSelection from './components/WorldSelection.vue';
 import TopBar from './components/TopBar.vue';
@@ -93,8 +93,10 @@ const main = reactive({
   holdingMovableWindow: null,
   mousePosition: {x: 0, y: 0},
   userInfo: {},
+  stagingUserInfo: {},
 });
 
+const userSettings = ref(null);
 
 // Mapping GUI components to human-readable window titles
 const componentTitle = {
@@ -286,6 +288,18 @@ const handleLogin = (credentials) => {
             null, userFeedPriority.error);
         appState.failedSigningIn();
       });
+};
+
+const handleUserSubmit = (user) => {
+  httpClient.putUser(main.userInfo.id, user).then((u) => {
+    main.userInfo = u;
+    userFeed.publish('Successfully updated account information!',
+        null, userFeedPriority.info);
+  }).catch((error) => {
+    userSettings.value?.resetUser();
+    userFeed.publish(`Failed to update account information:\n${error.message}`,
+        null, userFeedPriority.error);
+  });
 };
 
 // Update camera based on desired mode
@@ -692,11 +706,13 @@ const holdMovableWindow = (movableWindow, x, y) => {
           <template #body>
             <UserSettings
               v-if="main.displayWindow.component == 'UserSettings'"
+              ref="userSettings"
               :listener="inputListener"
               :chunk-cache="chunkCache"
               :user-config="userConfig"
               :user-info="main.userInfo"
               :feed="userFeed"
+              @user-submit="handleUserSubmit"
             />
 
             <PropSettings

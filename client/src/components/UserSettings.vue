@@ -106,6 +106,8 @@ const props = defineProps({
   },
 });
 
+const emit = defineEmits(['user-submit']);
+
 // Alias to shorten the path
 const backgroundScenery = () =>
   props.userConfig.at('graphics').at('backgroundScenery');
@@ -131,6 +133,8 @@ const onImageServiceChange = (event) => {
 const inputField = ref(null);
 
 const imageService = ref(null);
+
+const userInfoRef = ref(null);
 
 const resetKeys = () => {
   props.listener.bindAllKeys(qwertyBindings);
@@ -271,6 +275,16 @@ const clearChunkCache = () => {
       userFeedPriority.info);
   props.chunkCache.clear();
 };
+
+const onUserSubmit = (data) => {
+  emit('user-submit', data);
+};
+
+const resetUser = () => {
+  userInfoRef.value?.reset();
+};
+
+defineExpose({resetUser});
 
 const localRenderingDistance = ref(getRenderingDistance());
 const localPropsLoadingDistance = ref(getPropsLoadingDistance());
@@ -661,7 +675,11 @@ onUnmounted(() => {
         role="tabpanel"
         hidden
       >
-        <UserInfo :user-info="userInfo" />
+        <UserInfo
+          ref="userInfoRef"
+          :user-info="userInfo"
+          @submit="onUserSubmit"
+        />
       </article>
     </section>
   </div>

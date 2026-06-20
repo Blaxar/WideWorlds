@@ -1032,6 +1032,7 @@ const spawnHttpServer = async (path, port, secret, worldFolder, worldCache,
           }
 
           if (errorsJson.length) {
+            logger.error(errorsJson);
             res.status(errorCode).json(errorsJson);
             next();
             return;
