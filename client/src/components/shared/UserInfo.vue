@@ -3,7 +3,7 @@
  * @author Julien 'Blaxar' Bardagi <blaxar.waldarax@gmail.com>
  */
 
-import {ref, toRaw} from 'vue';
+import {onMounted, computed, ref, toRaw} from 'vue';
 
 
 const props = defineProps({
@@ -21,18 +21,52 @@ const emit = defineEmits(['submit']);
 
 // Break reactivity with original object, use local version
 const {name, role, email} = toRaw(props.userInfo);
+let canEditRole = false;
 const userRef = ref({name, role, email});
 
+// Handle passwords logic here, they are only included in
+// the JSON payoad when their macthing fields are field
+const password = ref(null);
+const passwordRepeat = ref(null);
+const privilegePassword = ref(null);
+const privilegePasswordRepeat = ref(null);
+
+// True when the form can be submitted (coherent field values)
+const submittable = computed(() =>
+  (password.value === passwordRepeat.value) &&
+  (privilegePassword.value === privilegePasswordRepeat.value));
+
+const clearPasswords = () => {
+  password.value = null;
+  passwordRepeat.value = null;
+
+  privilegePassword.value = null;
+  privilegePasswordRepeat.value = null;
+};
+
 const onSubmit = () => {
+  userRef.value['password'] = password.value || undefined;
+  userRef.value['privilegePassword'] = privilegePassword.value || undefined;
+
+  clearPasswords();
+  console.log(userRef.value);
   emit('submit', userRef.value);
 };
 
 const reset = () => {
   const {name, role, email} = toRaw(props.userInfo);
   userRef.value = {name, role, email};
+
+  clearPasswords();
+
+  canEditRole = (role === 'admin');
 };
 
 defineExpose({reset});
+
+onMounted(() => {
+  reset();
+});
 
 </script>
 
@@ -60,6 +94,7 @@ defineExpose({reset});
           <td>
             <select
               v-model="userRef.role"
+              :disabled="!canEditRole"
             >
               <option value="tourist">
                 Tourist
@@ -87,6 +122,54 @@ defineExpose({reset});
         </tr>
         <tr>
           <td>
+            Password:
+          </td>
+          <td>
+            <input
+              v-model="password"
+              placeholder="****"
+              type="password"
+              class="text-input"
+            >
+          </td>
+        </tr>
+        <tr>
+          <td />
+          <td>
+            <input
+              v-model="passwordRepeat"
+              placeholder="repeat"
+              type="password"
+              class="text-input"
+            >
+          </td>
+        </tr>
+        <tr>
+          <td>
+            Privilege Password:
+          </td>
+          <td>
+            <input
+              v-model="privilegePassword"
+              placeholder="****"
+              type="password"
+              class="text-input"
+            >
+          </td>
+        </tr>
+        <tr>
+          <td />
+          <td>
+            <input
+              v-model="privilegePasswordRepeat"
+              placeholder="repeat"
+              type="password"
+              class="text-input"
+            >
+          </td>
+        </tr>
+        <tr>
+          <td>
             ID:
           </td>
           <td>
@@ -95,7 +178,10 @@ defineExpose({reset});
         </tr>
         <tr>
           <td colspan="2">
-            <button type="submit">
+            <button
+              type="submit"
+              :disabled="!submittable"
+            >
               {{ buttonText }}
             </button>
           </td>
