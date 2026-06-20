@@ -49,7 +49,6 @@ const onSubmit = () => {
   userRef.value['privilegePassword'] = privilegePassword.value || undefined;
 
   clearPasswords();
-  console.log(userRef.value);
   emit('submit', userRef.value);
 };
 
