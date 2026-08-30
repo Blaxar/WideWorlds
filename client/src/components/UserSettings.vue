@@ -280,8 +280,8 @@ const onUserSubmit = (data) => {
   emit('user-submit', data);
 };
 
-const resetUser = () => {
-  userInfoRef.value?.reset();
+const resetUser = (errors) => {
+  userInfoRef.value?.reset(errors);
 };
 
 defineExpose({resetUser});

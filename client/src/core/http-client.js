@@ -21,8 +21,10 @@ class HttpError extends Error {
       }
 
       super(message);
+      this.payload = payload;
     } else {
       super(status);
+      this.payload = null;
     }
 
     this.name = 'HttpError';

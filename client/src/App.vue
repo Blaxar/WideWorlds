@@ -296,7 +296,7 @@ const handleUserSubmit = (user) => {
     userFeed.publish('Successfully updated account information!',
         null, userFeedPriority.info);
   }).catch((error) => {
-    userSettings.value?.resetUser();
+    userSettings.value?.resetUser(error.payload);
     userFeed.publish(`Failed to update account information:\n${error.message}`,
         null, userFeedPriority.error);
   });
