@@ -2,6 +2,7 @@
  * @author Julien 'Blaxar' Bardagi <blaxar.waldarax@gmail.com>
  */
 
+import {param} from 'express-validator';
 import jwt from 'jsonwebtoken';
 import {URL} from 'url';
 import logger from './logger.js';
@@ -162,6 +163,11 @@ function loadCaches(dbManager, worldCache, userCache) {
       }); // TODO: handle error (if any)
 }
 
+/*
+ * ID sanitizer for requests with an :id parameter, parses it to integer
+ */
+const pathIdSanitizer = param('id').customSanitizer((id) => parseInt(id));
+
 export {roleLevels, hasUserRole, hasUserIdInParams, middleOr, formatHttpErrors,
   middleAnd, forbiddenOnFalse, getAuthenticationCallback, requestRemoteAddress,
-  loadCaches};
+  loadCaches, pathIdSanitizer};
