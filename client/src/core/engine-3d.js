@@ -57,6 +57,8 @@ class Engine3D {
           .at('renderingDistance').value();
       this.hidingDistance = graphicsNode
           .at('propsLoadingDistance').value();
+      this.framesPerSecond = utils3D.sanitizeFramesPerSecond(
+          graphicsNode.at('framesPerSecond').value());
 
       graphicsNode.at('renderingDistance').onUpdate((value) => {
         this.renderingDistance = parseFloat(value);
@@ -65,6 +67,11 @@ class Engine3D {
       graphicsNode.at('propsLoadingDistance').onUpdate((value) => {
         this.hidingDistance = parseFloat(value);
         this.lods = [0.0, this.hidingDistance];
+      });
+
+      graphicsNode.at('framesPerSecond').onUpdate((value) => {
+        this.framesPerSecond = utils3D.sanitizeFramesPerSecond(
+            value, this.framesPerSecond);
       });
     }
 
@@ -751,6 +758,14 @@ class Engine3D {
    */
   getDeltaTime() {
     return this.clock.getDelta();
+  }
+
+  /**
+   * Get target number of frames per second
+   * @return {number} Number of frames per second.
+   */
+  getFramesPerSecond() {
+    return this.framesPerSecond;
   }
 
   /**

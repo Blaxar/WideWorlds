@@ -74,6 +74,7 @@ const defaultConfig = {
     },
     useHtmlSignRendering: false,
     debugUserCollider: false,
+    framesPerSecond: 60.0,
   },
   physics: {
     colliderInterpolation: true,

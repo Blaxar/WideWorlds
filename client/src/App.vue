@@ -46,6 +46,7 @@ let someInputFocused = false;
 let worldManager = null;
 let worldState = null;
 let entityManager = null;
+let deltaTimeAcc = 0;
 const tmpVec2 = new Vector2;
 const animationManager = new AnimationManager();
 const chunkCache = new ChunkCache();
@@ -401,8 +402,15 @@ const handleAnimation = (name) => {
 };
 
 const render = () => {
-  const delta = engine3d.getDeltaTime();
-  inputListener.step(delta);
+  deltaTimeAcc += engine3d.getDeltaTime();
+  const fps = engine3d.getFramesPerSecond();
+
+  if (fps > 0 && deltaTimeAcc < (1.0 / fps)) {
+    requestAnimationFrame(render);
+    return;
+  }
+
+  inputListener.step(deltaTimeAcc);
 
   if (main.holdingMovableWindow) {
     const {movableWindow, x, y} = main.holdingMovableWindow;
@@ -429,7 +437,7 @@ const render = () => {
     movableWindow.style['margin-top'] = `${y + yD + main.mousePosition.y}px`;
   }
 
-  worldManager?.update(engine3d.camera.position, delta);
+  worldManager?.update(engine3d.camera.position, deltaTimeAcc);
   entityManager?.setLocalUserId(main.userId);
 
   if (main.userId !== null && worldState && entityManager &&
@@ -487,9 +495,10 @@ const render = () => {
   propsSelector.updatePropAxis(engine3d.camera);
 
   // Only update entities if the world is loaded
-  if (worldState) entityManager.step(delta);
+  if (worldState) entityManager.step(deltaTimeAcc);
 
-  if (engine3d.render(delta)) {
+  if (engine3d.render(deltaTimeAcc)) {
+    deltaTimeAcc = 0;
     requestAnimationFrame(render);
   }
 };

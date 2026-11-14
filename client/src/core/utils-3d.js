@@ -72,6 +72,17 @@ function flipYawDegrees(yaw) {
 }
 
 /**
+ * Sanitize a frames-per-second value from user config/input
+ * @param {any} value - Candidate FPS value.
+ * @param {number} fallback - Fallback FPS when value is invalid.
+ * @return {number} Sanitized FPS value.
+ */
+function sanitizeFramesPerSecond(value, fallback = 60.0) {
+  const fps = parseFloat(value);
+  return Number.isFinite(fps) && fps > 0 ? fps : fallback;
+}
+
+/**
  * Build 3D asset for helper arrows
  * @return {Group} three.js group entity holding the arrows.
  */
@@ -146,4 +157,4 @@ function makeHelperArrows() {
 }
 
 export {makeReversedOctahedron, defaultSkyColors,
-  makeHelperArrows, flipYawRadians, flipYawDegrees};
+  makeHelperArrows, flipYawRadians, flipYawDegrees, sanitizeFramesPerSecond};

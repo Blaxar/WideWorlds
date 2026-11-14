@@ -64,6 +64,10 @@ const props = defineProps({
     type: String,
     default: 'Display user collider box',
   },
+  framesPerSecondText: {
+    type: String,
+    default: 'FPS',
+  },
   colliderInterpolationText: {
     type: String,
     default: 'Enable collider interpolation',
@@ -258,6 +262,11 @@ const setUseHtmlSignRendering = (event) => {
 const setDebugUserCollider = (event) => {
   props.userConfig.at('graphics')
       .at('debugUserCollider').set(event.target.checked);
+};
+
+const setFramesPerSecond = (event) => {
+  props.userConfig.at('graphics')
+      .at('framesPerSecond').set(parseFloat(event.target.value));
 };
 
 const setColliderInterpolation = (event) => {
@@ -519,6 +528,22 @@ onUnmounted(() => {
                 <label for="debugUserCollider">
                   {{ debugUserColliderText }}
                 </label>
+              </td>
+            </tr>
+            <tr>
+              <td colspan="2">
+                <label for="framesPerSecond">
+                  {{ framesPerSecondText }}:
+                </label>
+                <input
+                  id="framesPerSecond"
+                  type="number"
+                  min="1"
+                  step="1"
+                  inputmode="numeric"
+                  :value="props.userConfig.at('graphics').at('framesPerSecond').value()"
+                  @change="setFramesPerSecond"
+                >
               </td>
             </tr>
           </tbody>
