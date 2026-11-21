@@ -199,7 +199,7 @@ describe('UserInput', () => {
     assert.equal(subject.mouseMove.x, 5);
     assert.equal(subject.mouseMove.y, -8);
 
-    await sleep(200);
+    await sleep(220);
 
     inputListener.releaseKey('z');
     inputListener.releaseKey('q');
@@ -259,7 +259,7 @@ describe('UserInput', () => {
     assert.equal(subject.mouseMove.x, -3);
     assert.equal(subject.mouseMove.y, 99);
 
-    await sleep(300);
+    await sleep(320);
 
     inputListener.releaseKey('s');
     inputListener.releaseKey('-');
