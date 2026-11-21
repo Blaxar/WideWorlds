@@ -113,12 +113,19 @@ class SubjectBehavior {
    */
 
   /**
+   * @typedef {object} MouseMovement
+   * @property {number} x - X-axis movement.
+   * @property {number} y - Y-axis movement.
+   */
+
+  /**
    * To be overridden, update subject-based input commands
    * @param {number} delta - Elapsed number of seconds since last call.
+   * @param {MouseMovement} mouseMove - Mouse movements.
    * @param {UserInputEvent[]} buffer - List on user input events since last
    *                                    {@link step} call.
    */
-  step(delta, buffer = []) {} // override this in a subclass
+  step(delta, mouseMove = {x: 0, y: 0}, buffer = []) {}
 }
 
 /**
@@ -155,6 +162,8 @@ class UserInputListener {
       this[`clear${upperCased}Key`] = () => this.clearKey(name);
       this[`get${upperCased}Key`] = () => this.getKey(name);
     }
+
+    this.mouseMove = {x: 0, y: 0};
   }
 
   /**
@@ -318,6 +327,28 @@ class UserInputListener {
   }
 
   /**
+   * Register mouse movement
+   * @param {number} x - X-axis movement.
+   * @param {number} y - Y-axis movement.
+   */
+  registerMouseMove(x, y) {
+    this.mouseMove.x += x;
+    this.mouseMove.y += y;
+  }
+
+  /**
+   * Commit mouse movements by returning them and clearing
+   * the buffered values
+   * @return {{x: number, y: number}} Mouse movements.
+   */
+  commitMouseMove() {
+    const mouseMove = this.mouseMove;
+    this.mouseMove = {x: 0, y: 0};
+
+    return mouseMove;
+  }
+
+  /**
    * Update subject based on the current key states
    * @param {number} delta - Amount of seconds elapsed since last update.
    */
@@ -333,7 +364,7 @@ class UserInputListener {
         }
       }
 
-      this.subjectBehavior.step(delta, this.buffer);
+      this.subjectBehavior.step(delta, this.commitMouseMove(), this.buffer);
 
       // Update timestamp and clear the event buffer
       this.lastStep = now;

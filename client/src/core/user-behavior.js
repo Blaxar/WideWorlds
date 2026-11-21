@@ -77,8 +77,9 @@ class UserBehavior extends SubjectBehavior {
   /**
    * Update user position based input commands
    * @param {number} delta - Elapsed number of seconds since last call.
+   * @param {MouseMovement} mouseMove - Mouse movements.
    */
-  step(delta) {
+  step(delta, mouseMove) {
     this.elapsed += delta;
     this.subject.state.idle = true;
 

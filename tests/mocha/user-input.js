@@ -13,6 +13,7 @@ class DummySubject {
     this.z = 0.0;
 
     this.buffer = [];
+    this.mouseMove = {x: 0, y: 0};
   }
 }
 
@@ -21,7 +22,7 @@ class DummyBehavior extends SubjectBehavior {
     super(subject);
   }
 
-  step(delta, buffer) {
+  step(delta, mouseMove, buffer) {
     if (this.forward()) {
       this.subject.z += 20.0 * delta;
     }
@@ -47,6 +48,7 @@ class DummyBehavior extends SubjectBehavior {
     }
 
     this.subject.buffer = buffer;
+    this.subject.mouseMove = mouseMove;
   }
 }
 
@@ -146,6 +148,11 @@ describe('UserInput', () => {
     inputListener.bindMoveUpKey('+');
     inputListener.bindMoveDownKey('-');
 
+    // Stateful members must still be set to their default state
+    assert.equal(inputListener.buffer.length, 0);
+    assert.equal(inputListener.mouseMove.x, 0);
+    assert.equal(inputListener.mouseMove.y, 0);
+
     assert.strictEqual(inputListener.getLookUpKey(), null); // 'lookUp' key unset
     assert.equal(inputListener.getForwardKey(), 'z');
     assert.equal(inputListener.getBackwardKey(), 's');
@@ -159,9 +166,29 @@ describe('UserInput', () => {
     inputListener.pressKey('z');
     inputListener.pressKey('q');
 
+    inputListener.registerMouseMove(10, -10);
+    inputListener.registerMouseMove(-5, 2); // At this point: {5, -8} should be stored
+
+    // Validate listener stateful members
+    assert.equal(inputListener.buffer.length, 2);
+    assert.equal(inputListener.buffer[0].name, 'forward');
+    assert.ok(inputListener.buffer[0].pressed);
+    assert.ok(inputListener.buffer[0].delta >= 0);
+    assert.equal(inputListener.buffer[1].name, 'left');
+    assert.ok(inputListener.buffer[1].pressed);
+    assert.ok(inputListener.buffer[1].delta >= 0);
+    assert.equal(inputListener.mouseMove.x, 5);
+    assert.equal(inputListener.mouseMove.y, -8);
+
     inputListener.step(0.2);
 
-    // Validate buffer content
+    // Listener stateful members must have been cleared
+    assert.equal(inputListener.buffer.length, 0);
+    assert.equal(inputListener.mouseMove.x, 0);
+    assert.equal(inputListener.mouseMove.y, 0);
+
+    // Validate subject stateful members, coming from
+    // the listener
     assert.equal(subject.buffer.length, 2);
     assert.equal(subject.buffer[0].name, 'forward');
     assert.ok(subject.buffer[0].pressed);
@@ -169,8 +196,10 @@ describe('UserInput', () => {
     assert.equal(subject.buffer[1].name, 'left');
     assert.ok(subject.buffer[1].pressed);
     assert.ok(subject.buffer[1].delta >= 0);
+    assert.equal(subject.mouseMove.x, 5);
+    assert.equal(subject.mouseMove.y, -8);
 
-    await sleep(220);
+    await sleep(200);
 
     inputListener.releaseKey('z');
     inputListener.releaseKey('q');
@@ -182,9 +211,38 @@ describe('UserInput', () => {
     inputListener.pressKey('s');
     inputListener.pressKey('-');
 
+    inputListener.registerMouseMove(-4, 100);
+    inputListener.registerMouseMove(0, 0);
+    inputListener.registerMouseMove(1, -1); // At this point: {-3, 99} should be stored
+
+    // Validate listener stateful members again
+    assert.equal(inputListener.buffer.length, 4);
+    assert.equal(inputListener.buffer[0].name, 'forward');
+    assert.ok(!inputListener.buffer[0].pressed);
+    assert.ok(inputListener.buffer[0].delta >= 0.2);
+    assert.equal(inputListener.buffer[1].name, 'left');
+    assert.ok(!inputListener.buffer[1].pressed);
+    assert.ok(inputListener.buffer[1].delta >= 0.2);
+    assert.equal(inputListener.buffer[2].name, 'backward');
+    assert.ok(inputListener.buffer[2].pressed);
+    assert.ok(inputListener.buffer[2].delta >= 0.2);
+    assert.equal(inputListener.buffer[3].name, 'moveDown');
+    assert.ok(inputListener.buffer[3].pressed);
+    assert.ok(inputListener.buffer[3].delta >= 0.2);
+    assert.equal(inputListener.mouseMove.x, -3);
+    assert.equal(inputListener.mouseMove.y, 99);
+
+    // Clock 0.3 seconds forward, commiting buffer and mouse move registers
+    // to the subject and clearing them on the listener itself
     inputListener.step(0.3);
 
-    // Validate buffer content again
+    // Listener stateful members must have been cleared again
+    assert.equal(inputListener.buffer.length, 0);
+    assert.equal(inputListener.mouseMove.x, 0);
+    assert.equal(inputListener.mouseMove.y, 0);
+
+    // Validate subject stateful members coming from
+    // the listener again
     assert.equal(subject.buffer.length, 4);
     assert.equal(subject.buffer[0].name, 'forward');
     assert.ok(!subject.buffer[0].pressed);
@@ -198,8 +256,10 @@ describe('UserInput', () => {
     assert.equal(subject.buffer[3].name, 'moveDown');
     assert.ok(subject.buffer[3].pressed);
     assert.ok(subject.buffer[3].delta >= 0.2);
+    assert.equal(subject.mouseMove.x, -3);
+    assert.equal(subject.mouseMove.y, 99);
 
-    await sleep(320);
+    await sleep(300);
 
     inputListener.releaseKey('s');
     inputListener.releaseKey('-');
@@ -208,9 +268,28 @@ describe('UserInput', () => {
     assert.equal(subject.y, -6.0);
     assert.equal(subject.z, -2.0);
 
+    inputListener.registerMouseMove(0, 0); // {0, 0} should be stored (changing nothing)
+
+    // Validate listener stateful members one last time
+    assert.equal(inputListener.buffer.length, 2);
+    assert.equal(inputListener.buffer[0].name, 'backward');
+    assert.ok(!inputListener.buffer[0].pressed);
+    assert.ok(inputListener.buffer[0].delta >= 0.3);
+    assert.equal(inputListener.buffer[1].name, 'moveDown');
+    assert.ok(!inputListener.buffer[1].pressed);
+    assert.ok(inputListener.buffer[1].delta >= 0.3);
+    assert.equal(inputListener.mouseMove.x, 0);
+    assert.equal(inputListener.mouseMove.y, 0);
+
     inputListener.step(0.1);
 
-    // Validate buffer content one last time
+    // Listener stateful members must have been cleared one last time
+    assert.equal(inputListener.buffer.length, 0);
+    assert.equal(inputListener.mouseMove.x, 0);
+    assert.equal(inputListener.mouseMove.y, 0);
+
+    // Validate subject stateful members coming from
+    // the listener one last time
     assert.equal(subject.buffer.length, 2);
     assert.equal(subject.buffer[0].name, 'backward');
     assert.ok(!subject.buffer[0].pressed);
@@ -218,6 +297,8 @@ describe('UserInput', () => {
     assert.equal(subject.buffer[1].name, 'moveDown');
     assert.ok(!subject.buffer[1].pressed);
     assert.ok(subject.buffer[1].delta >= 0.3);
+    assert.equal(subject.mouseMove.x, 0);
+    assert.equal(subject.mouseMove.y, 0);
 
     inputListener.clearForwardKey();
     inputListener.clearBackwardKey();
