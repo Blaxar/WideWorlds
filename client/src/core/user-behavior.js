@@ -14,6 +14,8 @@ const jumpVelocity = 4.0; // m/s
 
 const heightCorrectionThreshold = 0.01;
 const interpolationDistance = 0.30;
+const mouseMoveTurnScale = 3.0; // Turn faster with the mouse
+const mouseMoveStrafeScale = 30.0; // Strafe faster with the mouse
 
 /** Define the behavior of the local user in the 3D space based on key inputs */
 class UserBehavior extends SubjectBehavior {
@@ -127,8 +129,8 @@ class UserBehavior extends SubjectBehavior {
 
     this.direction.multiplyScalar(this.speed);
 
-    if (this.lookDown()) {
-      const deltaRotX = delta * this.lSpeed;
+    if (this.lookDown() || mouseMove.y > 0) {
+      const deltaRotX = this.lookDown() ? delta * this.lSpeed : mouseMove.y;
       if (tilt + deltaRotX > absTiltLimit) {
         // Do not look above the maximum allowed tilt angle
         this.tmpEul.set(absTiltLimit, 0, 0, 'YXZ');
@@ -138,8 +140,8 @@ class UserBehavior extends SubjectBehavior {
       }
     }
 
-    if (this.lookUp()) {
-      const deltaRotX = - delta * this.lSpeed;
+    if (this.lookUp() || mouseMove.y < 0) {
+      const deltaRotX = this.lookUp() ? - delta * this.lSpeed : mouseMove.y;
       if (tilt + deltaRotX < - absTiltLimit) {
         // Do not look below the minimum allowed tilt angle
         this.tmpEul.set(- absTiltLimit, 0, 0, 'YXZ');
@@ -149,16 +151,18 @@ class UserBehavior extends SubjectBehavior {
       }
     }
 
-    if (this.turnLeft() && !this.strafe()) {
+    if ((this.turnLeft() || mouseMove.x < 0) && !this.strafe()) {
       const rot = this.subject.user.rotation;
-      let rotY = (rot.y + delta * this.tSpeed) % twicePi;
+      let rotY = (this.turnLeft() ? rot.y + delta * this.tSpeed :
+          rot.y - mouseMove.x * mouseMoveTurnScale) % twicePi;
       if (rotY < 0) rotY += twicePi;
       this.subject.user.rotation.set(rot.x, rotY, rot.z, 'YXZ');
     }
 
-    if (this.turnRight() && !this.strafe()) {
+    if ((this.turnRight() || mouseMove.x > 0) && !this.strafe()) {
       const rot = this.subject.user.rotation;
-      let rotY = (rot.y - delta * this.tSpeed) % twicePi;
+      let rotY = (this.turnRight() ? (rot.y - delta * this.tSpeed) :
+          rot.y - mouseMove.x * mouseMoveTurnScale) % twicePi;
       if (rotY < 0) rotY += twicePi;
       this.subject.user.rotation.set(rot.x, rotY, rot.z, 'YXZ');
     }
@@ -212,17 +216,21 @@ class UserBehavior extends SubjectBehavior {
       return;
     }
 
-    if (this.left() || (this.turnLeft() && this.strafe())) {
+    if (this.left() || ((this.turnLeft() || mouseMove.x < 0) &&
+        this.strafe())) {
       this.subject.state.idle = false;
       this.tmpEul.set(0, Math.PI / 2, 0, 'YXZ');
       this.tmpVec3.applyEuler(this.tmpEul);
+      this.tmpVec3.multiplyScalar(1 - mouseMove.x * mouseMoveStrafeScale);
       this.subject.velocity.add(this.tmpVec3);
     }
 
-    if (this.right() || (this.turnRight() && this.strafe())) {
+    if (this.right() || ((this.turnRight() || mouseMove.x > 0) &&
+        this.strafe())) {
       this.subject.state.idle = false;
       this.tmpEul.set(0, - Math.PI / 2, 0, 'YXZ');
       this.tmpVec3.applyEuler(this.tmpEul);
+      this.tmpVec3.multiplyScalar(1 + mouseMove.x * mouseMoveStrafeScale);
       this.subject.velocity.add(this.tmpVec3);
     }
 

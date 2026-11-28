@@ -66,12 +66,16 @@ const isOverlay3D = (target) =>
         !['surface', 'window', 'window-body', 'title-bar', 'title-text']
             .some((className) => target.classList.contains(className));
 
+// To be set once in onMounted()
+let canvas = null;
+
 let defaultWorldId = null;
 let worldAvatars = [];
 let animations = [];
 const thirdPersonCameraDistance = 8;
 let cameraMode = 0; // 0 is first person view, 1 is rear view, 2 is front view
 let lastAvatarUpdate = 0;
+
 
 const wsClient =
    new WsClient((window.location.protocol == 'https:' ? 'wss:' : 'ws:') +
@@ -506,7 +510,8 @@ const render = () => {
 // As soon as the component is mounted: initialize Three.js 3D context and
 // spool up the rendering cycle
 onMounted(() => {
-  const canvas = document.querySelector('#main-3d-canvas');
+  canvas = document.querySelector('#main-3d-canvas');
+  addMouseMoveListener(canvas);
   engine3d = new Engine3D(canvas, userConfig.at('graphics'));
   userCollider = new UserCollider(engine3d, userConfig.at('graphics'));
 
@@ -572,11 +577,11 @@ const handleSendChat = (msg) => {
   }
 };
 
-const getViewCoordinates = (event, vec2) => {
+const getViewCoordinates = (mouseX, mouseY, vec2) => {
   // Note: here we're assuming that the 3D rendering canvas will always
   // perfectly match the whole HTML window itself (it should anyway...)
-  const x = ( event.clientX / window.innerWidth ) * 2 - 1;
-  const y = - ( event.clientY / window.innerHeight ) * 2 + 1;
+  const x = ( mouseX / window.innerWidth ) * 2 - 1;
+  const y = - ( mouseY / window.innerHeight ) * 2 + 1;
   vec2.set(x, y);
 };
 
@@ -633,7 +638,7 @@ document.addEventListener('contextmenu', (event) => {
   if (someInputFocused) return;
 
   if (isOverlay3D(event.target)) {
-    getViewCoordinates(event, tmpVec2);
+    getViewCoordinates(event.clientX, event.clientY, tmpVec2);
     propsSelector.select(tmpVec2, main.propSettings.strafe);
     event.preventDefault();
   }
@@ -648,16 +653,37 @@ document.addEventListener('pointermove', (event) => {
   if (someInputFocused) return;
 
   if (isOverlay3D(event.target)) {
-    getViewCoordinates(event, tmpVec2);
+    getViewCoordinates(event.clientX, event.clientY, tmpVec2);
     event.target.title = propsSelector.point(tmpVec2);
   }
 }, false);
+
+const addMouseMoveListener = (elem) => {
+  elem.addEventListener('mousemove', (event) => {
+    if (someInputFocused || !canvas ||
+        document.pointerLockElement !== canvas) return;
+
+    inputListener.registerMouseMove(event.movementX / window.innerWidth,
+        event.movementY / window.innerHeight);
+    // Mouse cursor is locked, the center of the screen is the effective
+    // pointer here...
+    getViewCoordinates(window.innerWidth / 2.0,
+        window.innerHeight / 2.0, tmpVec2);
+
+    event.target.title = propsSelector.point(tmpVec2);
+  }, false);
+};
 
 document.addEventListener('pointerup', (event) => {
   if (main.holdingMovableWindow) {
     main.holdingMovableWindow = null;
   }
 }, false);
+
+document.addEventListener('auxclick', async () => {
+  if (!canvas || !canvas.isConnected) return;
+  await canvas.requestPointerLock();
+});
 
 const closeMovableWindow = () => {
   resetMovableComponent();
